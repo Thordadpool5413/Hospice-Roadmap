@@ -18,6 +18,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AppProvider } from "@/context/AppContext";
+import { JournalProvider } from "@/context/JournalContext";
+import { RemindersProvider } from "@/context/RemindersContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -107,6 +109,18 @@ function RootLayoutNav() {
         name="emergency-card"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="journal"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="journal-entry"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="reminders"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
@@ -132,6 +146,8 @@ export default function RootLayout() {
       <ErrorBoundary>
         <AccessibilityProvider>
         <AppProvider>
+          <JournalProvider>
+          <RemindersProvider>
           <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
@@ -142,6 +158,8 @@ export default function RootLayout() {
               </KeyboardProvider>
             </GestureHandlerRootView>
           </QueryClientProvider>
+          </RemindersProvider>
+          </JournalProvider>
         </AppProvider>
         </AccessibilityProvider>
       </ErrorBoundary>

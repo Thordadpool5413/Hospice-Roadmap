@@ -60,6 +60,8 @@ export default function MoreScreen() {
     {
       title: "Tools",
       items: [
+        { label: "Caregiver Journal", icon: "edit-3", route: "/journal" },
+        { label: "Reminders", icon: "bell", route: "/reminders" },
         { label: "Get Help Now — Situation Finder", icon: "alert-circle", route: "/situation-finder" },
         { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation" },
         { label: "Contact Support", icon: "message-circle", route: "/support" },
