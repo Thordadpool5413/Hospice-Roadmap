@@ -12,6 +12,7 @@ interface ProviderCardProps {
   onPress: () => void;
   onSave?: () => void;
   isSaved?: boolean;
+  isCms?: boolean;
 }
 
 export function ProviderCard({
@@ -19,6 +20,7 @@ export function ProviderCard({
   onPress,
   onSave,
   isSaved = false,
+  isCms = false,
 }: ProviderCardProps) {
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -73,6 +75,11 @@ export function ProviderCard({
       )}
 
       <View style={styles.tags}>
+        {isCms && (
+          <View style={[styles.tag, styles.tagCms]}>
+            <Text style={[styles.tagText, styles.tagTextCms]}>CMS Verified</Text>
+          </View>
+        )}
         {provider.acceptsMedicare && (
           <View style={styles.tag}>
             <Text style={styles.tagText}>Medicare</Text>
@@ -176,6 +183,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
     color: Colors.success,
+  },
+  tagCms: {
+    backgroundColor: "#E8F4FD",
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  tagTextCms: {
+    color: "#1A6DAA",
   },
   tagAccred: {
     backgroundColor: Colors.infoPale,
