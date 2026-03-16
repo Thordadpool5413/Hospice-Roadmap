@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
   AiConversation,
   AiMessage,
@@ -51,6 +52,7 @@ interface LocalMessage {
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext } = useApp();
+  const { isOnline } = useNetworkStatus();
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -313,33 +315,44 @@ export default function HelpScreen() {
       </ScrollView>
 
       <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <TextInput
-          ref={inputRef}
-          style={styles.input}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder={hasMessages ? "Ask a follow-up question…" : "Describe what's happening or ask anything…"}
-          placeholderTextColor={Colors.textMuted}
-          multiline
-          maxLength={2000}
-          returnKeyType="default"
-          editable={!isStreaming}
-        />
-        <Pressable
-          onPress={() => sendMessage(inputText)}
-          disabled={!inputText.trim() || isStreaming}
-          style={({ pressed }) => [
-            styles.sendBtn,
-            (!inputText.trim() || isStreaming) && styles.sendBtnDisabled,
-            pressed && { opacity: 0.8 },
-          ]}
-        >
-          {isStreaming ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Feather name="send" size={18} color="#FFFFFF" />
-          )}
-        </Pressable>
+        {!isOnline ? (
+          <View style={styles.offlineInputNotice}>
+            <Feather name="wifi-off" size={15} color={Colors.amber} />
+            <Text style={styles.offlineInputText}>
+              Internet required for Compass AI — all guidance content works offline.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder={hasMessages ? "Ask a follow-up question…" : "Describe what's happening or ask anything…"}
+              placeholderTextColor={Colors.textMuted}
+              multiline
+              maxLength={2000}
+              returnKeyType="default"
+              editable={!isStreaming}
+            />
+            <Pressable
+              onPress={() => sendMessage(inputText)}
+              disabled={!inputText.trim() || isStreaming}
+              style={({ pressed }) => [
+                styles.sendBtn,
+                (!inputText.trim() || isStreaming) && styles.sendBtnDisabled,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              {isStreaming ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Feather name="send" size={18} color="#FFFFFF" />
+              )}
+            </Pressable>
+          </>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -780,5 +793,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.divider,
     shadowOpacity: 0,
     elevation: 0,
+  },
+  offlineInputNotice: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.amberPale,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: Colors.amberLight,
+  },
+  offlineInputText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.amber,
+    lineHeight: 18,
   },
 });

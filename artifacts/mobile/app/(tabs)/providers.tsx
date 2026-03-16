@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProviderCard } from "@/components/ProviderCard";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { mockProviders } from "@/data/mockProviders";
 import { setCmsProviders as storeCmsProviders } from "@/context/cmsProviderStore";
 import {
@@ -34,6 +35,7 @@ type SortBy = "name" | "rating";
 export default function ProvidersScreen() {
   const insets = useSafeAreaInsets();
   const { toggleSavedProvider, isSavedProvider } = useApp();
+  const { isOnline } = useNetworkStatus();
   const [search, setSearch] = useState("");
   const [filterMedicare, setFilterMedicare] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("name");
@@ -52,6 +54,10 @@ export default function ProvidersScreen() {
 
   const handleCmsSearch = useCallback(async () => {
     if (!selectedState && !zipInput) return;
+    if (!isOnline) {
+      setCmsError("No internet connection. Provider search requires internet access.");
+      return;
+    }
     setCmsLoading(true);
     setCmsError(null);
     setCmsSearched(true);
@@ -82,7 +88,7 @@ export default function ProvidersScreen() {
     } finally {
       setCmsLoading(false);
     }
-  }, [selectedState, zipInput]);
+  }, [selectedState, zipInput, isOnline]);
 
   const localFiltered = mockProviders
     .filter((p) => {
@@ -172,6 +178,15 @@ export default function ProvidersScreen() {
                 Official CMS Provider Data — 6,900+ certified hospices
               </Text>
             </View>
+
+            {!isOnline && (
+              <View style={styles.offlineCmsNotice}>
+                <Feather name="wifi-off" size={14} color={Colors.amber} />
+                <Text style={styles.offlineCmsText}>
+                  No internet — CMS search unavailable. Sample providers below work offline.
+                </Text>
+              </View>
+            )}
 
             <Pressable
               onPress={() => setShowStatePicker(!showStatePicker)}
@@ -794,5 +809,22 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     flex: 1,
     lineHeight: 16,
+  },
+  offlineCmsNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: Colors.amberPale,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.amberLight,
+  },
+  offlineCmsText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.amber,
+    lineHeight: 18,
   },
 });
