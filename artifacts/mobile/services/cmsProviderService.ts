@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-import { CmsQualityData, Provider } from "@/types";
+import { CmsQualityData, CmsSpendingData, Provider } from "@/types";
 
 function getApiBase(): string {
   const customDomain = process.env.EXPO_PUBLIC_API_URL;
@@ -56,6 +56,20 @@ export async function fetchQualityData(ccn: string): Promise<CmsQualityData> {
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Quality data failed (${res.status}): ${body}`);
+  }
+
+  return res.json();
+}
+
+export async function fetchSpendingData(zip: string): Promise<CmsSpendingData> {
+  const res = await fetch(`${API_BASE}/cms/spending/${zip}`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(20000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Spending data failed (${res.status}): ${body}`);
   }
 
   return res.json();

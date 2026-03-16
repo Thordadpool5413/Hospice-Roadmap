@@ -8,6 +8,7 @@ const DATASETS = {
   generalInfo: "yc9t-dgbk",
   providerData: "252m-zfp9",
   cahps: "gxki-hrr8",
+  spending: "0ddf-4325",
 } as const;
 
 interface CacheEntry<T> {
@@ -142,11 +143,12 @@ router.get("/cms/providers", async (req: Request, res: Response) => {
 
     setCache(cacheKey, result);
     res.json(result);
-  } catch (err: any) {
-    console.error("CMS providers error:", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("CMS providers error:", message);
     res.status(502).json({
       error: "Unable to fetch data from CMS. Please try again later.",
-      detail: err.message,
+      detail: message,
     });
   }
 });
@@ -249,11 +251,78 @@ router.get("/cms/quality/:ccn", async (req: Request, res: Response) => {
 
     setCache(cacheKey, result);
     res.json(result);
-  } catch (err: any) {
-    console.error("CMS quality error:", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("CMS quality error:", message);
     res.status(502).json({
       error: "Unable to fetch quality data from CMS. Please try again later.",
-      detail: err.message,
+      detail: message,
+    });
+  }
+});
+
+router.get("/cms/spending/:zip", async (req: Request, res: Response) => {
+  try {
+    const { zip } = req.params;
+    if (!zip || zip.length < 3) {
+      res.status(400).json({ error: "Valid ZIP code is required" });
+      return;
+    }
+
+    const cacheKey = `spending:${zip}`;
+    const cached = getCached<object>(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    const data = await cmsQuery(DATASETS.spending, [
+      { property: "zip_code", value: zip, operator: "=" },
+    ], 1);
+
+    if (data.results.length === 0) {
+      res.json({
+        zip,
+        found: false,
+        source: "CMS Hospice and Palliative Care Office Visit Costs",
+      });
+      return;
+    }
+
+    const row = data.results[0];
+    const result = {
+      zip: row.zip_code,
+      found: true,
+      newPatient: {
+        minMedicarePricing: row.min_medicare_pricing_for_new_patient,
+        maxMedicarePricing: row.max_medicare_pricing_for_new_patient,
+        modeMedicarePricing: row.mode_medicare_pricing_for_new_patient,
+        minCopay: row.min_copay_for_new_patient,
+        maxCopay: row.max_copay_for_new_patient,
+        modeCopay: row.mode_copay_for_new_patient,
+        mostUtilizedProcedureCode: row.most_utilized_procedure_code_for_new_patient,
+      },
+      establishedPatient: {
+        minMedicarePricing: row.min_medicare_pricing_for_established_patient,
+        maxMedicarePricing: row.max_medicare_pricing_for_established_patient,
+        modeMedicarePricing: row.mode_medicare_pricing_for_established_patient,
+        minCopay: row.min_copay_for_established_patient,
+        maxCopay: row.max_copay_for_established_patient,
+        modeCopay: row.mode_copay_for_established_patient,
+        mostUtilizedProcedureCode: row.most_utilized_procedure_code_for_established_patient,
+      },
+      source: "CMS Hospice and Palliative Care Office Visit Costs",
+      methodologyUrl: "https://data.cms.gov/provider-data/dataset/0ddf-4325",
+    };
+
+    setCache(cacheKey, result);
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("CMS spending error:", message);
+    res.status(502).json({
+      error: "Unable to fetch spending data from CMS. Please try again later.",
+      detail: message,
     });
   }
 });

@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -429,6 +430,35 @@ export default function ProvidersScreen() {
           </View>
         )}
 
+        {searchMode === "cms" && cmsSearched && !cmsLoading && (
+          <View style={styles.aboutDataBox}>
+            <View style={styles.aboutDataHeader}>
+              <Feather name="database" size={14} color={Colors.info} />
+              <Text style={styles.aboutDataTitle}>About This Data</Text>
+            </View>
+            <Text style={styles.aboutDataText}>
+              Provider data is sourced from the CMS (Centers for Medicare &
+              Medicaid Services) Provider Data Catalog, which includes all
+              Medicare-certified hospice agencies in the United States. Data is
+              updated periodically by CMS as part of the Hospice Quality
+              Reporting Program.
+            </Text>
+            <Pressable
+              onPress={() =>
+                Linking.openURL(
+                  "https://data.cms.gov/provider-data/topics/hospice"
+                )
+              }
+              style={styles.aboutDataLink}
+            >
+              <Feather name="external-link" size={12} color={Colors.info} />
+              <Text style={styles.aboutDataLinkText}>
+                CMS Provider Data Catalog — Methodology
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         <View style={styles.disclaimer}>
           <Feather name="info" size={13} color={Colors.textSubtle} />
           <Text style={styles.disclaimerText}>
@@ -746,6 +776,41 @@ const styles = StyleSheet.create({
   },
   providerList: {
     gap: 12,
+  },
+  aboutDataBox: {
+    backgroundColor: Colors.infoPale,
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#BCD9EE",
+  },
+  aboutDataHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  aboutDataTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: Colors.info,
+  },
+  aboutDataText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  aboutDataLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  aboutDataLinkText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.info,
   },
   disclaimer: {
     flexDirection: "row",

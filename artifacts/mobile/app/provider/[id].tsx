@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  type DimensionValue,
   Linking,
   Pressable,
   ScrollView,
@@ -40,7 +41,7 @@ function QualityScoreBar({
         <View
           style={[
             qStyles.barFill,
-            { width: `${Math.min(value, 100)}%` as any, backgroundColor: barColor },
+            { width: `${Math.min(value, 100)}%` as DimensionValue, backgroundColor: barColor },
           ]}
         />
       </View>
@@ -205,6 +206,13 @@ export default function ProviderDetailScreen() {
 
       {isCms && qualityData && (
         <>
+          <View style={qStyles.qualityHeader}>
+            <Text style={qStyles.qualityTitle}>Medicare Quality Metrics</Text>
+            <Text style={qStyles.qualitySource}>
+              Source: CMS Hospice Quality Reporting Program
+            </Text>
+          </View>
+
           <View style={qStyles.scoreCardsRow}>
             <View style={qStyles.scoreCard}>
               <Text style={qStyles.scoreCardLabel}>Hospice Care Index</Text>
@@ -301,7 +309,7 @@ export default function ProviderDetailScreen() {
                     qStyles.compositeFill,
                     {
                       width:
-                        `${Math.min(parseFloat(qualityData.compositeProcessMeasure), 100)}%` as any,
+                        `${Math.min(parseFloat(qualityData.compositeProcessMeasure), 100)}%` as DimensionValue,
                     },
                   ]}
                 />
@@ -437,6 +445,20 @@ export default function ProviderDetailScreen() {
 }
 
 const qStyles = StyleSheet.create({
+  qualityHeader: {
+    gap: 2,
+  },
+  qualityTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.4,
+  },
+  qualitySource: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
   loadingBox: {
     flexDirection: "row",
     alignItems: "center",

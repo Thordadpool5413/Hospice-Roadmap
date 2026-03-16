@@ -44,6 +44,8 @@ export interface Provider {
   certificationDate?: string;
   cmsRegion?: string;
   medicareGovUrl?: string;
+  cmsQuality?: CmsQualityData;
+  cmsSpending?: CmsSpendingData;
 }
 
 export interface CmsQualityData {
@@ -71,6 +73,25 @@ export interface CmsQualityData {
     percentile?: string;
   }>;
   medicareGovUrl: string;
+}
+
+export interface CmsSpendingCostRange {
+  minMedicarePricing: string;
+  maxMedicarePricing: string;
+  modeMedicarePricing: string;
+  minCopay: string;
+  maxCopay: string;
+  modeCopay: string;
+  mostUtilizedProcedureCode: string;
+}
+
+export interface CmsSpendingData {
+  zip: string;
+  found: boolean;
+  newPatient?: CmsSpendingCostRange;
+  establishedPatient?: CmsSpendingCostRange;
+  source: string;
+  methodologyUrl: string;
 }
 
 export interface Resource {
