@@ -1,8 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
+  type DimensionValue,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -133,6 +135,11 @@ export default function EvaluationScreen() {
   const [adlDecline, setAdlDecline] = useState<boolean | null>(null);
   const [advanceDirectives, setAdvanceDirectives] = useState<boolean | null>(null);
   const [result, setResult] = useState<EvaluationResult | null>(null);
+  const [criteriaExpanded, setCriteriaExpanded] = useState(false);
+
+  const toggleCriteria = useCallback(() => {
+    setCriteriaExpanded((prev) => !prev);
+  }, []);
 
   const canSubmit =
     diagnosis !== null &&
@@ -179,7 +186,7 @@ export default function EvaluationScreen() {
           <Text style={styles.resultSummary}>{result.summary}</Text>
 
           <View style={styles.scoreBar}>
-            <View style={[styles.scoreBarFill, { width: `${result.score}%` as any, backgroundColor: config.color }]} />
+            <View style={[styles.scoreBarFill, { width: `${result.score}%` as DimensionValue, backgroundColor: config.color }]} />
           </View>
           <Text style={[styles.scoreText, { color: config.color }]}>
             Score: {result.score}/100
@@ -252,6 +259,17 @@ export default function EvaluationScreen() {
               provider search to find CMS-certified hospice programs near you.
             </Text>
           </View>
+          <Pressable
+            onPress={() =>
+              Linking.openURL("https://www.medicare.gov/coverage/hospice-care")
+            }
+            style={styles.cmsBenefitLink}
+          >
+            <Feather name="external-link" size={13} color={Colors.info} />
+            <Text style={styles.cmsBenefitLinkText}>
+              Medicare.gov — Hospice Care Coverage
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.resultActions}>
@@ -282,6 +300,62 @@ export default function EvaluationScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
+      {/* Official Medicare Hospice Criteria - Collapsible */}
+      <Pressable
+        onPress={toggleCriteria}
+        style={styles.criteriaCard}
+      >
+        <View style={styles.criteriaHeader}>
+          <View style={styles.criteriaHeaderLeft}>
+            <Feather name="shield" size={16} color="#1A6DAA" />
+            <Text style={styles.criteriaTitle}>Official Medicare Hospice Criteria</Text>
+          </View>
+          <Feather
+            name={criteriaExpanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color="#1A6DAA"
+          />
+        </View>
+        {criteriaExpanded && (
+          <View style={styles.criteriaBody}>
+            <Text style={styles.criteriaText}>
+              Under Medicare guidelines, a patient may be eligible for the
+              hospice benefit when:
+            </Text>
+            <View style={styles.criteriaList}>
+              {[
+                "Two physicians certify a terminal prognosis of 6 months or less if the illness runs its normal course",
+                "The patient elects to receive palliative (comfort) care rather than curative treatment",
+                "Care is provided by a Medicare-certified hospice program",
+              ].map((item) => (
+                <View key={item} style={styles.criteriaRow}>
+                  <Feather name="check-circle" size={13} color={Colors.success} />
+                  <Text style={styles.criteriaItemText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.criteriaText}>
+              The Medicare hospice benefit covers nursing care, medications for
+              symptom control, medical equipment, short-term inpatient care,
+              respite care, counseling, and aide services.
+            </Text>
+            <Pressable
+              onPress={() =>
+                Linking.openURL(
+                  "https://www.medicare.gov/coverage/hospice-care"
+                )
+              }
+              style={styles.criteriaLink}
+            >
+              <Feather name="external-link" size={13} color={Colors.info} />
+              <Text style={styles.criteriaLinkText}>
+                Medicare.gov — Hospice Care Coverage
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </Pressable>
+
       {/* Disclaimer Banner */}
       <View style={styles.bannerBox}>
         <Feather name="info" size={16} color={Colors.journeyBefore} />
@@ -737,6 +811,69 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 8,
   },
+  criteriaCard: {
+    backgroundColor: "#E8F4FD",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  criteriaHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  criteriaHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  criteriaTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#1A6DAA",
+    letterSpacing: -0.2,
+  },
+  criteriaBody: {
+    marginTop: 12,
+    gap: 10,
+  },
+  criteriaText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 19,
+  },
+  criteriaList: {
+    gap: 8,
+  },
+  criteriaRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  criteriaItemText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+    lineHeight: 19,
+  },
+  criteriaLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  criteriaLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.info,
+  },
   cmsBenefitCard: {
     backgroundColor: "#E8F4FD",
     borderRadius: 14,
@@ -789,5 +926,19 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     lineHeight: 16,
+  },
+  cmsBenefitLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  cmsBenefitLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.info,
   },
 });
