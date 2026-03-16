@@ -1,0 +1,71 @@
+The goal of the application is to give caregivers, patients, and families immediate access to practical guidance for any hospice related situation they may encounter. This includes medical symptoms, caregiving tasks, medications, equipment, emotional situations, hospice services, and after death guidance. The app must help users understand what is happening, what actions they can safely take, what actions they should avoid, and when to contact hospice or other support services.
+
+The application must not function as a general informational brochure or medical encyclopedia. Instead, it must be designed as an actionable guidance tool that helps users navigate real world caregiving situations step by step. The app must support users who may be tired, emotional, overwhelmed, inexperienced, or unfamiliar with medical terminology.
+
+The system must be built around real life caregiver scenarios rather than only clinical categories. Users should be able to identify their situation quickly using simple language and then receive clear guidance.
+
+The application must include a prominent help feature that allows users to quickly identify a situation they are experiencing and receive guidance immediately. This help system should allow users to select situations such as breathing difficulty, worsening pain, confusion, swallowing problems, falls, equipment failure, caregiving tasks, emotional distress, or uncertainty about what is happening.
+
+The app must support the entire hospice journey, not only urgent situations. This includes daily caregiving tasks, symptom management, medication understanding, equipment use, hospice services, emotional support, and bereavement.
+
+The application must include guidance across the following major domains.
+
+Symptom support and comfort management must include guidance for breathing changes, pain, agitation, confusion, hallucinations, swallowing difficulties, nausea, vomiting, constipation, diarrhea, fever, bleeding, seizures, fatigue, weakness, urinary issues, skin breakdown, swelling, sleep changes, decreased appetite, and signs that death may be approaching.
+
+Caregiver training must include hands on guidance for bed bathing, shower assistance, mouth care, perineal care, changing briefs, repositioning in bed, boosting a patient up in bed, feeding assistance, swallowing support, bed to chair transfers, chair to bed transfers, toilet transfers, shower transfers, car transfers, fall recovery assistance, skin care, pressure relief positioning, catheter care basics, and general comfort positioning.
+
+Medication support must explain what common hospice medications are used for, how medications may be given, common side effects caregivers may notice, medication storage guidance, swallowing issues, liquid medications, comfort kit medications, missed dose concerns, vomiting after medication, medication errors, medication availability issues, and when to contact hospice regarding medication concerns. The application must provide medication education but must never generate patient specific dosing instructions unless directly integrated with verified clinical orders approved by the hospice organization.
+
+Equipment guidance must cover common hospice equipment including oxygen concentrators, portable oxygen tanks, suction machines, hospital beds, bed remotes, wheelchairs, walkers, lifts, commodes, nebulizers, mattress overlays, and other commonly provided equipment. Each equipment section must include explanation of the equipment, how it is used, safety precautions, common problems, troubleshooting steps, temporary workarounds when possible, and instructions on who to contact for assistance.
+
+Supply guidance must explain common hospice supplies, how they are used, when they may be requested, and how caregivers can request additional supplies.
+
+Hospice services education must clearly explain the roles of the hospice nurse, hospice aide, social worker, chaplain, volunteers, and bereavement services. It must explain what each team member can help with and how families can request support.
+
+Social support guidance must explain caregiver stress, family dynamics, communication challenges, and emotional support. It must provide simple language scripts and suggestions for difficult conversations such as when patients ask if they are dying, when children ask questions about illness, when families disagree about decisions, or when caregivers feel overwhelmed.
+
+Respite education must explain what respite care is, how it works, and how caregivers can request it.
+
+Bereavement guidance must include hospice bereavement services, grief support options, support for spouses and partners, support for adult children, support for children and teenagers, pediatric bereavement resources, and guidance for coping with grief.
+
+End of life guidance must help families understand what changes may occur as death approaches. This section must explain common physical changes, emotional changes, and practical steps families may take to support comfort.
+
+After death guidance must explain what caregivers should do if they believe the patient has died. It must explain what to do first, what actions to avoid, who to contact, what hospice will do next, what happens with medications and equipment, and what support is available for the family.
+
+The application must also include support for situations where the caregiver is unsure what is happening. This universal guidance flow must help the caregiver assess safety, focus on comfort, avoid unsafe actions, gather information, and contact hospice for further support.
+
+The entire application must be written in clear plain language. Medical terminology should be minimized or explained in everyday words. Instructions should be short, clear, and actionable.
+
+Every urgent or practical guidance screen must contain the following elements: what the caregiver may be noticing, what the situation may mean, what actions the caregiver can take now, what actions to avoid, when to contact hospice, when equipment support may be needed, and what may happen next.
+
+The application must provide instructions in multiple communication formats. These formats must include written instructions, visual step cards, images or diagrams, audio narration, and short demonstration videos where appropriate. This ensures usability for people with different learning styles, literacy levels, and stress levels.
+
+The application must also include a patient emergency information card accessible throughout the app. This card may include the hospice phone number, after hours contact number, equipment provider number, pharmacy information, primary caregiver information, equipment in the home, and other relevant information that may help caregivers quickly communicate with hospice staff.
+
+Critical guidance content must be available offline so that caregivers can access instructions even if internet connectivity is unavailable.
+
+The application must be developed with clinical governance. All medical or caregiving content must be reviewed and approved by appropriate professionals such as hospice nurses, physicians, pharmacists, social workers, bereavement specialists, and compliance staff. Each content item must have a designated owner, approval date, and review cycle.
+
+The application must prioritize safety and clarity. It must always encourage caregivers to contact hospice whenever they are uncertain about a situation. The application must never create the impression that it replaces hospice professionals.
+
+The design philosophy must assume the user may be tired, emotionally overwhelmed, unfamiliar with medical terminology, and possibly facing an urgent or stressful situation. The application must therefore prioritize simplicity, clarity, reassurance, and practical guidance.
+
+The guiding principle for the entire product must be this: when a patient or caregiver needs help understanding what is happening or what to do next, the application should provide clear, practical, and compassionate guidance that helps them navigate the situation safely.
+
+The AI knowledge engine powering the application must use a retrieval based architecture that pulls responses from a clinically approved knowledge base rather than generating medical advice freely. The engine must identify user intent, map the request to a structured hospice scenario, retrieve the relevant approved content, and present it in a caregiver friendly format.
+
+The AI system must support scenario recognition, structured guidance delivery, communication adaptation, escalation support, and fallback safety guidance when the situation is unclear.
+
+All AI responses must follow a consistent structure including what the caregiver may be seeing, what the situation may mean, what to do right now, what actions to avoid, when to contact hospice, and what may happen next.
+
+The AI engine must support natural caregiver language and panic language searches such as gasping, wet breathing, cannot wake up, oxygen not working, cannot move patient, or I think they died.
+
+The AI system must never generate medication dosing instructions or medical decisions beyond the scope of approved hospice guidance.
+
+The system must include safety escalation logic that directs users to contact hospice, contact equipment providers, or follow the patient’s care plan when emergency assistance may be necessary.
+
+The AI knowledge engine must maintain an audit trail of which approved content blocks were used to generate each response and must support clinical governance and periodic content review.
+
+The architecture must support a universal hospice knowledge base combined with organization specific overlays so that individual hospice organizations can customize phone numbers, workflows, equipment partners, supply rules, and service descriptions.
+
+The AI system must also support analytics to identify the most common caregiver questions, areas of confusion, and opportunities to improve scenario guidance.
