@@ -1,13 +1,9 @@
 export type JourneyStage = "before" | "during" | "after";
 
 export type UserRole =
-  | "caregiver"
-  | "family"
   | "patient"
-  | "physician"
-  | "discharge_planner"
-  | "staff"
-  | "exploring";
+  | "caregiver"
+  | "other";
 
 export interface User {
   id: string;

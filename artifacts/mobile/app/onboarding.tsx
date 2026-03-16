@@ -16,13 +16,21 @@ import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { JourneyStage, UserRole } from "@/types";
 
-const roles: { id: UserRole; label: string; description: string; icon: string }[] = [
-  { id: "caregiver", label: "Caregiver", description: "Caring for someone in or approaching hospice", icon: "heart" },
-  { id: "family", label: "Family Member", description: "Supporting a loved one navigating hospice", icon: "users" },
-  { id: "patient", label: "Patient", description: "Exploring hospice for my own care", icon: "user" },
-  { id: "physician", label: "Physician", description: "Clinical guidance and referral resources", icon: "activity" },
-  { id: "discharge_planner", label: "Discharge Planner", description: "Patient transition and placement support", icon: "clipboard" },
-  { id: "exploring", label: "Just Exploring", description: "Learning about hospice for future reference", icon: "search" },
+const primaryRoles: { id: UserRole; label: string; description: string; icon: string; detail: string }[] = [
+  {
+    id: "patient",
+    label: "Patient",
+    description: "I'm exploring or receiving hospice care for myself",
+    icon: "user",
+    detail: "Get personalized guidance, provider search, and resources tailored to your care journey.",
+  },
+  {
+    id: "caregiver",
+    label: "Caregiver",
+    description: "I'm caring for someone in or approaching hospice",
+    icon: "heart",
+    detail: "Find support, connect with providers, and navigate every step alongside your loved one.",
+  },
 ];
 
 const stages: { id: JourneyStage; label: string; description: string; color: string; bg: string }[] = [
@@ -100,45 +108,77 @@ export default function OnboardingScreen() {
               This helps us show the most relevant content for your needs.
             </Text>
 
-            <View style={styles.optionGrid}>
-              {roles.map((role) => (
-                <Pressable
-                  key={role.id}
-                  onPress={() => handleRoleSelect(role.id)}
-                  style={({ pressed }) => [
-                    styles.roleCard,
-                    selectedRole === role.id && styles.roleCardSelected,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.roleIcon,
-                      selectedRole === role.id && styles.roleIconSelected,
+            <View style={styles.primaryRoleList}>
+              {primaryRoles.map((role) => {
+                const selected = selectedRole === role.id;
+                return (
+                  <Pressable
+                    key={role.id}
+                    onPress={() => handleRoleSelect(role.id)}
+                    style={({ pressed }) => [
+                      styles.primaryRoleCard,
+                      selected && styles.primaryRoleCardSelected,
+                      pressed && { opacity: 0.88 },
                     ]}
                   >
-                    <Feather
-                      name={role.icon as any}
-                      size={20}
-                      color={
-                        selectedRole === role.id ? "#FFFFFF" : Colors.textMuted
-                      }
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.roleLabel,
-                      selectedRole === role.id && styles.roleLabelSelected,
-                    ]}
-                  >
-                    {role.label}
-                  </Text>
-                  <Text style={styles.roleDesc} numberOfLines={2}>
-                    {role.description}
-                  </Text>
-                </Pressable>
-              ))}
+                    <View style={styles.primaryRoleTop}>
+                      <View
+                        style={[
+                          styles.primaryRoleIcon,
+                          selected && styles.primaryRoleIconSelected,
+                        ]}
+                      >
+                        <Feather
+                          name={role.icon as any}
+                          size={22}
+                          color={selected ? "#FFFFFF" : Colors.primary}
+                        />
+                      </View>
+                      {selected && (
+                        <View style={styles.primaryRoleCheck}>
+                          <Feather name="check-circle" size={18} color={Colors.primary} />
+                        </View>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.primaryRoleLabel,
+                        selected && styles.primaryRoleLabelSelected,
+                      ]}
+                    >
+                      {role.label}
+                    </Text>
+                    <Text style={styles.primaryRoleDesc}>{role.description}</Text>
+                    <Text style={styles.primaryRoleDetail}>{role.detail}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
+
+            <Pressable
+              onPress={() => handleRoleSelect("other")}
+              style={({ pressed }) => [
+                styles.otherBtn,
+                selectedRole === "other" && styles.otherBtnSelected,
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Feather
+                name="more-horizontal"
+                size={15}
+                color={selectedRole === "other" ? Colors.primary : Colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.otherBtnText,
+                  selectedRole === "other" && styles.otherBtnTextSelected,
+                ]}
+              >
+                {selectedRole === "other"
+                  ? "Other selected"
+                  : "I'm a family member, clinician, or someone else"}
+              </Text>
+            </Pressable>
           </>
         ) : (
           <>
@@ -304,48 +344,87 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: -10,
   },
-  optionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+  primaryRoleList: {
+    gap: 12,
   },
-  roleCard: {
-    width: "47%",
+  primaryRoleCard: {
     backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: Colors.divider,
     gap: 6,
   },
-  roleCardSelected: {
+  primaryRoleCardSelected: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryPale,
   },
-  roleIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: Colors.backgroundSecondary,
+  primaryRoleTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  primaryRoleIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: Colors.primaryPale,
     alignItems: "center",
     justifyContent: "center",
   },
-  roleIconSelected: {
+  primaryRoleIconSelected: {
     backgroundColor: Colors.primary,
   },
-  roleLabel: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+  primaryRoleCheck: {
+    opacity: 0.85,
   },
-  roleLabelSelected: {
+  primaryRoleLabel: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.3,
+  },
+  primaryRoleLabelSelected: {
     color: Colors.primaryDark,
   },
-  roleDesc: {
-    fontSize: 11,
+  primaryRoleDesc: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  primaryRoleDetail: {
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
-    lineHeight: 15,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  otherBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    backgroundColor: Colors.surface,
+  },
+  otherBtnSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryPale,
+  },
+  otherBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  otherBtnTextSelected: {
+    color: Colors.primary,
+    fontFamily: "Inter_500Medium",
   },
   stepHeader: {
     flexDirection: "row",
