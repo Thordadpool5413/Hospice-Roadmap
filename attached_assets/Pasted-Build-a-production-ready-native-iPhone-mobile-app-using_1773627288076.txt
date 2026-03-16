@@ -1,0 +1,253 @@
+Build a production ready native iPhone mobile app using React Native, Expo, and TypeScript that can ultimately be submitted to the Apple App Store.
+
+The app name is Hospice Roadmap.
+
+The tagline is: Guidance before, during, and after hospice.
+
+This must be a completely original product with original design, original copy, original information architecture, original navigation decisions, and original workflows. Do not copy any competitor app design, wording, layout, branding, assets, colors, icons, or screen flow.
+
+The product is a trusted research, education, navigation, and support app for people who need clear hospice guidance across the full journey. It must support people researching hospice before care begins, people navigating hospice while care is active, and people seeking support and understanding after hospice.
+
+You should act as both a senior mobile engineer and a senior product designer. I do NOT want to prescribe exact screen layouts or dictate what the home screen looks like. You should determine the best mobile information architecture, navigation pattern, content structure, and screen flow based on the product goals.
+
+The final experience should feel polished, calm, trustworthy, modern, and emotionally intelligent. It should feel like a premium healthcare mobile product designed specifically for iPhone. People should feel that the app is credible enough to rely on, simple enough to actually use, and valuable enough to return to repeatedly.
+
+Core product purpose:
+
+Create a trusted mobile app that helps users understand, research, and navigate hospice before, during, and after care.
+
+Core user goals the app must support:
+
+A user should be able to research and understand what hospice is and when it may be appropriate.
+
+A user should be able to learn about hospice before enrollment, including eligibility guidance, common myths, planning topics, and decision support.
+
+A user should be able to navigate hospice while care is active, including understanding services, symptoms, caregiver support, and what to expect.
+
+A user should be able to find helpful guidance after hospice, including grief support, practical next steps, and educational resources.
+
+A user should be able to search for hospice providers by geography and view provider details.
+
+A user should be able to start and submit a hospice referral request or information request.
+
+A user should be able to browse and search educational hospice resources.
+
+A user should be able to contact support or request follow up.
+
+The app should optionally support role based experiences such as:
+
+Caregiver
+Family member
+Patient
+Physician
+Discharge planner
+Internal staff
+
+Content areas the product should support:
+
+Understanding hospice
+Hospice basics
+Before hospice planning
+Eligibility guidance
+Decision support
+Questions to ask
+Caregiver education
+Physician resources
+Symptoms and comfort care
+What to expect during hospice
+Common myths about hospice
+Documentation guidance
+Referral readiness guidance
+Provider lookup
+Support resources
+After hospice guidance
+Grief and bereavement resources
+Practical next steps after loss
+
+Design requirements:
+
+Create a premium, polished, App Store quality mobile experience.
+
+Use strong visual hierarchy, thoughtful spacing, readable typography, calming colors, and clear grouping of information.
+
+The interface should feel medically credible but warm, human, and emotionally steady.
+
+Avoid clutter and avoid generic template design.
+
+Prioritize mobile usability and clarity for busy clinicians, caregivers, patients, and families.
+
+Use large touch targets and clean layout rhythm.
+
+Make forms easy to complete on a phone.
+
+Create a consistent visual design system with reusable UI patterns.
+
+Use cards, sections, icons, typography scale, and whitespace to create hierarchy rather than visual noise.
+
+The app should feel like a product people trust for guidance, not just a directory or lead form.
+
+UX requirements:
+
+Review all user flows for speed, clarity, and emotional ease.
+
+Reduce cognitive load where possible.
+
+Use clear labels, helpful helper text, and intuitive navigation.
+
+Include loading states, validation states, error states, empty states, and success states.
+
+Make multi step processes easy to understand.
+
+Ensure all screens are fully connected and navigable.
+
+Help users understand where they are in the journey and where to go next.
+
+Mobile requirements:
+
+Design specifically for iPhone rather than generic web layouts.
+
+Use patterns that feel native to mobile.
+
+Ensure tap targets and spacing support comfortable phone use.
+
+Make screen transitions and interactions smooth and intuitive.
+
+Technical requirements:
+
+Use React Native with Expo.
+
+Use TypeScript.
+
+Organize the project with a scalable structure including:
+
+screens
+components
+navigation
+services
+hooks
+utils
+types
+assets
+
+Create reusable UI components for common interface elements.
+
+Backend preparation:
+
+Even if the backend is not implemented yet, structure the app so it can easily connect to real APIs later.
+
+Create service layers for:
+
+auth
+providers
+resources
+referrals
+evaluation
+support
+journey content
+bereavement resources
+
+Use mock data and mock APIs initially but design the architecture so real APIs can be connected later without major rewrites.
+
+Define data models for:
+
+User
+Provider
+Resource
+JourneyStage
+Referral
+SupportRequest
+EvaluationInput
+EvaluationResult
+BereavementResource
+
+Journey structure requirements:
+
+The app experience should intelligently support content and flows for three broad stages:
+
+Before hospice
+During hospice
+After hospice
+
+You should decide how best to represent these stages within the app experience in a way that feels useful, natural, and not overly rigid. The app should help users move between research, education, provider discovery, and support based on their needs.
+
+Evaluation guidance engine:
+
+Create a simple local rules engine that can provide informational hospice readiness guidance.
+
+Support diagnosis categories such as:
+
+Cancer
+Congestive heart failure
+COPD
+Dementia
+Stroke
+General debility
+
+The evaluation output must clearly state that it is informational guidance only and not a clinical determination.
+
+Content requirements:
+
+Write realistic hospice related content that is fully original.
+
+Do not copy existing hospice apps or websites.
+
+Avoid generic placeholder content unless absolutely necessary.
+
+Make the content feel clear, compassionate, credible, informative, and useful across the full hospice journey.
+
+Tone requirements for content and interface copy:
+
+The writing should feel trustworthy, grounded, clear, and human.
+
+Avoid sounding overly corporate, robotic, or generic.
+
+The app should feel emotionally steady and respectful without becoming sentimental.
+
+Compliance preparation:
+
+Include placeholder screens for:
+
+Privacy Policy
+Terms of Use
+Support contact
+About the app
+
+Include an informational disclaimer explaining that evaluation guidance is educational and not medical determination.
+
+Structure the project so a privacy policy URL and support URL can be easily added later for App Store submission.
+
+Branding requirements:
+
+Use the app name Hospice Roadmap consistently.
+
+Use the tagline Guidance before, during, and after hospice where appropriate in onboarding, brand presentation, app metadata placeholders, or key product messaging.
+
+The product should feel trustworthy enough that a user would subscribe to it or rely on it repeatedly for guidance.
+
+Developer output requirements:
+
+Generate the full app architecture.
+
+Create the navigation structure.
+
+Build the initial set of screens and flows that support the product goals.
+
+Create reusable UI components.
+
+Implement mock data and a mock service layer.
+
+Include example content for before hospice, during hospice, and after hospice guidance.
+
+Include a simple README explaining how to run the project in Replit and test the app using Expo Go.
+
+After generating the project, show:
+
+1. The file structure
+2. The key screens and flows that were created
+3. The design decisions made for the mobile experience
+4. The reusable components created
+5. The service layer and mock API structure
+6. What backend endpoints would be required later
+7. What steps remain before TestFlight and App Store submission
+
+Your goal is to produce a clean, scalable, high quality mobile app foundation that could realistically become a production healthcare product and a trusted guidance platform across the full hospice journey.
