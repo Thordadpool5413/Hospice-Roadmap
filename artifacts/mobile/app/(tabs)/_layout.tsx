@@ -21,9 +21,11 @@ function NativeTabLayout() {
         <Icon sf={{ default: "map", selected: "map.fill" }} />
         <Label>Journey</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="resources">
-        <Icon sf={{ default: "book", selected: "book.fill" }} />
-        <Label>Learn</Label>
+      <NativeTabs.Trigger name="help">
+        {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+        {/* @ts-ignore safari is a valid SF Symbol (compass icon) */}
+        <Icon sf={{ default: "safari" as any, selected: "safari.fill" as any }} />
+        <Label>Compass</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="providers">
         <Icon sf={{ default: "mappin.and.ellipse", selected: "mappin.and.ellipse" }} />
@@ -101,14 +103,14 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="resources"
+        name="help"
         options={{
-          title: "Learn",
+          title: "Compass",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="book" tintColor={color} size={24} />
+              <SymbolView name="safari" tintColor={color} size={24} />
             ) : (
-              <Feather name="book" size={22} color={color} />
+              <Feather name="compass" size={22} color={color} />
             ),
         }}
       />
@@ -123,6 +125,10 @@ function ClassicTabLayout() {
               <Feather name="map-pin" size={22} color={color} />
             ),
         }}
+      />
+      <Tabs.Screen
+        name="resources"
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="more"

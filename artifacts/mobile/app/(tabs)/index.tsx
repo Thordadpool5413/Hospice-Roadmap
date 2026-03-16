@@ -24,6 +24,7 @@ const roleLabels: Record<string, string> = {
 };
 
 const quickActions = [
+  { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
   { label: "Evaluate Readiness", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
   { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.journeyDuring, bg: Colors.journeyDuringPale },
   { label: "Get Support", icon: "message-circle", route: "/support", color: Colors.amber, bg: Colors.amberPale },

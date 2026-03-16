@@ -63,6 +63,15 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
   - `GET /api/cms/quality/:ccn` — get quality metrics + CAHPS survey data for a provider
   - Uses in-memory cache (5-min TTL) to reduce CMS API calls
   - Data sources: CMS datasets `yc9t-dgbk` (General Info), `252m-zfp9` (Provider Data), `gxki-hrr8` (CAHPS)
+- **AI (Anthropic) Routes**: `src/routes/anthropic/` — Claude-powered conversation API
+  - `POST /api/anthropic/conversations` — create conversation
+  - `GET /api/anthropic/conversations/:id` — get conversation with messages
+  - `DELETE /api/anthropic/conversations/:id` — delete conversation
+  - `POST /api/anthropic/conversations/:id/messages` — send message, returns SSE stream of `{content}` / `{done}` chunks
+  - System prompt: `src/routes/anthropic/systemPrompt.ts` — expert hospice/palliative care knowledge
+  - Model: `claude-sonnet-4-6`, `max_tokens: 8192`
+  - Patient context injected as final system turn from mobile `patientContext` body field
+  - DB tables: `conversations` (title, userId), `messages` (conversationId, role, content)
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
@@ -77,7 +86,13 @@ Expo React Native app — "Hospice Roadmap" — healthcare navigation platform f
 - Uses NativeTabs with liquid glass + ClassicTabLayout fallback
 - Web top padding offset: `Platform.OS === "web" ? 67 : 0`
 - No UUID package — uses `Date.now() + Math.random()` for IDs
-- Key screens: onboarding, home, journey, resources, providers, more, provider detail, evaluation, referral, support
+- Key screens: onboarding, home, journey, resources, providers, more, provider detail, evaluation, support, patient-profile
+- **Compass AI companion**: Center tab "Compass" (`(tabs)/help.tsx`) — streaming Claude AI chat with urgent situation tiles, markdown rendering, and call-hospice emergency button
+  - AI service: `services/aiService.ts` — `createConversation`, `streamMessage` (SSE streaming), `deleteConversation`
+  - Patient profile: `app/patient-profile.tsx` — form to set patient context used by Compass
+  - Context: `AppContext.updatePatientProfile`, `AppContext.buildPatientContext` — persists patient data and serializes it for AI injection
+  - Tab renamed from "Learn/Resources" to "Compass" with `safari` SF Symbol (compass icon) on iOS, `Feather compass` on Android/web
+  - `resources` tab hidden from tab bar (`href: null`) but still accessible as a route
 - CMS integration:
   - `services/cmsProviderService.ts` — calls API server for provider search + quality data
   - `context/cmsProviderStore.ts` — in-memory store for CMS providers (shared between list/detail)

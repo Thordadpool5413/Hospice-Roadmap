@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 
-import { JourneyStage, User, UserRole } from "@/types";
+import { JourneyStage, PatientProfile, User, UserRole } from "@/types";
 
 interface AppContextValue {
   user: User | null;
@@ -16,10 +16,12 @@ interface AppContextValue {
   updateJourneyStage: (stage: JourneyStage) => void;
   updateRole: (role: UserRole) => void;
   completeOnboarding: (role: UserRole, stage: JourneyStage) => void;
+  updatePatientProfile: (profile: PatientProfile) => void;
   toggleSavedResource: (resourceId: string) => void;
   toggleSavedProvider: (providerId: string) => void;
   isSavedResource: (resourceId: string) => boolean;
   isSavedProvider: (providerId: string) => boolean;
+  buildPatientContext: () => string;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -92,6 +94,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [user]
   );
 
+  const updatePatientProfile = useCallback(
+    (profile: PatientProfile) => {
+      if (!user) return;
+      saveUser({ ...user, patientProfile: profile });
+    },
+    [user]
+  );
+
+  const buildPatientContext = useCallback((): string => {
+    if (!user) return "";
+    const p = user.patientProfile;
+    const lines: string[] = [];
+    lines.push(`Caregiver/user role: ${user.role}`);
+    lines.push(`Journey stage: ${user.journeyStage}`);
+    if (p?.patientName) lines.push(`Patient name: ${p.patientName}`);
+    if (p?.diagnosis) lines.push(`Primary diagnosis: ${p.diagnosis}`);
+    if (p?.comfortKitMedications) lines.push(`Comfort kit medications in home: ${p.comfortKitMedications}`);
+    if (p?.equipmentInHome) lines.push(`Medical equipment in home: ${p.equipmentInHome}`);
+    if (p?.hospicePhone) lines.push(`Hospice main phone: ${p.hospicePhone}`);
+    if (p?.hospiceAfterHoursPhone) lines.push(`Hospice after-hours phone: ${p.hospiceAfterHoursPhone}`);
+    if (p?.equipmentProviderPhone) lines.push(`Equipment provider phone: ${p.equipmentProviderPhone}`);
+    if (p?.pharmacyPhone) lines.push(`Pharmacy phone: ${p.pharmacyPhone}`);
+    if (p?.additionalNotes) lines.push(`Additional notes: ${p.additionalNotes}`);
+    return lines.join("\n");
+  }, [user]);
+
   const toggleSavedResource = useCallback(
     (resourceId: string) => {
       if (!user) return;
@@ -133,10 +161,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateJourneyStage,
         updateRole,
         completeOnboarding,
+        updatePatientProfile,
         toggleSavedResource,
         toggleSavedProvider,
         isSavedResource,
         isSavedProvider,
+        buildPatientContext,
       }}
     >
       {children}

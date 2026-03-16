@@ -1,0 +1,185 @@
+import { Router, type IRouter, type Request, type Response } from "express";
+import { eq } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { conversations, messages } from "@workspace/db/schema";
+import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { HOSPICE_SYSTEM_PROMPT } from "./systemPrompt.js";
+
+const router: IRouter = Router();
+
+router.get("/conversations", async (_req: Request, res: Response) => {
+  try {
+    const all = await db
+      .select()
+      .from(conversations)
+      .orderBy(conversations.createdAt);
+    res.json(all);
+  } catch (err: unknown) {
+    console.error("Error listing conversations:", err);
+    res.status(500).json({ error: "Failed to list conversations" });
+  }
+});
+
+router.post("/conversations", async (req: Request, res: Response) => {
+  try {
+    const { title } = req.body as { title: string };
+    if (!title || typeof title !== "string") {
+      res.status(400).json({ error: "title is required" });
+      return;
+    }
+    const [conv] = await db
+      .insert(conversations)
+      .values({ title: title.trim() })
+      .returning();
+    res.status(201).json(conv);
+  } catch (err: unknown) {
+    console.error("Error creating conversation:", err);
+    res.status(500).json({ error: "Failed to create conversation" });
+  }
+});
+
+router.get("/conversations/:id", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params["id"]);
+    const [conv] = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, id));
+    if (!conv) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+    const msgs = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(messages.createdAt);
+    res.json({ ...conv, messages: msgs });
+  } catch (err: unknown) {
+    console.error("Error getting conversation:", err);
+    res.status(500).json({ error: "Failed to get conversation" });
+  }
+});
+
+router.delete("/conversations/:id", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params["id"]);
+    const [conv] = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, id));
+    if (!conv) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+    await db.delete(conversations).where(eq(conversations.id, id));
+    res.status(204).send();
+  } catch (err: unknown) {
+    console.error("Error deleting conversation:", err);
+    res.status(500).json({ error: "Failed to delete conversation" });
+  }
+});
+
+router.get("/conversations/:id/messages", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params["id"]);
+    const msgs = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(messages.createdAt);
+    res.json(msgs);
+  } catch (err: unknown) {
+    console.error("Error listing messages:", err);
+    res.status(500).json({ error: "Failed to list messages" });
+  }
+});
+
+router.post("/conversations/:id/messages", async (req: Request, res: Response) => {
+  const id = Number(req.params["id"]);
+  const { content, patientContext } = req.body as {
+    content: string;
+    patientContext?: string;
+  };
+
+  if (!content || typeof content !== "string") {
+    res.status(400).json({ error: "content is required" });
+    return;
+  }
+
+  try {
+    const [conv] = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, id));
+    if (!conv) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+
+    await db.insert(messages).values({
+      conversationId: id,
+      role: "user",
+      content: content.trim(),
+    });
+
+    const history = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(messages.createdAt);
+
+    const chatMessages: { role: "user" | "assistant"; content: string }[] =
+      history.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    const systemPrompt = patientContext
+      ? `${HOSPICE_SYSTEM_PROMPT}\n\n═══════════════════════════════════════\nPATIENT CONTEXT FOR THIS SESSION\n═══════════════════════════════════════\n${patientContext}`
+      : HOSPICE_SYSTEM_PROMPT;
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+
+    let fullResponse = "";
+
+    const stream = anthropic.messages.stream({
+      model: "claude-sonnet-4-6",
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: chatMessages,
+    });
+
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        fullResponse += event.delta.text;
+        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+      }
+    }
+
+    await db.insert(messages).values({
+      conversationId: id,
+      role: "assistant",
+      content: fullResponse,
+    });
+
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+  } catch (err: unknown) {
+    console.error("Error sending message:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to send message" });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: "Stream interrupted" })}\n\n`);
+      res.end();
+    }
+  }
+});
+
+export default router;
