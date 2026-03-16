@@ -100,6 +100,10 @@ function RootLayoutNav() {
         name="guidance/[id]"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="emergency-card"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

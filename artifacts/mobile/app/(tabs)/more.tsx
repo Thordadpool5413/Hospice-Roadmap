@@ -51,6 +51,7 @@ export default function MoreScreen() {
     {
       title: "Tools",
       items: [
+        { label: "Get Help Now — Situation Finder", icon: "alert-circle", route: "/situation-finder" },
         { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation" },
         { label: "Contact Support", icon: "message-circle", route: "/support" },
       ],
@@ -109,6 +110,26 @@ export default function MoreScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.title}>More</Text>
+
+      {/* Emergency Card Banner */}
+      <Pressable
+        onPress={() => router.push("/emergency-card" as any)}
+        style={({ pressed }) => [
+          styles.emergencyCard,
+          pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+        ]}
+      >
+        <View style={styles.emergencyCardIcon}>
+          <Feather name="credit-card" size={22} color="#fff" />
+        </View>
+        <View style={styles.emergencyCardText}>
+          <Text style={styles.emergencyCardTitle}>Emergency Information Card</Text>
+          <Text style={styles.emergencyCardSubtitle}>
+            Hospice contacts, medications & equipment — tap to call
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.8)" />
+      </Pressable>
 
       {/* Profile Card */}
       {user && (
@@ -407,5 +428,42 @@ const styles = StyleSheet.create({
     color: Colors.textSubtle,
     textAlign: "center",
     paddingBottom: 8,
+  },
+  emergencyCard: {
+    backgroundColor: Colors.error,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    shadowColor: Colors.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  emergencyCardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emergencyCardText: {
+    flex: 1,
+  },
+  emergencyCardTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: -0.2,
+  },
+  emergencyCardSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 2,
+    lineHeight: 17,
   },
 });

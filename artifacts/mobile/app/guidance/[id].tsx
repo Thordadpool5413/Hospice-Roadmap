@@ -18,6 +18,8 @@ import {
   findScenarioById,
 } from "@/data/guidanceContent";
 
+const EMERGENCY_CARD_ROUTE = "/emergency-card";
+
 const urgencyColors: Record<string, string> = {
   immediate: Colors.error,
   soon: Colors.amber,
@@ -81,7 +83,12 @@ export default function GuidanceDetailScreen() {
             </Text>
           )}
         </View>
-        <View style={{ width: 40 }} />
+        <Pressable
+          onPress={() => router.push(EMERGENCY_CARD_ROUTE as any)}
+          style={({ pressed }) => [styles.emergencyBtn, pressed && { opacity: 0.6 }]}
+        >
+          <Feather name="phone-call" size={16} color={Colors.error} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -161,7 +168,7 @@ export default function GuidanceDetailScreen() {
           accent
         >
           {scenario.whatToDoNow.map((step, i) => (
-            <NumberedItem key={i} number={i + 1} text={step.text} color={Colors.success} />
+            <NumberedItem key={i} number={i + 1} text={step.text} color={Colors.success} tip={step.tip} caution={step.caution} />
           ))}
         </GuidanceSection>
 
@@ -269,17 +276,35 @@ function NumberedItem({
   number,
   text,
   color,
+  tip,
+  caution,
 }: {
   number: number;
   text: string;
   color: string;
+  tip?: string;
+  caution?: string;
 }) {
   return (
-    <View style={styles.numberedRow}>
-      <View style={[styles.numberCircle, { backgroundColor: color }]}>
-        <Text style={styles.numberText}>{number}</Text>
+    <View style={styles.numberedBlock}>
+      <View style={styles.numberedRow}>
+        <View style={[styles.numberCircle, { backgroundColor: color }]}>
+          <Text style={styles.numberText}>{number}</Text>
+        </View>
+        <Text style={styles.bulletText}>{text}</Text>
       </View>
-      <Text style={styles.bulletText}>{text}</Text>
+      {tip && (
+        <View style={styles.inlineTip}>
+          <Feather name="info" size={12} color={Colors.info} />
+          <Text style={styles.inlineTipText}>{tip}</Text>
+        </View>
+      )}
+      {caution && (
+        <View style={styles.inlineCaution}>
+          <Feather name="alert-triangle" size={12} color={Colors.amber} />
+          <Text style={styles.inlineCautionText}>{caution}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -345,6 +370,14 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.2,
     textTransform: "uppercase",
+  },
+  emergencyBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.errorPale,
+    alignItems: "center",
+    justifyContent: "center",
   },
   centerEmpty: {
     flex: 1,
@@ -485,10 +518,47 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 21,
   },
+  numberedBlock: {
+    gap: 6,
+  },
   numberedRow: {
     flexDirection: "row",
     gap: 12,
     alignItems: "flex-start",
+  },
+  inlineTip: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: Colors.infoPale,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginLeft: 34,
+  },
+  inlineTipText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.info,
+    lineHeight: 17,
+  },
+  inlineCaution: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: Colors.amberPale,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginLeft: 34,
+  },
+  inlineCautionText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.amber,
+    lineHeight: 17,
   },
   numberCircle: {
     width: 22,
