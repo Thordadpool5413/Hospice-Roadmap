@@ -38,6 +38,39 @@ export interface Provider {
   acceptsMedicare: boolean;
   acceptsMedicaid: boolean;
   specialties: string[];
+  ccn?: string;
+  county?: string;
+  ownershipType?: string;
+  certificationDate?: string;
+  cmsRegion?: string;
+  medicareGovUrl?: string;
+}
+
+export interface CmsQualityData {
+  ccn: string;
+  hciScore: string | null;
+  summaryStarRating: string | null;
+  compositeProcessMeasure: string | null;
+  perBeneficiarySpending: string | null;
+  avgDailyCensus: string | null;
+  visitsNearDeath: string | null;
+  cahps: {
+    overallRating9or10: string | null;
+    wouldDefinitelyRecommend: string | null;
+    alwaysTreatedWithRespect: string | null;
+    alwaysGotPainHelp: string | null;
+    alwaysCommunicatedWell: string | null;
+    alwaysTimelyHelp: string | null;
+    alwaysRightEmotionalSupport: string | null;
+    definitelyReceivedTraining: string | null;
+  };
+  qualityMeasures: Array<{
+    code: string;
+    name: string;
+    score: string;
+    percentile?: string;
+  }>;
+  medicareGovUrl: string;
 }
 
 export interface Resource {

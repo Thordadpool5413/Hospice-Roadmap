@@ -21,7 +21,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ```text
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
+│   ├── api-server/         # Express API server (CMS proxy + health)
+│   └── mobile/             # Expo React Native mobile app (Hospice Roadmap)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -57,10 +58,33 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
 - Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
+- CMS Routes: `src/routes/cms.ts` — proxies CMS Provider Data API
+  - `GET /api/cms/providers?state=XX&zip=XXXXX` — search CMS-certified hospice providers
+  - `GET /api/cms/quality/:ccn` — get quality metrics + CAHPS survey data for a provider
+  - Uses in-memory cache (5-min TTL) to reduce CMS API calls
+  - Data sources: CMS datasets `yc9t-dgbk` (General Info), `252m-zfp9` (Provider Data), `gxki-hrr8` (CAHPS)
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
 - Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+
+### `artifacts/mobile` (`@workspace/mobile`)
+
+Expo React Native app — "Hospice Roadmap" — healthcare navigation platform for the hospice journey.
+
+- Color palette: sage green (#5A8A7A) primary, teal (#2C6E6A) accent, cream (#FAF8F5) background
+- Journey stages: before (blue #5A7FA8), during (sage), after (purple #8A6A9A)
+- Uses NativeTabs with liquid glass + ClassicTabLayout fallback
+- Web top padding offset: `Platform.OS === "web" ? 67 : 0`
+- No UUID package — uses `Date.now() + Math.random()` for IDs
+- Key screens: onboarding, home, journey, resources, providers, more, provider detail, evaluation, referral, support
+- CMS integration:
+  - `services/cmsProviderService.ts` — calls API server for provider search + quality data
+  - `context/cmsProviderStore.ts` — in-memory store for CMS providers (shared between list/detail)
+  - Provider type extended with: `ccn`, `county`, `ownershipType`, `certificationDate`, `cmsRegion`, `medicareGovUrl`
+  - `CmsQualityData` type for HCI score, star rating, CAHPS scores, quality measures
+  - Providers screen has CMS/Sample toggle with state picker + ZIP search
+  - Provider detail loads quality metrics when viewing CMS providers
 
 ### `lib/db` (`@workspace/db`)
 

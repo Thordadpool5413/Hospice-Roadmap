@@ -220,9 +220,43 @@ export default function EvaluationScreen() {
           <Text style={styles.disclaimerBoxText}>{result.disclaimer}</Text>
         </View>
 
+        <View style={styles.cmsBenefitCard}>
+          <View style={styles.cmsBenefitHeader}>
+            <Feather name="shield" size={16} color="#1A6DAA" />
+            <Text style={styles.cmsBenefitTitle}>Medicare Hospice Benefit</Text>
+          </View>
+          <Text style={styles.cmsBenefitText}>
+            Medicare Part A covers hospice care for patients certified with a
+            terminal illness and a life expectancy of 6 months or less. The
+            benefit includes:
+          </Text>
+          <View style={styles.cmsBenefitList}>
+            {[
+              "Nursing care and physician services",
+              "Medical equipment and supplies",
+              "Prescription drugs for symptom control",
+              "Short-term inpatient and respite care",
+              "Counseling and social work services",
+              "Aide and homemaker services",
+            ].map((item) => (
+              <View key={item} style={styles.cmsBenefitRow}>
+                <Feather name="check" size={12} color={Colors.success} />
+                <Text style={styles.cmsBenefitItemText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.cmsBenefitNote}>
+            <Feather name="info" size={12} color={Colors.textMuted} />
+            <Text style={styles.cmsBenefitNoteText}>
+              Two physicians must certify the patient's eligibility. Use our
+              provider search to find CMS-certified hospice programs near you.
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.resultActions}>
           <Button
-            title="Find Providers"
+            title="Find CMS-Certified Providers"
             onPress={() => router.push("/(tabs)/providers")}
             fullWidth
             size="lg"
@@ -702,5 +736,58 @@ const styles = StyleSheet.create({
   resultActions: {
     gap: 10,
     paddingBottom: 8,
+  },
+  cmsBenefitCard: {
+    backgroundColor: "#E8F4FD",
+    borderRadius: 14,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#B8DAEF",
+  },
+  cmsBenefitHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cmsBenefitTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#1A6DAA",
+    letterSpacing: -0.2,
+  },
+  cmsBenefitText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 19,
+  },
+  cmsBenefitList: {
+    gap: 6,
+  },
+  cmsBenefitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cmsBenefitItemText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  cmsBenefitNote: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.5)",
+    borderRadius: 8,
+    padding: 10,
+  },
+  cmsBenefitNoteText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 16,
   },
 });
