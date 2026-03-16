@@ -21,6 +21,23 @@ import { mockProviders } from "@/data/mockProviders";
 import { fetchQualityData, fetchSpendingData } from "@/services/cmsProviderService";
 import type { CmsQualityData, CmsSpendingData, Provider } from "@/types";
 
+function parseCmsNum(val: string | null | undefined): number {
+  if (!val) return NaN;
+  return parseFloat(val.replace(/,/g, ""));
+}
+
+function fmtAmount(val: string | null | undefined): string {
+  if (!val) return "N/A";
+  const n = parseCmsNum(val);
+  return isNaN(n) ? val : `$${n.toLocaleString()}`;
+}
+
+function fmtCopay(val: string | null | undefined): string {
+  if (!val) return "N/A";
+  const n = parseFloat(val);
+  return isNaN(n) ? val : `$${n.toFixed(2)}`;
+}
+
 function QualityScoreBar({
   label,
   value,
@@ -300,7 +317,7 @@ export default function ProviderDetailScreen() {
                     Per-Beneficiary Spending
                   </Text>
                   <Text style={qStyles.spendingValue}>
-                    ${Number(qualityData.perBeneficiarySpending).toLocaleString()}
+                    {fmtAmount(qualityData.perBeneficiarySpending)}
                   </Text>
                 </View>
                 <Feather name="dollar-sign" size={20} color={Colors.textMuted} />
@@ -375,7 +392,7 @@ export default function ProviderDetailScreen() {
               <View style={qStyles.spendingCard}>
                 <Text style={qStyles.spendingCardLabel}>Per-Beneficiary Spending</Text>
                 <Text style={qStyles.spendingCardValue}>
-                  ${Number(spendingData.perBeneficiarySpending).toLocaleString()}
+                  {fmtAmount(spendingData.perBeneficiarySpending)}
                 </Text>
               </View>
             )}
@@ -383,7 +400,7 @@ export default function ProviderDetailScreen() {
               <View style={qStyles.spendingCard}>
                 <Text style={qStyles.spendingCardLabel}>Avg Daily Census</Text>
                 <Text style={qStyles.spendingCardValue}>
-                  {Number(spendingData.avgDailyCensus).toLocaleString()}
+                  {parseCmsNum(spendingData.avgDailyCensus).toLocaleString()}
                 </Text>
               </View>
             )}
@@ -391,12 +408,13 @@ export default function ProviderDetailScreen() {
           {spendingData.utilizationMeasures.length > 0 && (
             <View style={qStyles.utilizationList}>
               {spendingData.utilizationMeasures
-                .filter((m) => m.score && m.name)
-                .slice(0, 6)
+                .filter((m) => m.score && m.name && m.code.endsWith("_OBSERVED"))
                 .map((m) => (
                   <View key={m.code} style={qStyles.utilizationRow}>
                     <Text style={qStyles.utilizationName} numberOfLines={2}>{m.name}</Text>
-                    <Text style={qStyles.utilizationScore}>{m.score}</Text>
+                    <Text style={qStyles.utilizationScore}>
+                      {m.code.includes("_07_") ? fmtAmount(m.score) : m.score}
+                    </Text>
                   </View>
                 ))}
             </View>
@@ -409,13 +427,13 @@ export default function ProviderDetailScreen() {
               <View style={qStyles.officeVisitRow}>
                 <Text style={qStyles.officeVisitLabel}>New Patient Copay</Text>
                 <Text style={qStyles.officeVisitValue}>
-                  ${spendingData.officeVisitCosts.newPatientCopay ?? "N/A"}
+                  {fmtCopay(spendingData.officeVisitCosts.newPatientCopay)}
                 </Text>
               </View>
               <View style={qStyles.officeVisitRow}>
                 <Text style={qStyles.officeVisitLabel}>Established Patient Copay</Text>
                 <Text style={qStyles.officeVisitValue}>
-                  ${spendingData.officeVisitCosts.establishedPatientCopay ?? "N/A"}
+                  {fmtCopay(spendingData.officeVisitCosts.establishedPatientCopay)}
                 </Text>
               </View>
             </View>
@@ -465,6 +483,11 @@ export default function ProviderDetailScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Services Provided</Text>
+        {isCms && (
+          <Text style={styles.servicesNote}>
+            Standard Medicare-required hospice services. Contact provider directly for specialty or additional services.
+          </Text>
+        )}
         <View style={styles.serviceList}>
           {provider.services.map((service) => (
             <View key={service} style={styles.serviceRow}>
@@ -1021,6 +1044,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
+  },
+  servicesNote: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    fontStyle: "italic",
   },
   referralBanner: {
     flexDirection: "row",
