@@ -1909,6 +1909,98 @@ const emotional: GuidanceScenario[] = [
     whatHappensNext:
       "Hospice social workers and bereavement counselors can meet with children and teens, and often have age-appropriate resources and activities. Many hospices also offer children's grief groups. Bereavement support for children continues after the death.",
   },
+  {
+    id: "anticipatory-grief",
+    categoryId: "emotional",
+    title: "Grieving Before the Death",
+    subtitle: "Understanding anticipatory grief — the mourning that happens while your loved one is still alive",
+    urgencyLevel: "routine",
+    icon: "cloud",
+    tags: ["anticipatory grief", "grieving before death", "grief", "mourning", "loss", "sadness", "pre-death grief", "already grieving"],
+    whatYouMayNotice: [
+      "Feeling profound sadness even while your loved one is still alive",
+      "Crying or feeling grief as if the person is already gone",
+      "Feeling guilty for grieving 'too soon'",
+      "Going through waves of sadness, numbness, anger, and unexpected moments of peace",
+      "Finding it hard to be present because of the anticipation of loss",
+    ],
+    whatItMeans:
+      "Anticipatory grief is the grief that begins before a death and is entirely normal. You are mourning not just the future loss, but many losses already happening — the person's health, your old life, shared future plans, and the relationship as it was. This grief does not mean you have given up hope or that you love them any less. Research shows that anticipatory grief can actually help with adjustment after the death — it is not something to fight.",
+    whatToDoNow: [
+      {
+        text: "Allow yourself to feel what you feel without judgment. Grief before death is real grief — it deserves the same compassion you would give anyone who is grieving.",
+        tip: "You do not have to choose between grieving and cherishing the time that remains. Both can happen at once.",
+      },
+      { text: "Talk about it — to a friend, a family member, or the hospice social worker. Naming the feeling reduces its power to isolate you." },
+      {
+        text: "Find ways to be present with your loved one right now. Grief about the future can be anchored by the reality of today — they are still here.",
+      },
+      { text: "Journal, pray, walk, make art, or do whatever helps you process emotion — there is no wrong way to grieve." },
+      {
+        text: "If grief is making it hard to function or care safely, call hospice. The social worker and chaplain can provide regular support.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not feel guilty for grieving before the death — it is healthy and human",
+      "Do not suppress your grief entirely — it will find its way out",
+      "Do not feel that your grief means you want the person to die",
+      "Do not compare your grief to others' — there is no correct way to grieve",
+    ],
+    whenToCallHospice: [
+      "Grief is interfering with your ability to care or function",
+      "You want to talk with the social worker or chaplain",
+      "You are feeling isolated, hopeless, or having thoughts of harming yourself",
+    ],
+    whatHappensNext:
+      "The hospice team — social worker, chaplain, and bereavement counselor — are available to support you both before and after the death. You do not have to navigate this alone. The 988 Suicide and Crisis Lifeline (call or text 988) is available 24 hours if you are in emotional crisis.",
+  },
+  {
+    id: "family-disagreements",
+    categoryId: "emotional",
+    title: "Family Disagreements About Care",
+    subtitle: "When family members cannot agree on decisions or approach",
+    urgencyLevel: "soon",
+    icon: "alert-circle",
+    tags: ["family disagreement", "family conflict", "arguing about care", "disagreement hospice", "family meeting", "care decisions conflict"],
+    whatYouMayNotice: [
+      "Family members disagree on whether hospice was the right choice",
+      "Conflict over how much pain medication to give",
+      "Some family members want aggressive treatment and others do not",
+      "One family member is undermining the care plan",
+      "Tension or arguments during an already stressful time",
+    ],
+    whatItMeans:
+      "Family conflict during hospice is very common. People who love the same person often have different beliefs, different relationships with the patient, different levels of information, and different ways of coping with loss. Conflict usually comes from love — and from fear. The hospice team is experienced in navigating family conflict and can be a neutral, supportive resource.",
+    whatToDoNow: [
+      {
+        text: "Request a family meeting facilitated by the hospice social worker. This is one of the most valuable things hospice offers — a neutral space where everyone can be heard.",
+        tip: "Family meetings can happen in person, by phone, or by video for members who are distant.",
+      },
+      {
+        text: "Keep the focus on the patient's wishes and comfort. When conversation gets heated, return to the question: 'What would [name] want right now?'",
+      },
+      {
+        text: "Share information equally — sometimes conflict comes from family members not having the same clinical picture. Ask hospice to speak directly with the family member who is struggling.",
+        caution: "HIPAA applies — the patient or their health care proxy needs to authorize sharing of medical information with other family members.",
+      },
+      { text: "Be patient with family members who are in denial or shock — they may be in an earlier stage of grief than you. Confrontation often increases resistance." },
+      { text: "Protect the patient from hearing conflicts — stress and tension can affect their comfort even when they seem unresponsive." },
+    ],
+    whatToAvoid: [
+      "Do not argue at the bedside",
+      "Do not make unilateral care decisions without the health care proxy's involvement",
+      "Do not exclude the patient from their own care decisions if they are still able to participate",
+      "Do not let conflict delay comfort care — if there is an acute need, call hospice and address the care need first",
+    ],
+    whenToCallHospice: [
+      "You need a family meeting facilitated by the social worker",
+      "A family member is interfering with the care plan",
+      "You are not sure who has the legal authority to make decisions",
+      "The conflict is affecting the patient's comfort or care",
+    ],
+    whatHappensNext:
+      "The hospice social worker and sometimes the medical director can help mediate. They can clarify the legal authority of the health care proxy, explain the care plan in terms family members can understand, and create space for everyone's concerns to be heard. Family meetings often de-escalate conflict significantly.",
+  },
 ];
 
 const hospiceServices: GuidanceScenario[] = [
@@ -1979,9 +2071,397 @@ const hospiceServices: GuidanceScenario[] = [
     whatHappensNext:
       "Hospice will arrange a facility stay, handle the paperwork, and coordinate the transfer. When you are ready, your loved one returns home. Respite care is fully covered under the Medicare hospice benefit.",
   },
+  {
+    id: "continuous-home-care",
+    categoryId: "hospice-services",
+    title: "Crisis Care at Home",
+    subtitle: "When hospice can send continuous nursing support during a medical crisis",
+    urgencyLevel: "soon",
+    icon: "activity",
+    tags: ["crisis care", "continuous home care", "hospice nurse staying", "overnight nurse", "24 hour care", "nurse stays home", "crisis at home"],
+    whatYouMayNotice: [
+      "Symptoms are very difficult to control and you feel overwhelmed",
+      "You need someone present overnight because you cannot manage alone",
+      "Your loved one is in acute distress and you need consistent nursing support",
+    ],
+    whatItMeans:
+      "Continuous Home Care (also called Crisis Care) is a Medicare hospice benefit that provides nursing or hospice aide support for most of a 24-hour period when symptoms cannot be managed with the regular care plan. A nurse can be in your home for extended hours during an acute crisis. This is one of the most underused hospice benefits — many families do not know it exists.",
+    whatToDoNow: [
+      {
+        text: "Call hospice and clearly describe what is happening: what symptoms are uncontrolled, how long it has been, and why you feel you need consistent support.",
+        tip: "Be direct: 'I cannot manage this on my own right now. I need more support in the home.'",
+      },
+      { text: "Ask specifically: 'Is my loved one eligible for crisis-level care or continuous home care right now?'" },
+      { text: "While waiting for the response or for a nurse to arrive: use the comfort kit for symptom management as directed, keep the environment calm, and stay close." },
+    ],
+    whatToAvoid: [
+      "Do not assume that having a nurse available by phone is all hospice can offer — continuous home care is a real option",
+      "Do not wait until you are in complete crisis to ask — the earlier you call, the sooner support can be arranged",
+    ],
+    whenToCallHospice: [
+      "Symptoms are not manageable and you need hands-on support",
+      "You are unsafe to be alone with the patient in their current condition",
+      "You want to ask whether crisis-level care is appropriate",
+    ],
+    whatHappensNext:
+      "If criteria are met, hospice will arrange for a nurse to be present in your home for an extended period. Once the crisis is stabilized, care transitions back to the regular level. This benefit is specifically designed to keep people at home and out of the emergency room during difficult moments.",
+  },
+  {
+    id: "advance-directives",
+    categoryId: "hospice-services",
+    title: "DNR, POLST & Advance Directives",
+    subtitle: "Understanding legal documents that guide care decisions",
+    urgencyLevel: "routine",
+    icon: "file-text",
+    tags: ["DNR", "do not resuscitate", "POLST", "MOLST", "advance directive", "living will", "healthcare proxy", "power of attorney", "code status"],
+    whatYouMayNotice: [
+      "You are not sure what documents your loved one has or needs",
+      "A hospital or care facility is asking about code status",
+      "You want to make sure your loved one's wishes are documented",
+      "You are unsure about the difference between a DNR and a living will",
+    ],
+    whatItMeans:
+      "Several different legal documents guide medical decisions at end of life. They serve different purposes and are used in different situations. Understanding what each one does — and making sure the right ones are in place — helps ensure your loved one's wishes are honored, especially if you need to call 911 or go to a hospital.",
+    whatToDoNow: [
+      {
+        text: "DNR (Do Not Resuscitate): An order that tells emergency responders and medical staff not to attempt CPR if the heart stops. In hospice, most patients have a DNR. Without one, emergency responders are legally required to attempt resuscitation.",
+        tip: "Keep a copy of the DNR visibly accessible in the home — on the refrigerator or near the front door — so it can be found immediately in an emergency.",
+      },
+      {
+        text: "POLST / MOLST (Physician Orders for Life-Sustaining Treatment / Medical Orders for Life-Sustaining Treatment): A medical order signed by a physician that travels with the patient and guides emergency responders about resuscitation, hospitalization, and other interventions. More powerful than an advance directive in an emergency.",
+      },
+      {
+        text: "Living Will / Advance Directive: A document written by the patient (while still able) expressing their wishes about specific medical interventions. Guides decision-makers but is not itself a medical order.",
+      },
+      {
+        text: "Healthcare Proxy / Durable Power of Attorney for Healthcare: A document naming who has the legal authority to make medical decisions if the patient cannot. If you are not formally named as proxy, your authority to make decisions may be limited.",
+        caution: "If there is no healthcare proxy document and the patient cannot speak for themselves, medical decisions may default to next-of-kin in a legally defined order — which may not match the patient's wishes.",
+      },
+      { text: "Ask your hospice nurse or social worker which documents are in place and whether any are missing. They can help facilitate getting documents signed." },
+    ],
+    whatToAvoid: [
+      "Do not assume these documents are all the same thing — each has a different legal purpose",
+      "Do not wait until a crisis to find out whether documents exist",
+      "Do not call 911 without knowing the code status — if a DNR is in place, calling 911 can override it unless first responders can see it",
+    ],
+    whenToCallHospice: [
+      "You want to confirm which documents are in place",
+      "You are unsure about code status",
+      "You need help getting a POLST signed or updated",
+      "A family conflict has arisen about who has legal decision-making authority",
+    ],
+    whatHappensNext:
+      "The hospice social worker can review which documents are in place, explain what each means, and help arrange for any missing documents to be completed. The hospice physician can sign a POLST. These conversations are best done early and calmly, before a crisis.",
+  },
+  {
+    id: "volunteer-services",
+    categoryId: "hospice-services",
+    title: "Hospice Volunteer Support",
+    subtitle: "What hospice volunteers can do for you — and how to ask",
+    urgencyLevel: "routine",
+    icon: "gift",
+    tags: ["volunteer", "hospice volunteer", "companionship", "errands", "caregiver break", "sitting with patient", "volunteer visit"],
+    whatYouMayNotice: [
+      "You are overwhelmed and could use another set of hands",
+      "Your loved one would benefit from companionship when you cannot be there",
+      "You need help with errands or practical tasks",
+      "You did not know volunteers were available",
+    ],
+    whatItMeans:
+      "Hospice volunteers are a federally required part of the hospice program. They are trained, background-checked, and supervised by hospice. They are available at no additional cost. Most caregivers do not use this service simply because they do not know it exists or do not ask. Volunteers can provide meaningful practical relief.",
+    whatToDoNow: [
+      { text: "Call your hospice team and say: 'I would like to be connected with a hospice volunteer.'" },
+      {
+        text: "Common things volunteers can help with include: sitting with your loved one so you can sleep or leave the house; reading aloud, playing music, or simply providing companionship; running errands, picking up medications, or grocery shopping; light yard work or household tasks; writing letters or cards on behalf of the patient.",
+        tip: "Volunteers are not medical caregivers — they do not give medications or perform medical tasks. But the practical and companionship support they provide can be enormous.",
+      },
+      { text: "Tell hospice what would be most helpful — they will try to match a volunteer whose skills and personality fit your situation." },
+    ],
+    whatToAvoid: [
+      "Do not assume volunteers are only for companionship — ask what your specific hospice offers",
+      "Do not hesitate to ask — volunteers signed up specifically to help in this way",
+    ],
+    whenToCallHospice: [
+      "Anytime you want to request a volunteer",
+      "When you want companionship support for your loved one",
+      "When you need practical help with errands or tasks",
+    ],
+    whatHappensNext:
+      "Hospice will coordinate a volunteer and match you based on availability and need. Volunteer visits can be scheduled regularly or on an as-needed basis. Many families form meaningful connections with hospice volunteers.",
+  },
 ];
 
 const endOfLife: GuidanceScenario[] = [
+  {
+    id: "final-days-what-to-expect",
+    categoryId: "end-of-life",
+    title: "The Final Days — What to Expect",
+    subtitle: "Signs that death may be 1–3 days away and what is normal",
+    urgencyLevel: "soon",
+    icon: "sunset",
+    tags: ["final days", "dying signs", "close to death", "last few days", "actively dying", "signs death is near", "what to expect"],
+    whatYouMayNotice: [
+      "Sleeping much more — sometimes almost all the time",
+      "Not wanting food or water, even small amounts",
+      "Skin on hands, feet, knees, or nose appears mottled (blotchy purple-blue patterns)",
+      "Hands and feet feel cool even when the rest of the body is warm",
+      "Breathing becomes irregular — faster, then slower, with pauses",
+      "Jaw may relax, mouth may hang open",
+      "Eyes may be partially open but unfocused",
+      "They may become unresponsive to your voice or touch",
+      "Urine output decreases significantly or stops",
+    ],
+    whatItMeans:
+      "These signs tell you that the body is slowing down and turning its energy inward. They are a natural part of the dying process — not a medical emergency, not a sign of pain or suffering, and not something to reverse. Mottling (the blotchy coloring) is one of the most reliable signs that death is within hours to a few days. The decreased need for food and water is the body's way of easing the transition — the person is not starving. These are signs to be with, not to fight.",
+    whatToDoNow: [
+      {
+        text: "Call hospice and let them know what you are seeing. They will come to assess, guide you, and help you know what stage you are in.",
+        tip: "You do not need to have the 'right' words. Just describe what you see: 'Their breathing has changed. Their hands are cold. I think we might be close.'",
+      },
+      {
+        text: "Gather those who need to be present. If family members need to travel, now is the time to make those calls.",
+      },
+      {
+        text: "Continue mouth care with a damp swab — even if they are not drinking, keeping the mouth moist is comforting.",
+      },
+      {
+        text: "Keep medications available and use as directed for any signs of pain, restlessness, or difficult breathing — do not wait to see if it passes.",
+      },
+      {
+        text: "Speak to them softly. Hearing is believed to remain until the very end. Tell them who is in the room. Tell them what you need to tell them. Give them permission to go.",
+        tip: "Many people seem to wait for permission — for everyone to arrive, or for someone they love to say 'It's okay. We'll be okay. You can go.'",
+      },
+      {
+        text: "Take care of yourself too — eat something, step outside for a few minutes, let others take a turn at the bedside.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not call 911 for these changes — they are expected and normal in hospice",
+      "Do not try to rouse them with loud voices or strong stimulation",
+      "Do not force food or water — the body no longer needs it and it can cause discomfort",
+      "Do not leave them alone if you can avoid it — most people do not want to die alone",
+    ],
+    whenToCallHospice: [
+      "When you first notice these signs — hospice should be updated",
+      "When you are unsure whether something is comfort-related",
+      "When you need medication guidance or replenishment",
+      "When you need emotional support or just to talk to someone",
+    ],
+    whatHappensNext:
+      "Hospice will visit to assess and can give you a clearer sense of timing, though no one can predict the exact moment. They will ensure medications are stocked, walk you through what to expect in the hours ahead, and be available by phone around the clock. You are not alone in this.",
+  },
+  {
+    id: "last-hours",
+    categoryId: "end-of-life",
+    title: "The Final Hours",
+    subtitle: "What the last hours of life look like and how to be present",
+    urgencyLevel: "immediate",
+    icon: "moon",
+    tags: ["final hours", "last hours", "actively dying", "imminent death", "very close to death", "hours away"],
+    callHospiceNow: true,
+    whatYouMayNotice: [
+      "Breathing has changed to Cheyne-Stokes pattern — clusters of breaths followed by long pauses (10–60 seconds)",
+      "Breathing sounds wet or rattling",
+      "The jaw is relaxed and the mouth is open",
+      "Eyes are partially open but unseeing",
+      "No response to voice or touch",
+      "Mottling (purple-blue blotching) has spread from extremities toward the trunk",
+      "Skin feels cool and may look very pale, gray, or slightly yellow",
+      "Complete stillness",
+    ],
+    whatItMeans:
+      "These are signs that death is likely within hours, sometimes minutes. The body is completing a natural process. The person is not in pain — in fact, at this stage they are typically deeply unconscious. The sounds of breathing can be alarming to witness but are not a sign of distress. This is one of the most sacred moments a family can share.",
+    whatToDoNow: [
+      {
+        text: "Call hospice now. Tell them what you are observing. A nurse may come or guide you by phone. Either way, you will not be alone.",
+      },
+      {
+        text: "Gather the people who need to be there. Make those calls now.",
+        caution: "If someone is traveling to be present, let them know the timeline honestly so they can make decisions about how quickly to come.",
+      },
+      {
+        text: "Be present in whatever way feels right to you — hold their hand, sit beside them, play soft music, pray, or simply breathe.",
+      },
+      {
+        text: "Speak to them. Even if they cannot respond, hearing remains. Say what you need to say. 'I love you. Thank you. We will be okay. You can rest now.'",
+        tip: "There is no wrong thing to say. Your presence and your voice are the gift.",
+      },
+      {
+        text: "Continue giving medications for any visible signs of discomfort — labored breathing, visible agitation, or facial tension. Call hospice if you are unsure.",
+      },
+      {
+        text: "When death occurs: take a moment. You do not need to do anything immediately. Call hospice — not 911 — when you are ready.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not call 911 — call hospice",
+      "Do not attempt resuscitation if there is a DNR in place",
+      "Do not feel you must fill the silence — silence is okay",
+      "Do not feel you failed if you were not in the room when death occurred — many people seem to choose to go when loved ones step away briefly",
+    ],
+    whenToCallHospice: [
+      "Now — call hospice when you observe these signs",
+      "When death occurs — hospice is your first call",
+    ],
+    whatHappensNext:
+      "After death, hospice will guide every next step. A nurse will come to confirm the death and complete the necessary documentation. There is no rush. You have time to be with your loved one, to gather family, and to say goodbye before the funeral home is called.",
+  },
+  {
+    id: "meaningful-goodbye",
+    categoryId: "end-of-life",
+    title: "Saying a Meaningful Goodbye",
+    subtitle: "How to be present, what to say, and how to complete your relationship",
+    urgencyLevel: "routine",
+    icon: "heart",
+    tags: ["goodbye", "saying goodbye", "what to say", "final words", "meaningful time", "completing relationship", "last conversation", "end of life conversation"],
+    whatYouMayNotice: [
+      "You want to say something meaningful but don't know how to start",
+      "You are worried about saying the wrong thing",
+      "Your loved one may not be able to respond but you want to reach them",
+      "You want to make the most of the time that remains",
+    ],
+    whatItMeans:
+      "Meaningful goodbyes are not about having perfect words. They are about presence, honesty, and love. Research on what dying people most need reveals a consistent pattern: they want to know they are loved, they want forgiveness (given and received), they want to know their life mattered, and they want permission to go. These are things you can offer, whatever the circumstances.",
+    whatToDoNow: [
+      {
+        text: "The five things: Hospice chaplains and grief counselors often teach the 'five things' framework — five things people need to say and hear at end of life:",
+        tip: "'I love you.' 'Thank you.' 'I forgive you.' 'Please forgive me.' 'Goodbye.' These do not all need to be said in one conversation. They can happen over time, in any order.",
+      },
+      {
+        text: "Speak simply and directly. If your loved one is still alert: 'I just want you to know how much I love you. You have meant everything to me.' You do not need an elaborate speech.",
+      },
+      {
+        text: "If they are unresponsive: speak to them anyway. Assume they can hear. Tell them who is in the room. Tell them about your love. Tell them what you will carry forward from knowing them.",
+      },
+      {
+        text: "Share memories together — tell a story, recall a moment from your shared life. Even if they cannot respond, these stories surround them.",
+      },
+      {
+        text: "Give permission if it feels true. 'You don't have to worry about us. We'll take care of each other. It's okay to rest now.' Many people seem to hold on waiting for this.",
+        tip: "Saying 'you can go' does not mean you want them to go. It means you are releasing them from the obligation to stay.",
+      },
+      {
+        text: "Take care of yourself in these conversations — step outside when you need to, cry without shame, ask hospice for support before or after.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not wait for the 'right moment' — the right moment is now",
+      "Do not assume they cannot hear because they are unresponsive",
+      "Do not feel you must stay stoic — tears are part of love",
+      "Do not leave things unsaid if you can say them now",
+    ],
+    whenToCallHospice: [
+      "You would like support from the hospice chaplain or social worker for these conversations",
+      "You are struggling emotionally and want to talk with someone",
+      "You want guidance on how to support other family members or children during this time",
+    ],
+    whatHappensNext:
+      "The hospice chaplain and social worker are trained to support these conversations and can be present with you. Many families describe these final conversations as among the most important of their lives. Whatever words you find — they are enough.",
+  },
+  {
+    id: "after-death-practical",
+    categoryId: "end-of-life",
+    title: "Practical Steps After the Death",
+    subtitle: "What happens in the days after your loved one dies",
+    urgencyLevel: "routine",
+    icon: "clipboard",
+    tags: ["after death", "after someone dies", "what to do after death", "funeral home", "death certificate", "medication disposal", "equipment removal", "next steps"],
+    whatYouMayNotice: [
+      "You are not sure what needs to happen in the days following the death",
+      "You have questions about medications, equipment, or the death certificate",
+      "You are overwhelmed by logistics while also grieving",
+    ],
+    whatItMeans:
+      "Hospice will guide you through every practical step. You do not need to figure this out alone. Most things do not need to happen immediately — you have time. The priority in the first moments is to be with your loved one and with each other.",
+    whatToDoNow: [
+      {
+        text: "In the first moments: call hospice (not 911). Take time with your loved one if you need it. There is no rush to call the funeral home.",
+        tip: "You can take as much time as you need before the funeral home comes. Some families spend an hour or more — bathing, dressing, praying, or simply being together.",
+      },
+      {
+        text: "Hospice will: send a nurse to confirm the death and complete paperwork; contact the physician who will sign the death certificate; guide you on calling the funeral home.",
+      },
+      {
+        text: "Funeral home: call when you are ready. They will come and transport your loved one. If you are unsure which funeral home to use, the hospice social worker can provide a list.",
+      },
+      {
+        text: "Medications: hospice will arrange for the collection and disposal of all controlled substances (morphine, lorazepam, etc.) — do not flush or put in the trash without guidance. Other medications can usually be disposed of through a pharmacy take-back program.",
+        caution: "Controlled substances must be properly disposed of — keep them secured until hospice collects them.",
+      },
+      {
+        text: "Equipment: hospice will arrange for the collection of all rented equipment (hospital bed, oxygen, wheelchair, etc.) within a few days. You do not need to return it yourself.",
+      },
+      {
+        text: "Death certificate: the physician must sign the death certificate. Hospice coordinates this. You will need multiple certified copies — typically 8–10 — for banks, insurance, benefits, and legal purposes.",
+      },
+      {
+        text: "Notify: Social Security Administration (benefits stop the month of death), employer, banks, life insurance companies, and any other relevant institutions — but these can wait until you are ready.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not call 911 — call hospice",
+      "Do not feel pressured to rush any of the above steps",
+      "Do not flush controlled medications without guidance",
+      "Do not do this alone — ask family, friends, or the hospice social worker for help with logistics",
+    ],
+    whenToCallHospice: [
+      "Immediately after the death — they are your first call",
+      "Whenever you have questions about medications, equipment, or next steps",
+      "To connect with the bereavement counselor",
+    ],
+    whatHappensNext:
+      "Hospice bereavement support continues for up to 13 months after the death — phone calls, mailings, and in many cases counseling. You will not be abandoned. The social worker and bereavement counselor will reach out, and you can call them anytime.",
+  },
+  {
+    id: "bereavement-support",
+    categoryId: "end-of-life",
+    title: "Grief & Bereavement Support",
+    subtitle: "What to expect in grief and what help is available",
+    urgencyLevel: "routine",
+    icon: "coffee",
+    tags: ["grief", "bereavement", "mourning", "after death", "grief support", "loss", "coping with death", "grieving"],
+    whatYouMayNotice: [
+      "Overwhelming sadness, numbness, or disbelief in the days after the death",
+      "Physical symptoms — exhaustion, not eating, not sleeping",
+      "Waves of grief that come unexpectedly — at a smell, a song, or a random moment",
+      "Feeling like you are not 'doing grief right'",
+      "Wondering when you will feel better",
+    ],
+    whatItMeans:
+      "Grief is not a problem to solve or a stage to get through. It is the natural response to love and loss. It does not follow a schedule and it does not look the same for any two people. Grief changes over time — it does not disappear, but it becomes more integrated into life. There is no wrong way to grieve, and there is no timeline you should be on.",
+    whatToDoNow: [
+      {
+        text: "Allow yourself to feel what you feel — sadness, anger, relief, guilt, peace, numbness. All of these are valid grief responses and none of them mean something is wrong with you.",
+        tip: "Relief after a prolonged illness is very common. It is not a sign that you didn't love the person — it is a sign that you were with them through something very hard.",
+      },
+      {
+        text: "Take care of the basics: eat even when you are not hungry, sleep when you can, move your body, accept help with meals and tasks.",
+      },
+      {
+        text: "Connect with hospice bereavement support — they will reach out, and you can call them. This support is included in the hospice benefit for 13 months after the death.",
+      },
+      {
+        text: "Consider a grief support group. Many hospices offer them, and they provide something unique: people who understand what you are going through without explanation.",
+      },
+      {
+        text: "If grief is accompanied by thoughts of self-harm, inability to function for an extended period, or feeling completely hopeless: reach out to a mental health professional. The 988 Suicide and Crisis Lifeline (call or text 988) is available 24 hours.",
+        caution: "Normal grief and complicated grief are different. If you feel stuck in the most acute phase of grief for more than several months, speak with a counselor.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not isolate if you can avoid it — grief is harder alone",
+      "Do not put a timeline on your grief or let others put one on you",
+      "Do not make major life decisions in the first several months",
+      "Do not confuse grieving with weakness — it is the evidence of love",
+    ],
+    whenToCallHospice: [
+      "Anytime in the 13 months following the death",
+      "When you want to be connected with the bereavement counselor",
+      "When you want to find a grief support group",
+    ],
+    whatHappensNext:
+      "Your hospice bereavement team will follow up with you by phone and mail in the months following the death. Many hospices offer individual counseling, group support, and memorial events. You are not alone in this — the relationship with hospice does not end when your loved one dies.",
+  },
   {
     id: "after-death-guidance",
     categoryId: "end-of-life",
