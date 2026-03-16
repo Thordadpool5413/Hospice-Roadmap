@@ -40,7 +40,7 @@ export interface Provider {
   specialties: string[];
   ccn?: string;
   county?: string;
-  ownershipType?: string;
+  cmsOwnershipType?: string;
   certificationDate?: string;
   cmsRegion?: string;
   medicareGovUrl?: string;
@@ -75,23 +75,18 @@ export interface CmsQualityData {
   medicareGovUrl: string;
 }
 
-export interface CmsSpendingCostRange {
-  minMedicarePricing: string;
-  maxMedicarePricing: string;
-  modeMedicarePricing: string;
-  minCopay: string;
-  maxCopay: string;
-  modeCopay: string;
-  mostUtilizedProcedureCode: string;
-}
-
 export interface CmsSpendingData {
-  zip: string;
+  ccn: string;
   found: boolean;
-  newPatient?: CmsSpendingCostRange;
-  establishedPatient?: CmsSpendingCostRange;
+  perBeneficiarySpending: string | null;
+  avgDailyCensus: string | null;
+  utilizationMeasures: Array<{
+    code: string;
+    name: string;
+    score: string;
+  }>;
   source: string;
-  methodologyUrl: string;
+  medicareGovUrl: string;
 }
 
 export interface Resource {
