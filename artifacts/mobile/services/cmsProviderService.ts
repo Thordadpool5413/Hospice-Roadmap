@@ -61,8 +61,8 @@ export async function fetchQualityData(ccn: string): Promise<CmsQualityData> {
   return res.json();
 }
 
-export async function fetchSpendingData(zip: string): Promise<CmsSpendingData> {
-  const res = await fetch(`${API_BASE}/cms/spending/${zip}`, {
+export async function fetchSpendingData(ccn: string): Promise<CmsSpendingData> {
+  const res = await fetch(`${API_BASE}/cms/spending/${ccn}`, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(20000),
   });

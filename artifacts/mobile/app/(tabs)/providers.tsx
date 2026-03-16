@@ -62,8 +62,8 @@ export default function ProvidersScreen() {
       storeCmsProviders(result.providers);
       setCmsProviders(result.providers);
       setCmsTotal(result.total);
-    } catch (err: any) {
-      setCmsError(err.message || "Search failed");
+    } catch (err: unknown) {
+      setCmsError(err instanceof Error ? err.message : "Search failed");
       setCmsProviders([]);
       setCmsTotal(0);
     } finally {

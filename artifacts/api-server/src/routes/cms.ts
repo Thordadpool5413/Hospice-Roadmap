@@ -77,7 +77,7 @@ function mapGeneralInfoToProvider(row: Record<string, string>) {
     zip: row.zip_code || "",
     phone: row.telephone_number || "",
     county: titleCase(row.countyparish || ""),
-    ownershipType: row.ownership_type || "",
+    cmsOwnershipType: row.ownership_type || "",
     certificationDate: row.certification_date || "",
     cmsRegion: row.cms_region || "",
     acceptsMedicare: true,
@@ -261,58 +261,65 @@ router.get("/cms/quality/:ccn", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/cms/spending/:zip", async (req: Request, res: Response) => {
+router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
   try {
-    const { zip } = req.params;
-    if (!zip || zip.length < 3) {
-      res.status(400).json({ error: "Valid ZIP code is required" });
+    const { ccn } = req.params;
+    if (!ccn || ccn.length < 4) {
+      res.status(400).json({ error: "Valid CCN (CMS Certification Number) is required" });
       return;
     }
 
-    const cacheKey = `spending:${zip}`;
+    const cacheKey = `spending:${ccn}`;
     const cached = getCached<object>(cacheKey);
     if (cached) {
       res.json(cached);
       return;
     }
 
-    const data = await cmsQuery(DATASETS.spending, [
-      { property: "zip_code", value: zip, operator: "=" },
-    ], 1);
+    const data = await cmsQuery(DATASETS.providerData, [
+      { property: "cms_certification_number_ccn", value: ccn, operator: "=" },
+    ], 200);
 
     if (data.results.length === 0) {
       res.json({
-        zip,
+        ccn,
         found: false,
-        source: "CMS Hospice and Palliative Care Office Visit Costs",
+        source: "CMS Hospice Quality Reporting Program",
       });
       return;
     }
 
-    const row = data.results[0];
+    let perBeneficiarySpending: string | null = null;
+    let avgDailyCensus: string | null = null;
+    const utilizationMeasures: Array<{ code: string; name: string; score: string }> = [];
+
+    for (const row of data.results) {
+      const code = row.measure_code || "";
+      if (code === "H_012_07_OBSERVED") perBeneficiarySpending = row.score;
+      if (code === "Average_Daily_Census") avgDailyCensus = row.score;
+
+      if (
+        code.startsWith("H_012") ||
+        code === "Average_Daily_Census" ||
+        code.includes("SPENDING") ||
+        code.includes("COST")
+      ) {
+        utilizationMeasures.push({
+          code,
+          name: row.measure_name || "",
+          score: row.score || "",
+        });
+      }
+    }
+
     const result = {
-      zip: row.zip_code,
+      ccn,
       found: true,
-      newPatient: {
-        minMedicarePricing: row.min_medicare_pricing_for_new_patient,
-        maxMedicarePricing: row.max_medicare_pricing_for_new_patient,
-        modeMedicarePricing: row.mode_medicare_pricing_for_new_patient,
-        minCopay: row.min_copay_for_new_patient,
-        maxCopay: row.max_copay_for_new_patient,
-        modeCopay: row.mode_copay_for_new_patient,
-        mostUtilizedProcedureCode: row.most_utilized_procedure_code_for_new_patient,
-      },
-      establishedPatient: {
-        minMedicarePricing: row.min_medicare_pricing_for_established_patient,
-        maxMedicarePricing: row.max_medicare_pricing_for_established_patient,
-        modeMedicarePricing: row.mode_medicare_pricing_for_established_patient,
-        minCopay: row.min_copay_for_established_patient,
-        maxCopay: row.max_copay_for_established_patient,
-        modeCopay: row.mode_copay_for_established_patient,
-        mostUtilizedProcedureCode: row.most_utilized_procedure_code_for_established_patient,
-      },
-      source: "CMS Hospice and Palliative Care Office Visit Costs",
-      methodologyUrl: "https://data.cms.gov/provider-data/dataset/0ddf-4325",
+      perBeneficiarySpending,
+      avgDailyCensus,
+      utilizationMeasures,
+      source: "CMS Hospice Quality Reporting Program",
+      medicareGovUrl: `https://www.medicare.gov/care-compare/details/hospice/${ccn}`,
     };
 
     setCache(cacheKey, result);

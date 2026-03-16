@@ -18,8 +18,8 @@ import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { getCmsProvider } from "@/context/cmsProviderStore";
 import { mockProviders } from "@/data/mockProviders";
-import { fetchQualityData } from "@/services/cmsProviderService";
-import type { CmsQualityData, Provider } from "@/types";
+import { fetchQualityData, fetchSpendingData } from "@/services/cmsProviderService";
+import type { CmsQualityData, CmsSpendingData, Provider } from "@/types";
 
 function QualityScoreBar({
   label,
@@ -60,6 +60,8 @@ export default function ProviderDetailScreen() {
   const [qualityData, setQualityData] = useState<CmsQualityData | null>(null);
   const [qualityLoading, setQualityLoading] = useState(false);
   const [qualityError, setQualityError] = useState<string | null>(null);
+  const [spendingData, setSpendingData] = useState<CmsSpendingData | null>(null);
+  const [spendingLoading, setSpendingLoading] = useState(false);
 
   const cmsProvider = id ? getCmsProvider(id) : undefined;
   const mockProvider = mockProviders.find((p) => p.id === id);
@@ -72,8 +74,14 @@ export default function ProviderDetailScreen() {
       setQualityError(null);
       fetchQualityData(cmsProvider.ccn)
         .then(setQualityData)
-        .catch((err) => setQualityError(err.message || "Failed to load quality data"))
+        .catch((err: unknown) => setQualityError(err instanceof Error ? err.message : "Failed to load quality data"))
         .finally(() => setQualityLoading(false));
+
+      setSpendingLoading(true);
+      fetchSpendingData(cmsProvider.ccn)
+        .then(setSpendingData)
+        .catch(() => {})
+        .finally(() => setSpendingLoading(false));
     }
   }, [isCms, cmsProvider?.ccn]);
 
@@ -344,6 +352,53 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
+      {isCms && spendingLoading && (
+        <View style={qStyles.loadingBox}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={qStyles.loadingText}>Loading spending data...</Text>
+        </View>
+      )}
+
+      {isCms && spendingData?.found && (
+        <View style={qStyles.spendingSection}>
+          <Text style={qStyles.spendingSectionTitle}>Spending & Utilization</Text>
+          <Text style={qStyles.qualitySource}>
+            Source: CMS Hospice Quality Reporting Program
+          </Text>
+          <View style={qStyles.spendingCards}>
+            {spendingData.perBeneficiarySpending && (
+              <View style={qStyles.spendingCard}>
+                <Text style={qStyles.spendingCardLabel}>Per-Beneficiary Spending</Text>
+                <Text style={qStyles.spendingCardValue}>
+                  ${Number(spendingData.perBeneficiarySpending).toLocaleString()}
+                </Text>
+              </View>
+            )}
+            {spendingData.avgDailyCensus && (
+              <View style={qStyles.spendingCard}>
+                <Text style={qStyles.spendingCardLabel}>Avg Daily Census</Text>
+                <Text style={qStyles.spendingCardValue}>
+                  {Number(spendingData.avgDailyCensus).toLocaleString()}
+                </Text>
+              </View>
+            )}
+          </View>
+          {spendingData.utilizationMeasures.length > 0 && (
+            <View style={qStyles.utilizationList}>
+              {spendingData.utilizationMeasures
+                .filter((m) => m.score && m.name)
+                .slice(0, 6)
+                .map((m) => (
+                  <View key={m.code} style={qStyles.utilizationRow}>
+                    <Text style={qStyles.utilizationName} numberOfLines={2}>{m.name}</Text>
+                    <Text style={qStyles.utilizationScore}>{m.score}</Text>
+                  </View>
+                ))}
+            </View>
+          )}
+        </View>
+      )}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
         <Text style={styles.description}>{provider.description}</Text>
@@ -375,10 +430,10 @@ export default function ProviderDetailScreen() {
             </View>
           ))}
         </View>
-        {provider.ownershipType && (
+        {provider.cmsOwnershipType && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Ownership</Text>
-            <Text style={styles.detailValue}>{provider.ownershipType}</Text>
+            <Text style={styles.detailValue}>{provider.cmsOwnershipType}</Text>
           </View>
         )}
         {provider.certificationDate && (
@@ -643,6 +698,67 @@ const qStyles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.error,
+  },
+  spendingSection: {
+    gap: 8,
+  },
+  spendingSectionTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.4,
+  },
+  spendingCards: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  spendingCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  spendingCardLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  spendingCardValue: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.4,
+  },
+  utilizationList: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  utilizationRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  utilizationName: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 17,
+  },
+  utilizationScore: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+    minWidth: 50,
+    textAlign: "right",
   },
 });
 
