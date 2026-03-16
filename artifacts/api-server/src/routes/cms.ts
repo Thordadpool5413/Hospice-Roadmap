@@ -111,18 +111,29 @@ router.get("/cms/providers", async (req: Request, res: Response) => {
       return;
     }
 
+    const stateStr = String(state || "").toUpperCase();
+    const zipStr = String(zip || "");
+    if (state && !/^[A-Z]{2}$/.test(stateStr)) {
+      res.status(400).json({ error: "State must be a 2-letter abbreviation (e.g., CA, TX)" });
+      return;
+    }
+    if (zip && !/^\d{5}$/.test(zipStr)) {
+      res.status(400).json({ error: "ZIP code must be exactly 5 digits" });
+      return;
+    }
+
     const conditions: Array<{ property: string; value: string; operator: string }> = [];
     if (state) {
       conditions.push({
         property: "state",
-        value: String(state).toUpperCase(),
+        value: stateStr,
         operator: "=",
       });
     }
     if (zip) {
       conditions.push({
         property: "zip_code",
-        value: String(zip),
+        value: zipStr,
         operator: "=",
       });
     }
