@@ -110,6 +110,27 @@ Expo React Native app — "Hospice Roadmap" — healthcare navigation platform f
   - `fontScale: 1 | 1.2 | 1.4` and `highContrast: boolean` — persisted to AsyncStorage
   - Exposed in More tab under "Accessibility" section with A/A+/A++ text size buttons and High Contrast toggle
   - Applied to guidance detail screen: body text, bullet points, numbered steps, tips/cautions, title — all scale with `fontScale`; `highContrast` shifts backgrounds to white and text to near-black
+- **Caregiver Journal** (`app/journal.tsx`, `app/journal-entry.tsx`, `context/JournalContext.tsx`):
+  - Entry types: symptom, medication, observation, mood, general — each with distinct color/icon
+  - AsyncStorage persistence under `@hospice_roadmap_journal`; CRUD: addEntry, updateEntry, deleteEntry
+  - List view with date grouping, colored left-border cards, time + type badge per entry
+  - Full-screen editor with horizontal type picker, title, 2000-char notes field, "What to track" tips
+  - Long-press to delete; share individual entries via native Share API
+  - Accessible from More tab → Tools section
+- **Reminders** (`app/reminders.tsx`, `context/RemindersContext.tsx`):
+  - Types: medication and appointment; recurrence: once, daily, weekly
+  - `expo-notifications` for local push notifications (iOS/Android); web shows info notice
+  - Requests permissions on first save; gracefully degrades when unavailable
+  - Reminder toggle (Switch), long-press to delete, tap to edit via bottom sheet modal
+  - Date/time picker via `@react-native-community/datetimepicker`; guarded with `Platform.OS !== "web"`
+  - AsyncStorage persistence under `@hospice_roadmap_reminders`
+  - Accessible from More tab → Tools section
+- **Onboarding** (`app/onboarding.tsx`) expanded to 4 steps:
+  - Step 0: Welcome — app logo, tagline, 2×2 feature grid (Journey Guide, AI Compass, 60+ Scenarios, Provider Search), trust note
+  - Step 1: Role selection (patient / caregiver / other)
+  - Step 2: Journey stage (before / during / after)
+  - Step 3: App Tour — 5 tab cards with icons, colors, and descriptions
+  - Animated progress dots at top; fade transition between steps
 - CMS integration:
   - `services/cmsProviderService.ts` — calls API server for provider search + quality data
   - `context/cmsProviderStore.ts` — in-memory store for CMS providers (shared between list/detail)

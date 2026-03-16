@@ -208,3 +208,27 @@ export interface BereavementResource {
   isFree: boolean;
   tags: string[];
 }
+
+export type JournalEntryType = "symptom" | "medication" | "observation" | "mood" | "general";
+
+export interface JournalEntry {
+  id: string;
+  type: JournalEntryType;
+  title: string;
+  body: string;
+  date: string;
+  timestamp: number;
+}
+
+export type ReminderRecurrence = "none" | "daily" | "weekly";
+export type ReminderType = "medication" | "appointment";
+
+export interface Reminder {
+  id: string;
+  type: ReminderType;
+  label: string;
+  datetime: string;
+  recurrence: ReminderRecurrence;
+  enabled: boolean;
+  notificationId?: string;
+}
