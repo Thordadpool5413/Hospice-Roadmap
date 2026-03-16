@@ -43,6 +43,12 @@ export default function MoreScreen() {
 
   const menuSections: { title: string; items: MenuItem[] }[] = [
     {
+      title: "Compass AI",
+      items: [
+        { label: "Patient Profile", icon: "user", route: "/patient-profile" },
+      ],
+    },
+    {
       title: "Tools",
       items: [
         { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation" },

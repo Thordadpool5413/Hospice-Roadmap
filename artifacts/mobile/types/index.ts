@@ -5,6 +5,18 @@ export type UserRole =
   | "caregiver"
   | "other";
 
+export interface PatientProfile {
+  patientName?: string;
+  diagnosis?: string;
+  comfortKitMedications?: string;
+  equipmentInHome?: string;
+  hospicePhone?: string;
+  hospiceAfterHoursPhone?: string;
+  equipmentProviderPhone?: string;
+  pharmacyPhone?: string;
+  additionalNotes?: string;
+}
+
 export interface User {
   id: string;
   role: UserRole;
@@ -14,6 +26,7 @@ export interface User {
   savedResources: string[];
   savedProviders: string[];
   createdAt: string;
+  patientProfile?: PatientProfile;
 }
 
 export interface Provider {
