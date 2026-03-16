@@ -98,6 +98,18 @@ Expo React Native app — "Hospice Roadmap" — healthcare navigation platform f
   - Context: `AppContext.updatePatientProfile`, `AppContext.buildPatientContext` — persists patient data and serializes it for AI injection
   - Tab renamed from "Learn/Resources" to "Compass" with `safari` SF Symbol (compass icon) on iOS, `Feather compass` on Android/web
   - `resources` tab hidden from tab bar (`href: null`) but still accessible as a route
+  - **Smart follow-up suggestions**: Claude includes `[SUGGEST:Q1|Q2|Q3]` at end of every response; client parses and strips this, displays tappable suggestion pills below last AI message; tapping sends that question immediately; clears on new message/reset
+  - **Long-press to share**: long-press any assistant message bubble to open native share sheet (Share API) — allows sharing guidance text with family/care team
+- **Offline access** (`hooks/useNetworkStatus.ts`, `components/OfflineBanner.tsx`):
+  - `useNetworkStatus` — detects connectivity via `navigator.onLine` on web and periodic fetch probe on native
+  - `OfflineBanner` — animated amber pill banner at top of all screens when offline; uses `useNativeDriver: false` on web
+  - Compass input bar replaced with amber offline notice when offline
+  - CMS provider search shows offline warning and returns early when offline
+  - All 60 guidance scenarios, Journey, Emergency Card work fully offline
+- **Accessibility** (`context/AccessibilityContext.tsx`):
+  - `fontScale: 1 | 1.2 | 1.4` and `highContrast: boolean` — persisted to AsyncStorage
+  - Exposed in More tab under "Accessibility" section with A/A+/A++ text size buttons and High Contrast toggle
+  - Applied to guidance detail screen: body text, bullet points, numbered steps, tips/cautions, title — all scale with `fontScale`; `highContrast` shifts backgrounds to white and text to near-black
 - CMS integration:
   - `services/cmsProviderService.ts` — calls API server for provider search + quality data
   - `context/cmsProviderStore.ts` — in-memory store for CMS providers (shared between list/detail)

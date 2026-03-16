@@ -10,6 +10,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -49,6 +50,18 @@ interface LocalMessage {
   isStreaming?: boolean;
 }
 
+function parseSuggestions(raw: string): { text: string; suggestions: string[] } {
+  const match = raw.match(/\[SUGGEST:([^\]]+)\]\s*$/);
+  if (!match || !match[1]) return { text: raw, suggestions: [] };
+  const suggestions = match[1]
+    .split("|")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .slice(0, 3);
+  const text = raw.slice(0, match.index).trimEnd();
+  return { text, suggestions };
+}
+
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext } = useApp();
@@ -61,6 +74,7 @@ export default function HelpScreen() {
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const scrollToBottom = useCallback((delay = 100) => {
     setTimeout(() => {
@@ -91,6 +105,7 @@ export default function HelpScreen() {
     setConversation(null);
     setLocalMessages([]);
     setInputText("");
+    setSuggestions([]);
   }, []);
 
   const sendMessage = useCallback(
@@ -119,6 +134,7 @@ export default function HelpScreen() {
       const userMsgId = `user-${Date.now()}`;
       const assistantMsgId = `asst-${Date.now()}`;
 
+      setSuggestions([]);
       setLocalMessages((prev) => [
         ...prev,
         { id: userMsgId, role: "user", content: text },
@@ -146,12 +162,15 @@ export default function HelpScreen() {
         },
         () => {
           setLocalMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, isStreaming: false } : m
-            )
+            prev.map((m) => {
+              if (m.id !== assistantMsgId) return m;
+              const { text, suggestions: parsed } = parseSuggestions(m.content);
+              if (parsed.length > 0) setSuggestions(parsed);
+              return { ...m, content: text, isStreaming: false };
+            })
           );
           setIsStreaming(false);
-          scrollToBottom(100);
+          scrollToBottom(150);
         },
         (err) => {
           setLocalMessages((prev) =>
@@ -194,6 +213,11 @@ export default function HelpScreen() {
       },
     ]);
   }, [conversation, startNewConversation]);
+
+  const handleShareMessage = useCallback((content: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Share.share({ message: content }).catch(() => {});
+  }, []);
 
   const handleCallHospice = useCallback(() => {
     const phone = user?.patientProfile?.hospicePhone;
@@ -302,12 +326,43 @@ export default function HelpScreen() {
         ) : (
           <View style={styles.messagesContainer}>
             {localMessages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                onLongPress={
+                  msg.role === "assistant" && msg.content
+                    ? () => handleShareMessage(msg.content)
+                    : undefined
+                }
+              />
             ))}
             {isLoading && (
               <View style={styles.loadingBubble}>
                 <ActivityIndicator size="small" color={Colors.primary} />
                 <Text style={styles.loadingText}>Compass is thinking…</Text>
+              </View>
+            )}
+            {suggestions.length > 0 && !isStreaming && (
+              <View style={styles.suggestionsContainer}>
+                <Text style={styles.suggestionsLabel}>Ask a follow-up</Text>
+                <View style={styles.suggestionPills}>
+                  {suggestions.map((s, i) => (
+                    <Pressable
+                      key={i}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        sendMessage(s);
+                      }}
+                      style={({ pressed }) => [
+                        styles.suggestionPill,
+                        pressed && { opacity: 0.72, transform: [{ scale: 0.97 }] },
+                      ]}
+                    >
+                      <Feather name="message-circle" size={12} color={Colors.primary} style={{ marginRight: 5 }} />
+                      <Text style={styles.suggestionPillText}>{s}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             )}
           </View>
@@ -358,7 +413,13 @@ export default function HelpScreen() {
   );
 }
 
-function MessageBubble({ message }: { message: LocalMessage }) {
+function MessageBubble({
+  message,
+  onLongPress,
+}: {
+  message: LocalMessage;
+  onLongPress?: () => void;
+}) {
   const isUser = message.role === "user";
   const content = message.content;
   const isStreaming = message.isStreaming;
@@ -370,7 +431,15 @@ function MessageBubble({ message }: { message: LocalMessage }) {
           <Feather name="compass" size={12} color="#FFFFFF" />
         </View>
       )}
-      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
+      <Pressable
+        onLongPress={onLongPress}
+        delayLongPress={450}
+        style={({ pressed }) => [
+          styles.bubble,
+          isUser ? styles.bubbleUser : styles.bubbleAssistant,
+          pressed && onLongPress && { opacity: 0.85 },
+        ]}
+      >
         {isStreaming && content === "" ? (
           <View style={styles.typingIndicator}>
             <View style={[styles.typingDot, styles.typingDot1]} />
@@ -383,7 +452,7 @@ function MessageBubble({ message }: { message: LocalMessage }) {
         {isStreaming && content !== "" && (
           <View style={styles.streamingCursor} />
         )}
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -793,6 +862,39 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.divider,
     shadowOpacity: 0,
     elevation: 0,
+  },
+  suggestionsContainer: {
+    marginTop: 8,
+    gap: 8,
+  },
+  suggestionsLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSubtle,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginLeft: 2,
+  },
+  suggestionPills: {
+    flexDirection: "column",
+    gap: 7,
+  },
+  suggestionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: Colors.primaryPale,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+  },
+  suggestionPillText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primaryDark,
+    lineHeight: 18,
   },
   offlineInputNotice: {
     flex: 1,

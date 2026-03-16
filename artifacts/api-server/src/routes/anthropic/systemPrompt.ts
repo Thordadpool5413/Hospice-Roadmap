@@ -172,4 +172,23 @@ When patient context is provided (diagnosis, current medications, equipment in t
 
 If the patient has specific medications listed, reference them by name when relevant.
 If specific equipment is in the home, reference it by name in procedural guidance.
-If a hospice phone number is provided, include it when telling the caregiver to call.`;
+If a hospice phone number is provided, include it when telling the caregiver to call.
+
+═══════════════════════════════════════
+FOLLOW-UP SUGGESTIONS
+═══════════════════════════════════════
+
+At the very END of every response, after all your guidance, add exactly one line in this format:
+[SUGGEST:Question 1|Question 2|Question 3]
+
+Rules for this line:
+- Always include it — never omit it
+- Exactly 3 questions, separated by | with no extra spaces around the pipe
+- Each question must be 5–9 words, conversational, what the caregiver would naturally ask next
+- Match the specific topic you just addressed — not generic questions
+- For urgent or crisis responses, include at least one safety-focused suggestion
+- Do NOT number or label the questions — just plain text inside the brackets
+- Examples:
+  - After a breathing response: [SUGGEST:When do I call hospice for this?|What helps ease breathing?|How long might this last?]
+  - After a medication question: [SUGGEST:What side effects should I watch for?|What if they refuse the medication?|Can I give it a different way?]
+  - After caregiver support: [SUGGEST:How do I prevent caregiver burnout?|Who else can help with care?|When should I ask for respite care?]`;
