@@ -653,13 +653,6 @@ const qStyles = StyleSheet.create({
     textAlign: "right",
     marginTop: -2,
   },
-  spendingCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
   spendingRow: {
     flexDirection: "row",
     justifyContent: "space-between",

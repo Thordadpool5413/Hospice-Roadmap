@@ -18,13 +18,9 @@ import { useApp } from "@/context/AppContext";
 import { JourneyStage, UserRole } from "@/types";
 
 const roleLabels: Record<UserRole, string> = {
-  caregiver: "Caregiver",
-  family: "Family Member",
   patient: "Patient",
-  physician: "Physician",
-  discharge_planner: "Discharge Planner",
-  staff: "Staff",
-  exploring: "Exploring",
+  caregiver: "Caregiver",
+  other: "Other",
 };
 
 const stageLabels: Record<JourneyStage, string> = {

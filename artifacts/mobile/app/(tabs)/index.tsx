@@ -18,13 +18,9 @@ import { useApp } from "@/context/AppContext";
 import { mockResources } from "@/data/mockResources";
 
 const roleLabels: Record<string, string> = {
-  caregiver: "Caregiver",
-  family: "Family Member",
   patient: "Patient",
-  physician: "Physician",
-  discharge_planner: "Discharge Planner",
-  exploring: "Visitor",
-  staff: "Staff",
+  caregiver: "Caregiver",
+  other: "User",
 };
 
 const quickActions = [
