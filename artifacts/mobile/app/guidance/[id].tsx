@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { useA11y } from "@/context/AccessibilityContext";
 import {
   findCategoryById,
   findScenarioById,
@@ -41,8 +42,16 @@ const urgencyLabels: Record<string, string> = {
 export default function GuidanceDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { fontScale, highContrast } = useA11y();
   const scenario = findScenarioById(id ?? "");
   const category = scenario ? findCategoryById(scenario.categoryId) : null;
+
+  const scaledText = (base: number) => base * fontScale;
+  const scaledLine = (base: number) => base * fontScale;
+  const hcBg = highContrast ? "#FFFFFF" : undefined;
+  const hcText = highContrast ? "#111111" : undefined;
+  const hcSecondary = highContrast ? "#222222" : undefined;
+  const hcDivider = highContrast ? "#888888" : undefined;
 
   if (!scenario) {
     return (
@@ -67,9 +76,9 @@ export default function GuidanceDetailScreen() {
   const urgencyBg = urgencyBgColors[scenario.urgencyLevel];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: hcBg ?? Colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, highContrast && { backgroundColor: "#fff", borderBottomColor: hcDivider }]}>
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
@@ -133,8 +142,12 @@ export default function GuidanceDetailScreen() {
               </View>
             </View>
           </View>
-          <Text style={styles.scenarioTitle}>{scenario.title}</Text>
-          <Text style={styles.scenarioSubtitle}>{scenario.subtitle}</Text>
+          <Text style={[styles.scenarioTitle, { fontSize: scaledText(22), color: hcText ?? Colors.text }]}>
+            {scenario.title}
+          </Text>
+          <Text style={[styles.scenarioSubtitle, { fontSize: scaledText(14), lineHeight: scaledLine(20), color: hcSecondary ?? Colors.textSecondary }]}>
+            {scenario.subtitle}
+          </Text>
         </View>
 
         {/* What You May Notice */}
@@ -145,7 +158,7 @@ export default function GuidanceDetailScreen() {
           bgColor={Colors.infoPale}
         >
           {scenario.whatYouMayNotice.map((item, i) => (
-            <BulletItem key={i} text={item} color={Colors.info} />
+            <BulletItem key={i} text={item} color={Colors.info} fontScale={fontScale} highContrast={highContrast} />
           ))}
         </GuidanceSection>
 
@@ -154,9 +167,11 @@ export default function GuidanceDetailScreen() {
           icon="info"
           title="What this may mean"
           color={Colors.textSecondary}
-          bgColor={Colors.backgroundSecondary}
+          bgColor={highContrast ? "#F5F5F5" : Colors.backgroundSecondary}
         >
-          <Text style={styles.bodyText}>{scenario.whatItMeans}</Text>
+          <Text style={[styles.bodyText, { fontSize: scaledText(14), lineHeight: scaledLine(21), color: hcSecondary ?? Colors.textSecondary }]}>
+            {scenario.whatItMeans}
+          </Text>
         </GuidanceSection>
 
         {/* What To Do Now */}
@@ -168,7 +183,16 @@ export default function GuidanceDetailScreen() {
           accent
         >
           {scenario.whatToDoNow.map((step, i) => (
-            <NumberedItem key={i} number={i + 1} text={step.text} color={Colors.success} tip={step.tip} caution={step.caution} />
+            <NumberedItem
+              key={i}
+              number={i + 1}
+              text={step.text}
+              color={Colors.success}
+              tip={step.tip}
+              caution={step.caution}
+              fontScale={fontScale}
+              highContrast={highContrast}
+            />
           ))}
         </GuidanceSection>
 
@@ -180,7 +204,7 @@ export default function GuidanceDetailScreen() {
           bgColor={Colors.errorPale}
         >
           {scenario.whatToAvoid.map((item, i) => (
-            <BulletItem key={i} text={item} color={Colors.error} bullet="×" />
+            <BulletItem key={i} text={item} color={Colors.error} bullet="×" fontScale={fontScale} highContrast={highContrast} />
           ))}
         </GuidanceSection>
 
@@ -192,7 +216,7 @@ export default function GuidanceDetailScreen() {
           bgColor={Colors.amberPale}
         >
           {scenario.whenToCallHospice.map((item, i) => (
-            <BulletItem key={i} text={item} color={Colors.amber} />
+            <BulletItem key={i} text={item} color={Colors.amber} fontScale={fontScale} highContrast={highContrast} />
           ))}
         </GuidanceSection>
 
@@ -203,7 +227,9 @@ export default function GuidanceDetailScreen() {
           color={Colors.primary}
           bgColor={Colors.primaryPale}
         >
-          <Text style={styles.bodyText}>{scenario.whatHappensNext}</Text>
+          <Text style={[styles.bodyText, { fontSize: scaledText(14), lineHeight: scaledLine(21), color: hcSecondary ?? Colors.textSecondary }]}>
+            {scenario.whatHappensNext}
+          </Text>
         </GuidanceSection>
 
         {/* Call Hospice CTA */}
@@ -259,15 +285,21 @@ function BulletItem({
   text,
   color,
   bullet = "•",
+  fontScale = 1,
+  highContrast = false,
 }: {
   text: string;
   color: string;
   bullet?: string;
+  fontScale?: number;
+  highContrast?: boolean;
 }) {
+  const fs = (n: number) => n * fontScale;
+  const textColor = highContrast ? "#222222" : Colors.textSecondary;
   return (
     <View style={styles.bulletRow}>
-      <Text style={[styles.bulletChar, { color }]}>{bullet}</Text>
-      <Text style={styles.bulletText}>{text}</Text>
+      <Text style={[styles.bulletChar, { color, fontSize: fs(16), lineHeight: fs(21) }]}>{bullet}</Text>
+      <Text style={[styles.bulletText, { fontSize: fs(14), lineHeight: fs(21), color: textColor }]}>{text}</Text>
     </View>
   );
 }
@@ -278,31 +310,37 @@ function NumberedItem({
   color,
   tip,
   caution,
+  fontScale = 1,
+  highContrast = false,
 }: {
   number: number;
   text: string;
   color: string;
   tip?: string;
   caution?: string;
+  fontScale?: number;
+  highContrast?: boolean;
 }) {
+  const fs = (n: number) => n * fontScale;
+  const textColor = highContrast ? "#222222" : Colors.textSecondary;
   return (
     <View style={styles.numberedBlock}>
       <View style={styles.numberedRow}>
         <View style={[styles.numberCircle, { backgroundColor: color }]}>
           <Text style={styles.numberText}>{number}</Text>
         </View>
-        <Text style={styles.bulletText}>{text}</Text>
+        <Text style={[styles.bulletText, { fontSize: fs(14), lineHeight: fs(21), color: textColor }]}>{text}</Text>
       </View>
       {tip && (
         <View style={styles.inlineTip}>
           <Feather name="info" size={12} color={Colors.info} />
-          <Text style={styles.inlineTipText}>{tip}</Text>
+          <Text style={[styles.inlineTipText, { fontSize: fs(12), lineHeight: fs(17) }]}>{tip}</Text>
         </View>
       )}
       {caution && (
         <View style={styles.inlineCaution}>
           <Feather name="alert-triangle" size={12} color={Colors.amber} />
-          <Text style={styles.inlineCautionText}>{caution}</Text>
+          <Text style={[styles.inlineCautionText, { fontSize: fs(12), lineHeight: fs(17) }]}>{caution}</Text>
         </View>
       )}
     </View>

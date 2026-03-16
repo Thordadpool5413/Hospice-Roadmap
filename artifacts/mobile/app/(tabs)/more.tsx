@@ -8,12 +8,14 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { FontScale, useA11y } from "@/context/AccessibilityContext";
 import { useApp } from "@/context/AppContext";
 import { JourneyStage, UserRole } from "@/types";
 
@@ -37,9 +39,16 @@ interface MenuItem {
   destructive?: boolean;
 }
 
+const FONT_SCALE_OPTIONS: { label: string; value: FontScale; display: string }[] = [
+  { label: "Normal", value: 1, display: "A" },
+  { label: "Large", value: 1.2, display: "A+" },
+  { label: "X-Large", value: 1.4, display: "A++" },
+];
+
 export default function MoreScreen() {
   const insets = useSafeAreaInsets();
   const { user, updateJourneyStage } = useApp();
+  const { fontScale, highContrast, setFontScale, setHighContrast } = useA11y();
 
   const menuSections: { title: string; items: MenuItem[] }[] = [
     {
@@ -194,6 +203,71 @@ export default function MoreScreen() {
               </Text>
             </Pressable>
           ))}
+        </View>
+      </View>
+
+      {/* Accessibility */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Accessibility</Text>
+        <View style={styles.sectionList}>
+          {/* Text Size */}
+          <View style={[styles.menuItem, styles.a11yRow]}>
+            <View style={styles.menuIcon}>
+              <Feather name="type" size={18} color={Colors.primary} />
+            </View>
+            <View style={styles.a11yLabelCol}>
+              <Text style={styles.menuLabel}>Text Size</Text>
+              <Text style={styles.a11ySubLabel}>Affects guidance content</Text>
+            </View>
+            <View style={styles.fontSizeGroup}>
+              {FONT_SCALE_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setFontScale(opt.value);
+                  }}
+                  style={[
+                    styles.fontSizeBtn,
+                    fontScale === opt.value && styles.fontSizeBtnActive,
+                  ]}
+                  accessibilityLabel={opt.label}
+                >
+                  <Text
+                    style={[
+                      styles.fontSizeBtnText,
+                      fontScale === opt.value && styles.fontSizeBtnTextActive,
+                    ]}
+                  >
+                    {opt.display}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.menuItemBorder} />
+
+          {/* High Contrast */}
+          <View style={styles.menuItem}>
+            <View style={styles.menuIcon}>
+              <Feather name="circle" size={18} color={Colors.primary} />
+            </View>
+            <View style={styles.a11yLabelCol}>
+              <Text style={styles.menuLabel}>High Contrast</Text>
+              <Text style={styles.a11ySubLabel}>Stronger text and borders</Text>
+            </View>
+            <Switch
+              value={highContrast}
+              onValueChange={(val) => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setHighContrast(val);
+              }}
+              trackColor={{ false: Colors.divider, true: Colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
         </View>
       </View>
 
@@ -428,6 +502,46 @@ const styles = StyleSheet.create({
     color: Colors.textSubtle,
     textAlign: "center",
     paddingBottom: 8,
+  },
+  a11yRow: {
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  a11yLabelCol: {
+    flex: 1,
+    gap: 2,
+  },
+  a11ySubLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  fontSizeGroup: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  fontSizeBtn: {
+    minWidth: 40,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    paddingHorizontal: 10,
+  },
+  fontSizeBtnActive: {
+    backgroundColor: Colors.primaryPale,
+    borderColor: Colors.primary,
+  },
+  fontSizeBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: Colors.textSecondary,
+  },
+  fontSizeBtnTextActive: {
+    color: Colors.primaryDark,
   },
   emergencyCard: {
     backgroundColor: Colors.error,
