@@ -3,12 +3,14 @@ import { Platform } from "react-native";
 import { CmsQualityData, CmsSpendingData, Provider } from "@/types";
 
 function getApiBase(): string {
-  const customDomain = process.env.EXPO_PUBLIC_API_URL;
-  if (customDomain) return customDomain;
+  const customUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (customUrl) return customUrl;
   if (Platform.OS === "web") {
-    return "http://localhost:8080/api";
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    if (domain) return `https://${domain}/api`;
+    return "/api";
   }
-  return "http://localhost:8080/api";
+  return "http://localhost:80/api";
 }
 
 const API_BASE = getApiBase();
