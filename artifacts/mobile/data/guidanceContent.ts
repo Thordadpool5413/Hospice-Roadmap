@@ -1297,6 +1297,195 @@ const medications: GuidanceScenario[] = [
     whatHappensNext:
       "Hospice will review the medication and may adjust the dose, change the medication, or add a medication to manage the side effect. Most side effects can be managed very well.",
   },
+  {
+    id: "morphine-administration",
+    categoryId: "medications",
+    title: "Giving Morphine (Sublingual)",
+    subtitle: "How to give liquid morphine under the tongue for pain or breathing",
+    urgencyLevel: "soon",
+    icon: "droplet",
+    tags: ["morphine", "opioid", "sublingual", "liquid morphine", "breakthrough pain", "pain medication", "giving morphine", "how to give"],
+    whatYouMayNotice: [
+      "Your loved one is in pain or having difficulty breathing",
+      "Hospice has asked you to give morphine from the comfort kit",
+      "You are uncertain how to give it correctly",
+      "You want to feel prepared before a crisis occurs",
+    ],
+    whatItMeans:
+      "Liquid morphine is one of the most effective medications in hospice for controlling pain and easing the feeling of breathlessness. It is safe when used as directed. In hospice, it is commonly given under the tongue (sublingual) so it absorbs quickly — especially when swallowing is difficult. You are not hurrying death by giving this medication. You are preventing suffering.",
+    whatToDoNow: [
+      {
+        text: "Call hospice first to confirm the dose — the label on the bottle tells you the concentration and maximum dose, but the nurse will confirm the right amount for the current situation.",
+        tip: "Keep the comfort kit in the same place every time so you can find it quickly. Know the dose before you need it.",
+      },
+      {
+        text: "Draw up the prescribed dose using the dropper or syringe that came with the bottle.",
+        caution: "Do not estimate — use the dropper or syringe markings to measure exactly.",
+      },
+      {
+        text: "Tilt their head back slightly or turn it to the side. Gently place the dropper or syringe under the tongue or into the cheek pouch.",
+      },
+      {
+        text: "Release the medication slowly. It does not need to be swallowed — it absorbs through the lining of the mouth.",
+        tip: "If they cannot hold their head back, place in the cheek — it still absorbs well.",
+      },
+      { text: "Stay with them for at least 15–30 minutes to watch for response. Pain or breathing distress should ease within 20–30 minutes." },
+      {
+        text: "If there is no improvement after 30 minutes and they are still in distress, call hospice — a second dose may be appropriate or a stronger dose may be needed.",
+      },
+      { text: "Document the time, dose, and their response. Hospice will ask for this information." },
+    ],
+    whatToAvoid: [
+      "Do not give more than the labeled dose without calling hospice first",
+      "Do not give morphine to someone who is unconscious and cannot swallow — ask hospice about sublingual route in that case",
+      "Do not mix morphine with other liquids or medications without asking",
+      "Do not feel that giving this medication means you are 'giving up' — it is comfort care",
+    ],
+    whenToCallHospice: [
+      "Before giving any comfort kit medication — they will confirm the right dose",
+      "If one dose is not enough and the person is still in distress",
+      "If you are uncertain which medication to use",
+      "After every comfort kit use — to report and get guidance",
+    ],
+    whatHappensNext:
+      "Hospice will check in to see how the person responded. If the current dose is not enough, they can adjust the prescription. If you used the comfort kit frequently, they may set up a scheduled dose to prevent breakthrough pain from recurring.",
+  },
+  {
+    id: "lorazepam-use",
+    categoryId: "medications",
+    title: "Using Lorazepam (Ativan)",
+    subtitle: "Anti-anxiety medication for anxiety, air hunger, or restlessness",
+    urgencyLevel: "soon",
+    icon: "shield",
+    tags: ["lorazepam", "ativan", "anxiety medication", "anti-anxiety", "air hunger", "restlessness medication", "calming medication"],
+    whatYouMayNotice: [
+      "Your loved one seems anxious, panicked, or very unsettled",
+      "They are breathing hard and seem frightened by the feeling",
+      "They cannot stop moving or seem terrified",
+      "Hospice has asked you to give lorazepam from the comfort kit",
+    ],
+    whatItMeans:
+      "Lorazepam (brand name Ativan) is an anti-anxiety medication that works quickly to ease feelings of panic, anxiety, and air hunger (the frightening sensation of not getting enough air). It is also used for restlessness. In hospice, it is given sublingually (under the tongue) or by mouth. It is not a sedative in the way people fear — at comfort kit doses, it simply takes the edge off distress.",
+    whatToDoNow: [
+      {
+        text: "Call hospice to confirm you should give lorazepam and to confirm the dose.",
+        tip: "Lorazepam and morphine are often given together for breathing crises — hospice will guide whether to give one or both.",
+      },
+      { text: "Draw up the prescribed dose using the dropper or syringe." },
+      {
+        text: "Place under the tongue or in the cheek pouch and release slowly. It absorbs through the mouth lining.",
+        caution: "Do not give it by mouth if they are having trouble swallowing — sublingual is the correct route.",
+      },
+      { text: "Create a calm environment: lower lights, reduce noise, speak softly and slowly." },
+      { text: "Stay with them. Your calm presence is itself reassuring. Breathe slowly and encourage them to match your pace if able." },
+      { text: "Effects typically begin within 15–20 minutes. Allow time before deciding the dose was not enough." },
+    ],
+    whatToAvoid: [
+      "Do not give more than the prescribed dose without calling hospice",
+      "Do not give lorazepam and then leave the person alone — monitor for breathing changes",
+      "Do not give in an agitated struggle — wait for a calm moment or call hospice for guidance",
+    ],
+    whenToCallHospice: [
+      "Before giving lorazepam",
+      "If anxiety or restlessness does not improve with one dose",
+      "If the person becomes very drowsy after the dose",
+      "If you are not sure whether morphine or lorazepam is the right choice for the situation",
+    ],
+    whatHappensNext:
+      "Hospice may adjust the standing medication plan to prevent anxiety from breaking through. If this is happening frequently, they may set up a scheduled dose or a continuous infusion pump to keep the person comfortable around the clock.",
+  },
+  {
+    id: "medication-running-low",
+    categoryId: "medications",
+    title: "Running Low on Medications",
+    subtitle: "What to do when comfort kit or regular medications are almost gone",
+    urgencyLevel: "soon",
+    icon: "alert-triangle",
+    tags: ["running out of medication", "low medication", "refill", "comfort kit refill", "out of morphine", "medication supply"],
+    whatYouMayNotice: [
+      "The comfort kit bottle is nearly empty",
+      "You only have a few doses of a regular scheduled medication left",
+      "The pharmacy is closed and you are not sure what to do",
+      "You have used several doses and are worried about running out",
+    ],
+    whatItMeans:
+      "Running out of comfort medications is a genuine emergency — these medications are what stand between your loved one and uncontrolled pain or distress. Hospice and hospice pharmacies are available 24 hours a day precisely for this situation. Do not wait until you have run out completely to make the call.",
+    whatToDoNow: [
+      {
+        text: "Call hospice as soon as you realize you are getting low — do not wait until the medication is gone.",
+        tip: "A good rule: call hospice when you are down to 2–3 doses of any comfort medication.",
+      },
+      { text: "Tell them which medication is low, how much is left, how recently you used doses, and why (what symptoms you were treating)." },
+      {
+        text: "Hospice will arrange a refill through the hospice pharmacy, which delivers 24 hours a day, 7 days a week.",
+        caution: "Regular retail pharmacies do not stock hospice comfort kit medications in most cases — the hospice pharmacy handles this.",
+      },
+      { text: "While waiting for the refill: conserve remaining doses for true distress. Call hospice before giving another dose so they can track usage." },
+      { text: "If you are completely out and the person is in distress: call hospice immediately — they can send a nurse with emergency medication or arrange urgent delivery." },
+    ],
+    whatToAvoid: [
+      "Do not wait until the last dose to call — call when supplies are getting low",
+      "Do not try to get a refill at a regular pharmacy without guidance — the hospice pharmacy is the correct source",
+      "Do not give lower doses than prescribed to make medications last — call hospice instead",
+      "Do not panic — hospice is equipped for exactly this situation 24 hours a day",
+    ],
+    whenToCallHospice: [
+      "Whenever you are getting low on any comfort medication",
+      "If you have unexpectedly used many doses and are concerned about supply",
+      "If you are completely out and the person needs medication now",
+    ],
+    whatHappensNext:
+      "Hospice will arrange an urgent refill through the hospice pharmacy. Delivery is typically within hours. If the person is in distress in the meantime, the nurse will either come with medication or guide you through interim measures.",
+  },
+  {
+    id: "patch-medication",
+    categoryId: "medications",
+    title: "Medication Patch Care",
+    subtitle: "Fentanyl or other skin patches — placement, rotation, and removal",
+    urgencyLevel: "routine",
+    icon: "square",
+    tags: ["fentanyl patch", "medication patch", "skin patch", "pain patch", "patch fell off", "patch rotation", "where to put patch"],
+    whatYouMayNotice: [
+      "A medication patch has fallen off or is partially detached",
+      "You need to change the patch and are unsure where to place it",
+      "The skin under the patch looks irritated or red",
+      "You are not sure how long the patch has been on",
+    ],
+    whatItMeans:
+      "Fentanyl and other medication patches deliver medication continuously through the skin over 48–72 hours. They provide steady, around-the-clock pain control without pills. Proper placement and site rotation are important — an unstuck patch stops delivering medication, and a used patch still contains enough medication to be dangerous if touched or swallowed by others.",
+    whatToDoNow: [
+      {
+        text: "Apply patches to clean, dry, flat skin — good sites include the upper chest, upper arm, upper back, or abdomen. Avoid bony areas, skin folds, and areas with broken or irritated skin.",
+        tip: "Rotate sites with each change — never put a new patch in the exact same spot as the old one.",
+      },
+      {
+        text: "Press firmly for 30 seconds when applying. The warmth of your hand helps it stick.",
+        caution: "Do not cut patches. Do not apply heating pads over a patch — heat increases the rate of absorption and can cause overdose.",
+      },
+      { text: "Write the date and time of application on the edge of the patch with a pen or marker so you know when to change it." },
+      {
+        text: "When removing a used patch: fold it in half sticky-side-in, then flush it down the toilet or place in a disposal pouch (usually provided by the pharmacy).",
+        caution: "Used patches still contain significant medication — never put in regular trash where children, pets, or others could access them.",
+      },
+      { text: "If a patch has fallen off: call hospice immediately. They will advise whether to reapply, use a new patch, or cover with breakthrough medication." },
+      { text: "If the skin under the patch is red or irritated: rotate to a new site and call hospice — they may recommend a skin barrier or different adhesive." },
+    ],
+    whatToAvoid: [
+      "Do not cut patches — this causes unpredictable dosing",
+      "Do not apply heating pads over a patch",
+      "Do not flush in toilet if your community has a medication take-back program — use that instead",
+      "Do not touch the adhesive side with bare fingers when applying — use gloves or the backing",
+      "Do not apply to irritated, broken, or oily skin",
+    ],
+    whenToCallHospice: [
+      "A patch has fallen off and you are unsure what to do",
+      "Skin irritation is severe or the patch site looks infected",
+      "You are unsure when the patch is due for a change",
+      "Pain seems to be returning before the patch change is due — may need a dose adjustment",
+    ],
+    whatHappensNext:
+      "Hospice will advise on the correct next step and can adjust the patch dose or frequency if pain is not well-controlled. They can also arrange for skin barrier products if irritation is a recurring problem.",
+  },
 ];
 
 const equipment: GuidanceScenario[] = [
@@ -1448,6 +1637,162 @@ const equipment: GuidanceScenario[] = [
     ],
     whatHappensNext:
       "The equipment provider will dispatch emergency service or replacement equipment. Hospice will support you through the gap and can arrange alternative solutions.",
+  },
+  {
+    id: "catheter-care",
+    categoryId: "equipment",
+    title: "Urinary Catheter Care",
+    subtitle: "Managing a Foley catheter — draining the bag, skin care, signs of problems",
+    urgencyLevel: "soon",
+    icon: "droplet",
+    tags: ["catheter", "foley", "urinary catheter", "catheter bag", "catheter not draining", "urine bag", "catheter care", "catheter blocked"],
+    whatYouMayNotice: [
+      "The catheter bag is full and needs to be emptied",
+      "The catheter does not seem to be draining",
+      "There is leaking around the catheter",
+      "The urine looks very dark, cloudy, or has an unusual smell",
+      "The person seems uncomfortable near the catheter site",
+    ],
+    whatItMeans:
+      "A urinary catheter (Foley catheter) drains urine from the bladder through a tube into a collection bag. It is commonly used in hospice when a person can no longer control urination or when getting up to urinate is no longer safe. Routine care keeps it comfortable and working. Most problems are simple and can be fixed at home — some need hospice attention.",
+    whatToDoNow: [
+      {
+        text: "Empty the drainage bag when it is about half to two-thirds full — do not let it get completely full, which can cause backflow.",
+        tip: "Empty into a measuring cup or toilet. Record the amount if hospice has asked you to track output.",
+      },
+      {
+        text: "To empty: open the drain valve at the bottom of the bag into a container, then close the valve firmly. Do not let the drain port touch the inside of the container or the floor.",
+        caution: "Always wear gloves when emptying the bag.",
+      },
+      {
+        text: "Keep the bag below the level of the bladder at all times — it should never be lifted above the waist. This prevents backflow of urine into the bladder.",
+      },
+      {
+        text: "Clean around the catheter entry site daily with warm water and mild soap, wiping away from the body. Pat dry gently.",
+      },
+      {
+        text: "If the catheter is not draining: check that the tubing is not kinked, twisted, or compressed under the body or mattress. Straighten any kinks.",
+        tip: "Ensure the bag is hung lower than the bladder — drainage relies on gravity.",
+      },
+      {
+        text: "If urine looks very dark, cloudy, bloody, or smells very strongly — or if there is fever — call hospice. These can be signs of a urinary tract infection or dehydration.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not pull or tug on the catheter — the balloon inside the bladder holds it in place",
+      "Do not lift the drainage bag above waist level",
+      "Do not disconnect the tubing from the bag unnecessarily",
+      "Do not use powder or lotion directly around the catheter insertion site",
+      "Do not attempt to reinsert a catheter that has come out — call hospice",
+    ],
+    whenToCallHospice: [
+      "The catheter has come out or looks like it is coming out",
+      "Urine is bloody, cloudy, foul-smelling, or the person has a fever",
+      "The catheter is not draining despite checking for kinks and positioning",
+      "There is significant leaking around the catheter tube",
+      "The person is in pain or discomfort at the catheter site",
+    ],
+    whatHappensNext:
+      "Hospice can send a nurse to replace a catheter, obtain a urine specimen if infection is suspected, or assess whether the catheter is still the right approach. Many catheter problems are resolved quickly once properly assessed.",
+  },
+  {
+    id: "alternating-pressure-mattress",
+    categoryId: "equipment",
+    title: "Alternating Pressure Mattress",
+    subtitle: "Understanding and using the pressure-relief air mattress and pump",
+    urgencyLevel: "routine",
+    icon: "layers",
+    tags: ["alternating pressure", "air mattress", "pressure mattress", "pump alarm", "pressure relief", "bedsore prevention", "air pump"],
+    whatYouMayNotice: [
+      "The pump is making a normal cycling sound but you are unsure if it is working",
+      "The pump alarm is sounding",
+      "The mattress feels flat or underinflated",
+      "You want to understand how to use the pressure settings",
+    ],
+    whatItMeans:
+      "An alternating pressure mattress uses a pump to alternately inflate and deflate air cells within the mattress on a cycle (usually every 5–10 minutes). This continuously shifts pressure points, dramatically reducing the risk of pressure sores (bedsores) in someone who is mostly in bed. The pump sound is normal — it is working when you hear it cycling.",
+    whatToDoNow: [
+      {
+        text: "Confirm the pump is plugged in and the hose connecting the pump to the mattress is firmly attached at both ends.",
+      },
+      {
+        text: "The pump should make a gentle hum and cycle sound regularly — this is normal. If it is completely silent for a long period, check the power connection.",
+        tip: "Some pumps have an indicator light that shows it is cycling. Green usually means working correctly.",
+      },
+      {
+        text: "Adjust the pressure setting based on your loved one's weight and hospice's instructions. Most pumps have a dial — a higher number means firmer inflation.",
+        caution: "If unsure about the correct pressure setting, call hospice rather than guessing. Too low and the person bottoms out; too high reduces the alternating benefit.",
+      },
+      {
+        text: "Use only one layer of a regular flat sheet over the mattress. Do not use thick mattress pads, egg-crate foam overlays, or multiple layers on top — these defeat the pressure-relief benefit.",
+      },
+      {
+        text: "If an alarm is sounding: check for a disconnected hose, a kinked hose, or a punctured air cell (you may feel or hear air escaping). Reconnect, unkink, or call the equipment provider.",
+      },
+      { text: "Continue your regular repositioning schedule even with the mattress — it helps but does not replace turning." },
+    ],
+    whatToAvoid: [
+      "Do not use thick mattress pads or heavy blankets draped over the mattress",
+      "Do not sit or stand on the mattress — it is not designed for that weight and shape",
+      "Do not ignore a pump alarm — address it or call the equipment provider",
+      "Do not use safety pins or sharp objects near the mattress",
+    ],
+    whenToCallHospice: [
+      "A new pressure sore has appeared despite using the mattress",
+      "The pump alarm cannot be resolved",
+      "You are unsure whether the pressure setting is correct",
+    ],
+    whatHappensNext:
+      "If the pump fails, the equipment provider has 24-hour service and can replace it. Hospice can also assess any skin concerns and adjust the care plan, including more frequent repositioning or wound care.",
+  },
+  {
+    id: "cpap-bipap-hospice",
+    categoryId: "equipment",
+    title: "CPAP or BiPAP in Hospice",
+    subtitle: "Whether to continue sleep apnea equipment and how to decide",
+    urgencyLevel: "routine",
+    icon: "wind",
+    tags: ["cpap", "bipap", "sleep apnea machine", "breathing machine", "continue cpap", "stop cpap", "respiratory equipment"],
+    whatYouMayNotice: [
+      "Your loved one has been using CPAP or BiPAP for sleep apnea",
+      "You are wondering whether to keep using it now that they are on hospice",
+      "The mask is uncomfortable and causing skin irritation",
+      "They no longer seem to want to wear it",
+    ],
+    whatItMeans:
+      "CPAP and BiPAP machines were prescribed to treat obstructive sleep apnea, which is a chronic condition. In hospice, the goal shifts from treating chronic conditions to maximizing comfort. Many people in hospice find the mask uncomfortable, especially as they spend more time sleeping. Whether to continue is a personal decision that should be made with the hospice team, weighing comfort against any benefit.",
+    whatToDoNow: [
+      {
+        text: "Talk with the hospice nurse or physician about whether CPAP or BiPAP is still serving a comfort purpose.",
+        tip: "If the person is sleeping most of the time and the mask is waking or disturbing them, it is often appropriate to discontinue it.",
+      },
+      {
+        text: "If you decide to continue using it: ensure the mask fits well and there is no skin breakdown from the mask straps. Check the bridge of the nose and the forehead daily.",
+      },
+      {
+        text: "If the mask is causing skin breakdown or sores: stop using it and call hospice — skin comfort comes first.",
+        caution: "Mask sores on the nose or face can become serious quickly in someone who is immobile.",
+      },
+      {
+        text: "If your loved one resists the mask or removes it during sleep: this is often a signal that it is no longer comfortable or acceptable to them. This can be honored.",
+      },
+      {
+        text: "Stopping CPAP or BiPAP does not cause immediate distress in most hospice patients — the conditions that make sleep apnea dangerous in healthy people are different at end of life.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not feel obligated to force the mask if the person resists",
+      "Do not stop without at least a brief conversation with the hospice team",
+      "Do not assume continuing CPAP is required — it is not a hospice-covered comfort therapy in most cases",
+    ],
+    whenToCallHospice: [
+      "Skin breakdown is occurring under the mask",
+      "You are unsure whether to continue or discontinue",
+      "The person seems distressed by the equipment",
+      "You would like guidance on the decision",
+    ],
+    whatHappensNext:
+      "The hospice team will help you weigh the benefits and burdens. In most cases, comfort is prioritized and CPAP or BiPAP is gradually or immediately discontinued. Hospice can also address any breathing discomfort that follows with medications.",
   },
 ];
 
