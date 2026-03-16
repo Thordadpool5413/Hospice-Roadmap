@@ -61,6 +61,30 @@ export async function fetchQualityData(ccn: string): Promise<CmsQualityData> {
   return res.json();
 }
 
+export interface QualitySummary {
+  hciScore: string | null;
+  starRating: string | null;
+  avgDailyCensus: string | null;
+}
+
+export async function fetchQualitySummary(
+  ccns: string[]
+): Promise<Record<string, QualitySummary>> {
+  if (ccns.length === 0) return {};
+  const res = await fetch(
+    `${API_BASE}/cms/quality-summary?ccns=${ccns.join(",")}`,
+    {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(30000),
+    }
+  );
+
+  if (!res.ok) return {};
+
+  const data = (await res.json()) as { summaries: Record<string, QualitySummary> };
+  return data.summaries;
+}
+
 export async function fetchSpendingData(ccn: string): Promise<CmsSpendingData> {
   const res = await fetch(`${API_BASE}/cms/spending/${ccn}`, {
     headers: { Accept: "application/json" },

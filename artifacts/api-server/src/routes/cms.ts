@@ -261,6 +261,74 @@ router.get("/cms/quality/:ccn", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/cms/quality-summary", async (req: Request, res: Response) => {
+  try {
+    const { ccns } = req.query;
+    if (!ccns || typeof ccns !== "string") {
+      res.status(400).json({ error: "Provide 'ccns' as comma-separated CCNs" });
+      return;
+    }
+    const ccnList = ccns.split(",").filter((c) => c.length >= 4).slice(0, 20);
+    if (ccnList.length === 0) {
+      res.json({ summaries: {} });
+      return;
+    }
+
+    const cacheKey = `quality-summary:${ccnList.sort().join(",")}`;
+    const cached = getCached<object>(cacheKey);
+    if (cached) {
+      res.json(cached);
+      return;
+    }
+
+    const summaries: Record<string, { hciScore: string | null; starRating: string | null; avgDailyCensus: string | null }> = {};
+
+    await Promise.all(
+      ccnList.map(async (ccn) => {
+        try {
+          const [provData, cahpsData] = await Promise.all([
+            cmsQuery(DATASETS.providerData, [
+              { property: "cms_certification_number_ccn", value: ccn, operator: "=" },
+            ], 50),
+            cmsQuery(DATASETS.cahps, [
+              { property: "cms_certification_number_ccn", value: ccn, operator: "=" },
+            ], 10),
+          ]);
+
+          let hciScore: string | null = null;
+          let avgDailyCensus: string | null = null;
+          for (const row of provData.results) {
+            if (row.measure_code === "H_012_00_OBSERVED") hciScore = row.score;
+            if (row.measure_code === "Average_Daily_Census") avgDailyCensus = row.score;
+          }
+
+          let starRating: string | null = null;
+          for (const row of cahpsData.results) {
+            if (row.measure_code === "SUMMARY_STAR_RATING") {
+              starRating = row.star_rating || null;
+            }
+          }
+
+          summaries[ccn] = { hciScore, starRating, avgDailyCensus };
+        } catch {
+          summaries[ccn] = { hciScore: null, starRating: null, avgDailyCensus: null };
+        }
+      })
+    );
+
+    const result = { summaries, source: "CMS Hospice Quality Reporting Program" };
+    setCache(cacheKey, result);
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("CMS quality summary error:", message);
+    res.status(502).json({
+      error: "Unable to fetch quality summaries from CMS.",
+      detail: message,
+    });
+  }
+});
+
 router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
   try {
     const { ccn } = req.params;
@@ -276,11 +344,16 @@ router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
       return;
     }
 
-    const data = await cmsQuery(DATASETS.providerData, [
-      { property: "cms_certification_number_ccn", value: ccn, operator: "=" },
-    ], 200);
+    const [providerMeasures, generalInfo] = await Promise.all([
+      cmsQuery(DATASETS.providerData, [
+        { property: "cms_certification_number_ccn", value: ccn, operator: "=" },
+      ], 200),
+      cmsQuery(DATASETS.generalInfo, [
+        { property: "cms_certification_number_ccn", value: ccn, operator: "=" },
+      ], 1),
+    ]);
 
-    if (data.results.length === 0) {
+    if (providerMeasures.results.length === 0) {
       res.json({
         ccn,
         found: false,
@@ -293,16 +366,14 @@ router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
     let avgDailyCensus: string | null = null;
     const utilizationMeasures: Array<{ code: string; name: string; score: string }> = [];
 
-    for (const row of data.results) {
+    for (const row of providerMeasures.results) {
       const code = row.measure_code || "";
       if (code === "H_012_07_OBSERVED") perBeneficiarySpending = row.score;
       if (code === "Average_Daily_Census") avgDailyCensus = row.score;
 
       if (
         code.startsWith("H_012") ||
-        code === "Average_Daily_Census" ||
-        code.includes("SPENDING") ||
-        code.includes("COST")
+        code === "Average_Daily_Census"
       ) {
         utilizationMeasures.push({
           code,
@@ -312,13 +383,36 @@ router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
       }
     }
 
+    let officeVisitCosts = null;
+    const providerZip = generalInfo.results[0]?.zip_code;
+    if (providerZip) {
+      try {
+        const spendingData = await cmsQuery(DATASETS.spending, [
+          { property: "zip_code", value: providerZip, operator: "=" },
+        ], 1);
+        if (spendingData.results.length > 0) {
+          const s = spendingData.results[0];
+          officeVisitCosts = {
+            zip: providerZip,
+            newPatientCopay: s.mode_copay_for_new_patient || null,
+            establishedPatientCopay: s.mode_copay_for_established_patient || null,
+            newPatientMedicarePricing: s.mode_medicare_pricing_for_new_patient || null,
+            establishedPatientMedicarePricing: s.mode_medicare_pricing_for_established_patient || null,
+          };
+        }
+      } catch {
+        officeVisitCosts = null;
+      }
+    }
+
     const result = {
       ccn,
       found: true,
       perBeneficiarySpending,
       avgDailyCensus,
       utilizationMeasures,
-      source: "CMS Hospice Quality Reporting Program",
+      officeVisitCosts,
+      source: "CMS Hospice Quality Reporting Program & Hospice Office Visit Costs",
       medicareGovUrl: `https://www.medicare.gov/care-compare/details/hospice/${ccn}`,
     };
 

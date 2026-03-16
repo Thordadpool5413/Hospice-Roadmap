@@ -396,6 +396,25 @@ export default function ProviderDetailScreen() {
                 ))}
             </View>
           )}
+          {spendingData.officeVisitCosts && (
+            <View style={qStyles.officeVisitBox}>
+              <Text style={qStyles.officeVisitTitle}>
+                Office Visit Costs (ZIP {spendingData.officeVisitCosts.zip})
+              </Text>
+              <View style={qStyles.officeVisitRow}>
+                <Text style={qStyles.officeVisitLabel}>New Patient Copay</Text>
+                <Text style={qStyles.officeVisitValue}>
+                  ${spendingData.officeVisitCosts.newPatientCopay ?? "N/A"}
+                </Text>
+              </View>
+              <View style={qStyles.officeVisitRow}>
+                <Text style={qStyles.officeVisitLabel}>Established Patient Copay</Text>
+                <Text style={qStyles.officeVisitValue}>
+                  ${spendingData.officeVisitCosts.establishedPatientCopay ?? "N/A"}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
       )}
 
@@ -759,6 +778,34 @@ const qStyles = StyleSheet.create({
     color: Colors.text,
     minWidth: 50,
     textAlign: "right",
+  },
+  officeVisitBox: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  officeVisitTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  officeVisitRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  officeVisitLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  officeVisitValue: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
   },
 });
 

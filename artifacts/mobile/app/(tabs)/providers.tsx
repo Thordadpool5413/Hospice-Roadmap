@@ -21,9 +21,11 @@ import { useApp } from "@/context/AppContext";
 import { mockProviders } from "@/data/mockProviders";
 import { setCmsProviders as storeCmsProviders } from "@/context/cmsProviderStore";
 import {
+  fetchQualitySummary,
   searchCmsProviders,
   US_STATES,
 } from "@/services/cmsProviderService";
+import type { QualitySummary } from "@/services/cmsProviderService";
 import type { Provider } from "@/types";
 
 type SearchMode = "local" | "cms";
@@ -46,6 +48,7 @@ export default function ProvidersScreen() {
   const [cmsSearched, setCmsSearched] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [stateFilter, setStateFilter] = useState("");
+  const [qualitySummaries, setQualitySummaries] = useState<Record<string, QualitySummary>>({});
 
   const handleCmsSearch = useCallback(async () => {
     if (!selectedState && !zipInput) return;
@@ -62,6 +65,16 @@ export default function ProvidersScreen() {
       storeCmsProviders(result.providers);
       setCmsProviders(result.providers);
       setCmsTotal(result.total);
+
+      const ccns = result.providers
+        .map((p) => p.ccn)
+        .filter((c): c is string => !!c)
+        .slice(0, 20);
+      if (ccns.length > 0) {
+        fetchQualitySummary(ccns)
+          .then(setQualitySummaries)
+          .catch(() => {});
+      }
     } catch (err: unknown) {
       setCmsError(err instanceof Error ? err.message : "Search failed");
       setCmsProviders([]);
@@ -425,6 +438,7 @@ export default function ProvidersScreen() {
                 onSave={() => toggleSavedProvider(provider.id)}
                 isSaved={isSavedProvider(provider.id)}
                 isCms={!!provider.ccn}
+                qualitySummary={provider.ccn ? qualitySummaries[provider.ccn] : undefined}
               />
             ))}
           </View>

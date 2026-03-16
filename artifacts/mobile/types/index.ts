@@ -75,6 +75,14 @@ export interface CmsQualityData {
   medicareGovUrl: string;
 }
 
+export interface CmsOfficeVisitCosts {
+  zip: string;
+  newPatientCopay: string | null;
+  establishedPatientCopay: string | null;
+  newPatientMedicarePricing: string | null;
+  establishedPatientMedicarePricing: string | null;
+}
+
 export interface CmsSpendingData {
   ccn: string;
   found: boolean;
@@ -85,6 +93,7 @@ export interface CmsSpendingData {
     name: string;
     score: string;
   }>;
+  officeVisitCosts: CmsOfficeVisitCosts | null;
   source: string;
   medicareGovUrl: string;
 }
