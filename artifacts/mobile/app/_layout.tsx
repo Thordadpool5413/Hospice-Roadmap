@@ -66,15 +66,6 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
-        name="referral"
-        options={{
-          headerShown: true,
-          headerTitle: "Request Information",
-          headerBackTitle: "Back",
-          headerTintColor: "#1C2228",
-        }}
-      />
-      <Stack.Screen
         name="support"
         options={{
           headerShown: true,

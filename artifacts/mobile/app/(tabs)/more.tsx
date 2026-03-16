@@ -46,7 +46,6 @@ export default function MoreScreen() {
       title: "Tools",
       items: [
         { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation" },
-        { label: "Request Information", icon: "send", route: "/referral" },
         { label: "Contact Support", icon: "message-circle", route: "/support" },
       ],
     },

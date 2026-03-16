@@ -118,24 +118,6 @@ export type ResourceCategory =
   | "documentation"
   | "myths_facts";
 
-export interface Referral {
-  id: string;
-  patientName: string;
-  patientDOB: string;
-  diagnosis: string;
-  physicianName: string;
-  physicianPhone: string;
-  facilityName?: string;
-  contactName: string;
-  contactPhone: string;
-  contactRelationship: string;
-  urgency: "routine" | "urgent" | "emergent";
-  additionalNotes?: string;
-  status: "draft" | "submitted" | "received" | "processing" | "complete";
-  submittedAt?: string;
-  providerId?: string;
-}
-
 export interface SupportRequest {
   id: string;
   name: string;
@@ -151,7 +133,6 @@ export interface SupportRequest {
 export type SupportTopic =
   | "general_question"
   | "provider_search"
-  | "referral_help"
   | "caregiver_support"
   | "bereavement"
   | "eligibility_question"
