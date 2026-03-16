@@ -30,6 +30,15 @@ const quickActions = [
   { label: "Get Support", icon: "message-circle", route: "/support", color: Colors.amber, bg: Colors.amberPale },
 ];
 
+const urgentSituations = [
+  { label: "Breathing difficulty", id: "breathing-changes" },
+  { label: "Worsening pain", id: "pain-worsening" },
+  { label: "Agitation or restlessness", id: "agitation-restlessness" },
+  { label: "Patient has fallen", id: "fall-recovery" },
+  { label: "Signs of dying", id: "approaching-death" },
+  { label: "I'm not sure what's happening", id: "not-sure-whats-happening" },
+];
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user, toggleSavedResource, isSavedResource } = useApp();
@@ -86,6 +95,50 @@ export default function HomeScreen() {
           Trusted information and tools for every step of the hospice journey —
           for patients, families, and care teams.
         </Text>
+      </View>
+
+      {/* Get Help Now */}
+      <View>
+        <Pressable
+          onPress={() => router.push("/situation-finder" as any)}
+          style={({ pressed }) => [
+            styles.helpNowBanner,
+            pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={styles.helpNowLeft}>
+            <View style={styles.helpNowIcon}>
+              <Feather name="alert-circle" size={22} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.helpNowTitle}>Get Help Now</Text>
+              <Text style={styles.helpNowSubtitle}>
+                Find guidance for any situation
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.8)" />
+        </Pressable>
+
+        <View style={styles.urgentChips}>
+          {urgentSituations.map((s) => (
+            <Pressable
+              key={s.id}
+              onPress={() =>
+                router.push({
+                  pathname: "/guidance/[id]",
+                  params: { id: s.id },
+                } as any)
+              }
+              style={({ pressed }) => [
+                styles.urgentChip,
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Text style={styles.urgentChipText}>{s.label}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       {/* Quick Actions */}
@@ -295,5 +348,62 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     flex: 1,
     lineHeight: 16,
+  },
+  helpNowBanner: {
+    backgroundColor: Colors.error,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: Colors.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  helpNowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  helpNowIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helpNowTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: -0.3,
+  },
+  helpNowSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 2,
+  },
+  urgentChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+  urgentChip: {
+    backgroundColor: Colors.errorPale,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: Colors.error + "30",
+  },
+  urgentChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
   },
 });
