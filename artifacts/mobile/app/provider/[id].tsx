@@ -205,6 +205,11 @@ export default function ProviderDetailScreen() {
         </View>
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About</Text>
+        <Text style={styles.description}>{provider.description}</Text>
+      </View>
+
       {isCms && qualityLoading && (
         <View style={qStyles.loadingBox}>
           <ActivityIndicator size="small" color={Colors.primary} />
@@ -417,11 +422,6 @@ export default function ProviderDetailScreen() {
           )}
         </View>
       )}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <Text style={styles.description}>{provider.description}</Text>
-      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Insurance & Accreditation</Text>
