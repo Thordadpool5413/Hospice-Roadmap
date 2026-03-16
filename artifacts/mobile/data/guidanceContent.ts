@@ -12,6 +12,8 @@ export type GuidanceCategoryId =
 
 export interface GuidanceStep {
   text: string;
+  tip?: string;
+  caution?: string;
 }
 
 export interface GuidanceScenario {
@@ -482,6 +484,281 @@ const symptoms: GuidanceScenario[] = [
     whatHappensNext:
       "Hospice will stay in close contact, may send a nurse, and will guide you through this time. After death, hospice will tell you exactly what steps to take. You do not need to rush — take the time you need with your loved one.",
   },
+  {
+    id: "constipation",
+    categoryId: "symptoms",
+    title: "Constipation",
+    subtitle: "No bowel movement in several days, straining, or discomfort",
+    urgencyLevel: "soon",
+    icon: "alert-triangle",
+    tags: ["constipation", "no bowel movement", "straining", "hard stool", "not going to bathroom", "opioid constipation"],
+    whatYouMayNotice: [
+      "No bowel movement in 3 or more days",
+      "Straining or pain with attempts to have a bowel movement",
+      "Hard, dry stools",
+      "Bloating, stomach cramping, or distension",
+      "Nausea or decreased appetite related to constipation",
+      "Restlessness or agitation (constipation can cause discomfort even when it's hard to identify)",
+    ],
+    whatItMeans:
+      "Constipation is one of the most common and preventable problems in hospice. Pain medications (opioids) almost always cause constipation, and this does not improve on its own without a bowel regimen. Untreated constipation can cause significant discomfort, agitation, and even confusion. It is very treatable.",
+    whatToDoNow: [
+      { text: "Check: when was the last bowel movement? More than 3 days without one needs attention.", tip: "Keep a simple log — even a note on your phone helps hospice help you." },
+      { text: "Ensure a stool softener and/or laxative is in place — hospice should have ordered this with any opioid. Call if not." },
+      { text: "Encourage fluid intake if swallowing is safe — even small sips help." },
+      { text: "Warm liquids (tea, warm water) can help stimulate bowel activity." },
+      { text: "Gentle movement if possible — even sitting up in a chair helps." },
+      { text: "Call hospice if no bowel movement in 3+ days, if there is significant pain, or if the abdomen feels very hard or bloated." },
+    ],
+    whatToAvoid: [
+      "Do not assume constipation will resolve without intervention when someone is on opioids — it will not",
+      "Do not use enemas without hospice guidance",
+      "Do not ignore new abdominal pain or hardness — these need assessment",
+    ],
+    whenToCallHospice: [
+      "No bowel movement in 3 or more days",
+      "Significant abdominal pain, distension, or bloating",
+      "Person is very uncomfortable or restless and constipation may be the cause",
+      "Current medications are not working",
+    ],
+    whatHappensNext:
+      "Hospice will review the bowel regimen and can order more effective interventions if needed. Constipation is almost always resolvable with appropriate treatment, and preventing it is a core part of good hospice care.",
+  },
+  {
+    id: "fever",
+    categoryId: "symptoms",
+    title: "Fever",
+    subtitle: "High temperature or signs of infection",
+    urgencyLevel: "soon",
+    icon: "thermometer",
+    tags: ["fever", "high temperature", "infection", "hot skin", "shaking", "chills", "temperature"],
+    whatYouMayNotice: [
+      "Skin that feels hot and dry, or sweaty",
+      "Flushed face or cheeks",
+      "Shaking or chills",
+      "Increased confusion",
+      "Faster breathing or heart rate",
+      "Temperature above 100.4°F (38°C)",
+    ],
+    whatItMeans:
+      "In hospice, fever may indicate an infection or may be part of the illness process itself. In the final stages of life, low-grade fevers can be a normal part of the body's changes. Whether or how aggressively to treat a fever depends on the goals of care — comfort is always the priority. Call hospice to discuss.",
+    whatToDoNow: [
+      { text: "Check temperature if a thermometer is available and the person can tolerate it." },
+      { text: "Apply a cool, damp cloth to the forehead, back of the neck, or armpits — this brings comfort even when not aimed at reducing fever." },
+      { text: "Offer cool fluids if swallowing is safe." },
+      { text: "Use a light blanket or sheet rather than heavy covers." },
+      { text: "Acetaminophen (Tylenol) can reduce fever and discomfort if hospice has approved its use — follow the label or hospice guidance." },
+      { text: "Call hospice to report the fever and get guidance based on the specific situation.", caution: "Do not give aspirin or ibuprofen without checking with hospice." },
+    ],
+    whatToAvoid: [
+      "Do not use cold baths or ice — these cause shivering which raises the body's heat production",
+      "Do not give aspirin to adults in some conditions without checking — call hospice first",
+      "Do not assume all fevers need aggressive treatment in hospice — comfort is the guide",
+    ],
+    whenToCallHospice: [
+      "Temperature above 102°F (38.9°C)",
+      "Person is very uncomfortable or the fever is not improving with comfort measures",
+      "Confusion worsens significantly",
+      "Anytime you are uncertain",
+    ],
+    whatHappensNext:
+      "Hospice will help you determine whether the fever is treatable, whether treatment aligns with comfort goals, and what measures are most appropriate. In late-stage illness, some fevers are part of the dying process and comfort-focused care is the priority.",
+  },
+  {
+    id: "fatigue-weakness",
+    categoryId: "symptoms",
+    title: "Extreme Fatigue or Weakness",
+    subtitle: "Sleeping most of the time, unable to lift arms or legs",
+    urgencyLevel: "routine",
+    icon: "battery",
+    tags: ["fatigue", "tired", "weakness", "sleeping all day", "can't lift arms", "can't move legs", "exhausted", "sleeping a lot"],
+    whatYouMayNotice: [
+      "Sleeping most of the day and night",
+      "Difficulty holding a cup, lifting arms, or turning independently",
+      "Speaking only briefly and then sleeping again",
+      "Eyes closing mid-conversation",
+      "Much less engagement than usual",
+    ],
+    whatItMeans:
+      "Progressive fatigue and weakness is one of the most predictable parts of serious illness. As the body's energy reserves decline, sleep becomes the default state. This is not laziness or giving up — it is the body conserving resources. The amount of time a person sleeps often increases significantly in the final weeks and days. Your presence during these quiet times still matters.",
+    whatToDoNow: [
+      { text: "Allow rest without interruption — do not try to keep them awake." },
+      { text: "Schedule important conversations, visits, or activities during natural alert periods.", tip: "Many people are most alert in the mornings — plan meaningful time then." },
+      { text: "Keep the environment calm and quiet — the senses remain sensitive even when asleep." },
+      { text: "Speak softly when they are asleep — your voice may still bring comfort." },
+      { text: "Ensure comfort during long periods of rest — reposition every 1–2 hours, provide mouth care, keep skin clean and dry." },
+      { text: "Use this time to care for yourself — rest, eat, and reach out for support." },
+    ],
+    whatToAvoid: [
+      "Do not try to wake them frequently to eat or drink",
+      "Do not interpret increased sleep as a sign that they are suffering",
+      "Do not have loud or distressing conversations in the room while they sleep",
+    ],
+    whenToCallHospice: [
+      "Sudden dramatic increase in sleeping over 24 hours",
+      "Cannot be awakened at all",
+      "You are uncertain whether this is normal",
+    ],
+    whatHappensNext:
+      "Increasing sleep is a natural part of the dying process. Hospice will help you understand what is expected and guide you through this transition. It is also a signal to ensure that all meaningful conversations and connections have been made.",
+  },
+  {
+    id: "urinary-changes",
+    categoryId: "symptoms",
+    title: "Urinary Changes",
+    subtitle: "Decreased urine, dark urine, or urinary incontinence",
+    urgencyLevel: "soon",
+    icon: "droplet",
+    tags: ["urine", "urinary", "no urine", "dark urine", "catheter", "incontinence", "not urinating"],
+    whatYouMayNotice: [
+      "Very little or no urine output for 12 or more hours",
+      "Urine that is very dark, brown, or tea-colored",
+      "Strong-smelling urine",
+      "Urinary incontinence (leaking or accidents)",
+      "Discomfort or agitation that may relate to a full bladder",
+      "Catheter that is not draining well",
+    ],
+    whatItMeans:
+      "Decreased urine output is a very common sign as the kidneys slow down in late illness. Very dark or tea-colored urine often signals dehydration or kidney changes. In the final days, urine may stop almost entirely as the body shuts down. If incontinence is new, good skin care and prompt brief changes are essential.",
+    whatToDoNow: [
+      { text: "Note how long it has been since any urine was produced." },
+      { text: "Check for signs that a full bladder may be causing discomfort — lower abdominal firmness or restlessness." },
+      { text: "For incontinence: keep skin clean and dry, apply barrier cream, change briefs promptly." },
+      { text: "If a catheter is in place: check that the tubing is not kinked or blocked. Check that the collection bag is not too full.", tip: "Catheter bag should be emptied when about half to two-thirds full." },
+      { text: "Call hospice if there is no urine for 12+ hours and the person seems uncomfortable, or if you suspect a blockage." },
+    ],
+    whatToAvoid: [
+      "Do not push large amounts of fluid if the kidneys are failing — it does not help and may cause discomfort",
+      "Do not leave a person in a soiled brief — skin breaks down rapidly",
+      "Do not attempt to insert or replace a catheter without training",
+    ],
+    whenToCallHospice: [
+      "No urine in 12 or more hours with signs of discomfort",
+      "Catheter appears blocked or has stopped draining",
+      "New signs of urinary tract infection (foul odor, cloudy urine, agitation)",
+      "You need guidance on catheter care",
+    ],
+    whatHappensNext:
+      "Hospice will assess whether decreased urine is a natural part of the dying process or whether a catheter or other intervention might improve comfort. Near the end of life, cessation of urine is an expected change.",
+  },
+  {
+    id: "swelling",
+    categoryId: "symptoms",
+    title: "Swelling (Edema)",
+    subtitle: "Puffy legs, ankles, feet, or abdomen",
+    urgencyLevel: "routine",
+    icon: "alert-circle",
+    tags: ["swelling", "edema", "puffy legs", "swollen ankles", "fluid", "abdomen swelling", "bloated"],
+    whatYouMayNotice: [
+      "Legs, ankles, or feet that are visibly swollen or puffy",
+      "Skin that feels tight or shiny over swollen areas",
+      "Shoes or socks that no longer fit",
+      "A large, distended abdomen",
+      "Pitting — when you press the skin and the indentation stays",
+    ],
+    whatItMeans:
+      "Swelling (edema) occurs when the body retains fluid, which is common in serious illness due to heart, kidney, or liver changes, or low protein levels. In hospice, the goal is comfort rather than complete elimination of swelling. Some swelling cannot be reversed but its discomfort can be managed.",
+    whatToDoNow: [
+      { text: "Elevate swollen legs above the level of the heart when resting — use pillows under the calves and feet." },
+      { text: "Keep skin over swollen areas clean, moisturized, and protected from pressure — swollen skin breaks down easily." },
+      { text: "Use properly fitted, non-binding clothing and socks — avoid tight elastic." },
+      { text: "Gentle repositioning to relieve pressure on swollen areas." },
+      { text: "Report new or worsening swelling to hospice." },
+    ],
+    whatToAvoid: [
+      "Do not massage severely swollen limbs without hospice guidance",
+      "Do not apply compression stockings without hospice guidance — in some conditions these are harmful",
+      "Do not restrict fluids on your own without hospice guidance",
+    ],
+    whenToCallHospice: [
+      "Swelling is new, sudden, or rapidly worsening",
+      "Skin over swollen areas appears broken, blistered, or weeping",
+      "Swelling seems to be causing pain or significant discomfort",
+    ],
+    whatHappensNext:
+      "Hospice will assess the cause and may consider gentle diuretic medications if they align with comfort goals. They will also advise on skin protection and positioning to prevent breakdown over swollen areas.",
+  },
+  {
+    id: "bleeding",
+    categoryId: "symptoms",
+    title: "Bleeding",
+    subtitle: "Any unexpected bleeding — mouth, nose, wound, or elsewhere",
+    urgencyLevel: "immediate",
+    icon: "alert-octagon",
+    tags: ["bleeding", "blood", "hemorrhage", "blood in mouth", "nose bleed", "blood in urine", "blood from wound"],
+    callHospiceNow: true,
+    whatYouMayNotice: [
+      "Blood from the mouth, nose, or a wound",
+      "Blood in the urine or stool",
+      "Unexplained bruising",
+      "A wound that will not stop bleeding",
+      "Coughing up blood",
+    ],
+    whatItMeans:
+      "Bleeding in hospice can range from minor (small nosebleeds) to serious (active hemorrhage). In some illnesses, significant bleeding can occur near the end of life. Hospice teams prepare for this and have comfort measures and supplies to help. If large-scale bleeding occurs, call hospice immediately and focus on keeping the person calm.",
+    whatToDoNow: [
+      { text: "Stay calm — your calm presence helps the person you are caring for." },
+      { text: "Call hospice immediately for any significant bleeding.", caution: "Do not wait to see if major bleeding stops on its own." },
+      { text: "For minor nosebleeds: pinch the soft part of the nose, tilt head slightly forward, and apply gentle pressure for 10–15 minutes." },
+      { text: "For wound bleeding: apply firm, gentle pressure with a clean cloth or gauze." },
+      { text: "For large-scale or sudden bleeding: call hospice immediately. Dark-colored towels can minimize visual distress. Stay with the person." },
+      { text: "Speak softly and reassuringly — do not show panic." },
+    ],
+    whatToAvoid: [
+      "Do not leave the person alone during active bleeding",
+      "Do not pack a nose bleed too deeply",
+      "Do not give blood thinning medications (aspirin, ibuprofen) without checking with hospice",
+    ],
+    whenToCallHospice: [
+      "Any significant bleeding that cannot be controlled with simple pressure",
+      "Blood from the lungs, stomach, or rectum",
+      "You are frightened or feel this may be a serious situation",
+    ],
+    whatHappensNext:
+      "Hospice will guide you through the situation. For people at risk of significant bleeding, hospice will often prepare you in advance with a plan and comfort medications. After the event, a hospice nurse will follow up to provide support and assess next steps.",
+  },
+  {
+    id: "seizures",
+    categoryId: "symptoms",
+    title: "Seizures",
+    subtitle: "Shaking, stiffening, or uncontrolled movements",
+    urgencyLevel: "immediate",
+    icon: "zap",
+    tags: ["seizure", "convulsion", "shaking", "stiffening", "jerking movements", "fell during seizure"],
+    callHospiceNow: true,
+    whatYouMayNotice: [
+      "Sudden stiffening of the body",
+      "Rhythmic jerking or shaking of arms, legs, or the whole body",
+      "Eyes rolling back or staring blankly",
+      "Loss of consciousness during the event",
+      "Confusion, sleepiness, or weakness immediately after",
+      "Brief whole-body stiffening followed by limpness",
+    ],
+    whatItMeans:
+      "Seizures can occur in some illnesses affecting the brain or in the final stages of life. A first-time seizure always needs hospice contact. For people known to have seizures, hospice usually has a plan in place. Most seizures stop on their own within 1–3 minutes.",
+    whatToDoNow: [
+      { text: "Stay calm. Start timing the seizure so you can report it to hospice." },
+      { text: "Protect from injury: move sharp or hard objects away. Do not restrain.", caution: "Never put anything in the person's mouth during a seizure." },
+      { text: "If they are in bed: lower the side rails and leave them in place. If on the floor, cushion the head." },
+      { text: "After the seizure stops: turn them onto their side to prevent choking on secretions." },
+      { text: "Call hospice immediately after the seizure." },
+      { text: "Stay with them while they recover — they may be confused and frightened." },
+    ],
+    whatToAvoid: [
+      "Do not put anything in the mouth — this is a dangerous myth",
+      "Do not restrain the person — you can cause injury",
+      "Do not leave them alone",
+      "Do not give water immediately after — wait until they are fully alert",
+    ],
+    whenToCallHospice: [
+      "After any seizure — always call",
+      "The seizure lasts more than 5 minutes — this is an emergency",
+      "A second seizure occurs without full recovery between them",
+      "The person does not regain consciousness after several minutes",
+    ],
+    whatHappensNext:
+      "Hospice will assess the situation and may add anti-seizure medications to the comfort kit. If seizures are a known risk, they will help you prepare and know what to do. Most people are drowsy and confused after a seizure but recover to their baseline within 15–30 minutes.",
+  },
 ];
 
 const caregiving: GuidanceScenario[] = [
@@ -727,6 +1004,152 @@ const caregiving: GuidanceScenario[] = [
     ],
     whatHappensNext:
       "Hospice can provide gait belt training, recommend assistive equipment, and evaluate whether a mechanical lift is needed. Caregiver safety matters too — do not push through unsafe situations alone.",
+  },
+  {
+    id: "boosting-in-bed",
+    categoryId: "caregiving",
+    title: "Boosting Up in Bed",
+    subtitle: "Moving someone who has slid down toward the foot of the bed",
+    urgencyLevel: "routine",
+    icon: "arrow-up",
+    tags: ["boosting", "slide up bed", "move up in bed", "repositioning", "slid down"],
+    whatYouMayNotice: [
+      "Person has slid down and their head is no longer on the pillow",
+      "Person is uncomfortable and needs to move up",
+    ],
+    whatItMeans:
+      "When someone cannot reposition themselves, they slide down in bed over time. Boosting them back up requires technique to avoid dragging skin across the sheets, which causes friction injuries. If possible, this is a two-person task.",
+    whatToDoNow: [
+      { text: "Lower the head of the bed flat or as close to flat as tolerated.", tip: "The flatter the bed, the less friction when moving." },
+      { text: "Remove pillows from behind the head temporarily." },
+      { text: "If available, use a draw sheet (a folded sheet under the person from shoulders to hips) — two people each hold one side and lift slightly while sliding up." },
+      { text: "Alone: ask the person to bend their knees and push with their feet while you guide their upper body.", tip: "Bend your own knees and keep your back straight — protect yourself." },
+      { text: "Slide, do not drag — even a slight lift makes a significant difference to skin safety." },
+      { text: "Reposition the pillow, restore head-of-bed angle, and check for comfort when done." },
+    ],
+    whatToAvoid: [
+      "Do not drag across the sheets — this tears fragile skin",
+      "Do not try to boost without a draw sheet if you are alone and the person is heavy",
+      "Do not twist your back — face the direction you are moving",
+    ],
+    whenToCallHospice: [
+      "You cannot safely boost without risking injury to yourself or the patient",
+      "You need a draw sheet or slide board",
+      "Skin is being damaged from frequent sliding",
+    ],
+    whatHappensNext:
+      "The hospice aide can demonstrate this technique and assist during visits. A draw sheet, slide board, or mechanical lift can make this much safer — ask hospice to arrange these if boosting is a regular challenge.",
+  },
+  {
+    id: "feeding-assistance",
+    categoryId: "caregiving",
+    title: "Feeding Assistance",
+    subtitle: "Helping someone eat or drink safely",
+    urgencyLevel: "routine",
+    icon: "coffee",
+    tags: ["feeding", "helping eat", "can't feed themselves", "feeding assistance", "mealtime"],
+    whatYouMayNotice: [
+      "Person cannot manage utensils or cup independently",
+      "Person is eating very slowly",
+      "Person is spilling food or liquid",
+    ],
+    whatItMeans:
+      "When weakness or coordination problems make self-feeding difficult, a caregiver can assist. The goal is to preserve dignity, safety, and enjoyment — not just caloric intake. As illness progresses, the importance shifts from nutrition to pleasure and connection.",
+    whatToDoNow: [
+      { text: "Sit at the person's level — never stand over them while feeding. This puts them in a more natural swallowing position.", tip: "Sitting beside them rather than across from them often feels more natural." },
+      { text: "Ensure they are sitting upright at 90 degrees or as close as possible before offering any food or drink." },
+      { text: "Offer small amounts — a teaspoon at a time. Wait for a full swallow before offering more." },
+      { text: "Alternate food and liquid to keep the mouth moist and help clear the throat." },
+      { text: "Watch for signs of swallowing difficulty: coughing, wet voice, or a gurgling sound after eating." },
+      { text: "Keep mealtimes unhurried and pleasant — conversation, music, or familiar settings help." },
+      { text: "Honor their preferences — even a few bites of a loved food matters more than a balanced meal.", tip: "Ask: 'What sounds good to you today?'" },
+    ],
+    whatToAvoid: [
+      "Do not rush — mealtime is also a time for connection",
+      "Do not use straws — they deliver liquid too fast for safe swallowing",
+      "Do not force eating if the person refuses — this can damage trust and cause aspiration",
+    ],
+    whenToCallHospice: [
+      "Consistent coughing or choking during meals",
+      "Sudden refusal to eat that is new and unexplained",
+      "You suspect swallowing is unsafe",
+    ],
+    whatHappensNext:
+      "If swallowing difficulties arise, hospice will assess and advise on safe consistencies. As illness progresses and appetite declines, hospice will help you transition the focus from nutrition to comfort and pleasure.",
+  },
+  {
+    id: "skin-care",
+    categoryId: "caregiving",
+    title: "Skin Care",
+    subtitle: "Protecting and moisturizing fragile skin",
+    urgencyLevel: "routine",
+    icon: "shield",
+    tags: ["skin care", "dry skin", "fragile skin", "moisturizer", "lotion", "skin protection", "barrier cream"],
+    whatYouMayNotice: [
+      "Skin that looks dry, paper-thin, or flaky",
+      "Skin that tears easily",
+      "Redness in areas of pressure or moisture",
+      "Person complains of itchy or irritated skin",
+    ],
+    whatItMeans:
+      "Skin becomes fragile in serious illness due to poor nutrition, dehydration, immobility, and medication effects. Good daily skin care is one of the most important things you can do to prevent serious wounds and keep the person comfortable.",
+    whatToDoNow: [
+      { text: "Moisturize the skin at least once daily after bathing — use a gentle, unscented lotion or cream.", tip: "Focus on heels, elbows, lower back, and other bony areas." },
+      { text: "Apply barrier cream (zinc oxide or petroleum jelly) to areas exposed to moisture from incontinence." },
+      { text: "Keep skin dry — moisture from sweat, urine, or wound drainage greatly increases breakdown risk." },
+      { text: "Inspect skin with each bath or brief change — look for new redness, breakdown, or bruising.", caution: "Report any new wounds or open areas to hospice — early treatment prevents serious problems." },
+      { text: "Ensure sheets are free of wrinkles and crumbs under the person." },
+      { text: "Use soft, smooth fabrics — avoid rough textures directly on fragile skin." },
+    ],
+    whatToAvoid: [
+      "Do not massage reddened areas — this damages tissue rather than helping",
+      "Do not use alcohol-based products on fragile skin",
+      "Do not use fragranced soaps or lotions — these can irritate sensitive skin",
+      "Do not apply tape directly to fragile skin without a protective barrier",
+    ],
+    whenToCallHospice: [
+      "Any new wound, open area, or significant breakdown appears",
+      "You need wound care supplies or instruction",
+      "Skin problems seem to be causing pain or discomfort",
+    ],
+    whatHappensNext:
+      "Hospice will advise on wound care and can order appropriate supplies. Prevention is always easier than treatment — a quick daily inspection is one of the best things you can do.",
+  },
+  {
+    id: "comfort-positioning",
+    categoryId: "caregiving",
+    title: "Comfort Positioning",
+    subtitle: "Positioning for maximum comfort and pressure relief",
+    urgencyLevel: "routine",
+    icon: "layout",
+    tags: ["positioning", "comfort position", "pillows", "pressure relief", "side lying", "backrest"],
+    whatYouMayNotice: [
+      "Person seems uncomfortable in their current position",
+      "Person cannot tell you what they need",
+      "You want to know the best positioning options",
+    ],
+    whatItMeans:
+      "Comfort positioning involves using pillows, wedges, and repositioning to distribute pressure away from vulnerable areas and support the body in natural alignment. Good positioning reduces pain, prevents wounds, and can significantly improve rest.",
+    whatToDoNow: [
+      { text: "Side-lying position (30-degree tilt): Place a pillow behind the back to maintain a slight angle. This is safer than flat on one side (less pressure on the hip) and good for breathing." },
+      { text: "Between the knees: place a pillow between the knees when side-lying to protect the hip and knee joints." },
+      { text: "Heel elevation: slide a pillow under the calves so that the heels float — heels are very vulnerable to pressure wounds.", caution: "Pillows should be under the calves, not the heels themselves." },
+      { text: "Semi-reclined: head of bed elevated 30 degrees is good for breathing and reduces aspiration risk during and after feeding." },
+      { text: "Arm support: support arms with pillows to prevent shoulder strain and reduce swelling." },
+      { text: "Change position at least every 2 hours — set a timer if helpful." },
+    ],
+    whatToAvoid: [
+      "Do not position directly on a bony prominence (hip, shoulder blade, tailbone) for extended periods",
+      "Do not use donut-shaped cushions — these increase pressure on the surrounding tissue",
+      "Do not position with the head of bed above 30 degrees for long periods unless needed for breathing or feeding",
+    ],
+    whenToCallHospice: [
+      "Repositioning is causing significant pain",
+      "You need a specialized mattress or cushion",
+      "You want the aide to demonstrate positioning techniques",
+    ],
+    whatHappensNext:
+      "Hospice can order alternating pressure mattresses, foam overlays, or other positioning aids. The aide can also show you techniques in person during their visits.",
   },
 ];
 

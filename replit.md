@@ -86,7 +86,11 @@ Expo React Native app — "Hospice Roadmap" — healthcare navigation platform f
 - Uses NativeTabs with liquid glass + ClassicTabLayout fallback
 - Web top padding offset: `Platform.OS === "web" ? 67 : 0`
 - No UUID package — uses `Date.now() + Math.random()` for IDs
-- Key screens: onboarding, home, journey, resources, providers, more, provider detail, evaluation, support, patient-profile
+- Key screens: onboarding, home, journey, resources, providers, more, provider detail, evaluation, support, patient-profile, emergency-card, situation-finder, guidance/[id]
+- **Emergency Information Card** (`emergency-card.tsx`): one-tap call for hospice/after-hours/equipment/pharmacy; patient info, comfort kit, equipment list, quick guidance links — pre-filled from patient profile. Linked from More tab (red banner) and every guidance detail screen (phone-call icon top-right)
+- **Situation Finder** (`situation-finder.tsx`): full-text search + category grid across 30+ scenarios; accessible from More tab, home screen "Get Help Now" banner chips, and guidance/emergency flow
+- **Structured Guidance** (`guidance/[id].tsx`): 6-section layout (what you may notice → what it means → what to do now → what to avoid → when to call → what happens next) with inline tip/caution cards; emergency card shortcut in header
+- **Guidance content** (`data/guidanceContent.ts`): 30+ scenarios across 8 categories with tip/caution support per step
 - **Compass AI companion**: Center tab "Compass" (`(tabs)/help.tsx`) — streaming Claude AI chat with urgent situation tiles, markdown rendering, and call-hospice emergency button
   - AI service: `services/aiService.ts` — `createConversation`, `streamMessage` (SSE streaming), `deleteConversation`
   - Patient profile: `app/patient-profile.tsx` — form to set patient context used by Compass
