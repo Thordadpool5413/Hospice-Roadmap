@@ -3,17 +3,17 @@ import { Platform } from "react-native";
 import { CmsQualityData, CmsSpendingData, Provider } from "@/types";
 
 function getApiBase(): string {
-  const customUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (customUrl) return customUrl;
-  if (Platform.OS === "web") {
-    const domain = process.env.EXPO_PUBLIC_DOMAIN;
-    if (domain) return `https://${domain}/api`;
-    return "/api";
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    const apiHostname = hostname.replace(".expo.", ".");
+    return `${window.location.protocol}//${apiHostname}/api`;
   }
   return "http://localhost:80/api";
 }
 
-const API_BASE = getApiBase();
+function apiBase(): string {
+  return getApiBase();
+}
 
 interface SearchProvidersResponse {
   providers: Provider[];
@@ -29,13 +29,14 @@ export async function searchCmsProviders(params: {
   limit?: number;
   offset?: number;
 }): Promise<SearchProvidersResponse> {
-  const url = new URL(`${API_BASE}/cms/providers`, "https://placeholder.dev");
+  const base = apiBase();
+  const url = new URL(`${base}/cms/providers`, "https://placeholder.dev");
   if (params.state) url.searchParams.set("state", params.state);
   if (params.zip) url.searchParams.set("zip", params.zip);
   if (params.limit) url.searchParams.set("limit", String(params.limit));
   if (params.offset) url.searchParams.set("offset", String(params.offset));
 
-  const fetchUrl = `${API_BASE}/cms/providers?${url.searchParams.toString()}`;
+  const fetchUrl = `${base}/cms/providers?${url.searchParams.toString()}`;
   const res = await fetch(fetchUrl, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(20000),
@@ -50,7 +51,7 @@ export async function searchCmsProviders(params: {
 }
 
 export async function fetchQualityData(ccn: string): Promise<CmsQualityData> {
-  const res = await fetch(`${API_BASE}/cms/quality/${ccn}`, {
+  const res = await fetch(`${apiBase()}/cms/quality/${ccn}`, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(20000),
   });
@@ -74,7 +75,7 @@ export async function fetchQualitySummary(
 ): Promise<Record<string, QualitySummary>> {
   if (ccns.length === 0) return {};
   const res = await fetch(
-    `${API_BASE}/cms/quality-summary?ccns=${ccns.join(",")}`,
+    `${apiBase()}/cms/quality-summary?ccns=${ccns.join(",")}`,
     {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(30000),
@@ -88,7 +89,7 @@ export async function fetchQualitySummary(
 }
 
 export async function fetchSpendingData(ccn: string): Promise<CmsSpendingData> {
-  const res = await fetch(`${API_BASE}/cms/spending/${ccn}`, {
+  const res = await fetch(`${apiBase()}/cms/spending/${ccn}`, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(20000),
   });
