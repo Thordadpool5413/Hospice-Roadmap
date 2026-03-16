@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Card } from "@/components/ui/Card";
 import { Colors } from "@/constants/colors";
 import { Provider } from "@/types";
+import type { QualitySummary } from "@/services/cmsProviderService";
 
 interface ProviderCardProps {
   provider: Provider;
@@ -13,6 +14,7 @@ interface ProviderCardProps {
   onSave?: () => void;
   isSaved?: boolean;
   isCms?: boolean;
+  qualitySummary?: QualitySummary | null;
 }
 
 export function ProviderCard({
@@ -21,6 +23,7 @@ export function ProviderCard({
   onSave,
   isSaved = false,
   isCms = false,
+  qualitySummary,
 }: ProviderCardProps) {
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -96,6 +99,35 @@ export function ProviderCard({
           </View>
         ))}
       </View>
+
+      {isCms && qualitySummary && (qualitySummary.hciScore || qualitySummary.starRating) && (
+        <View style={styles.qualityRow}>
+          {qualitySummary.hciScore && (
+            <View style={styles.qualityBadge}>
+              <Feather name="bar-chart-2" size={11} color="#1A6DAA" />
+              <Text style={styles.qualityBadgeText}>
+                HCI: {qualitySummary.hciScore}/10
+              </Text>
+            </View>
+          )}
+          {qualitySummary.starRating && (
+            <View style={styles.qualityBadge}>
+              <Feather name="star" size={11} color="#D4A017" />
+              <Text style={styles.qualityBadgeText}>
+                {qualitySummary.starRating} Stars
+              </Text>
+            </View>
+          )}
+          {qualitySummary.avgDailyCensus && (
+            <View style={styles.qualityBadge}>
+              <Feather name="users" size={11} color={Colors.textMuted} />
+              <Text style={styles.qualityBadgeText}>
+                {qualitySummary.avgDailyCensus} ADC
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <Text style={styles.description} numberOfLines={2}>
         {provider.description}
@@ -197,6 +229,27 @@ const styles = StyleSheet.create({
   },
   tagTextAccred: {
     color: Colors.info,
+  },
+  qualityRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  qualityBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F0F7FC",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#D4E8F6",
+  },
+  qualityBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: "#1A6DAA",
   },
   description: {
     fontSize: 13,
