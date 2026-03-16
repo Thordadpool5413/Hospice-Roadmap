@@ -26,7 +26,6 @@ const roleLabels: Record<string, string> = {
 const quickActions = [
   { label: "Evaluate Readiness", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
   { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.journeyDuring, bg: Colors.journeyDuringPale },
-  { label: "Request Info", icon: "send", route: "/referral", color: Colors.journeyAfter, bg: Colors.journeyAfterPale },
   { label: "Get Support", icon: "message-circle", route: "/support", color: Colors.amber, bg: Colors.amberPale },
 ];
 

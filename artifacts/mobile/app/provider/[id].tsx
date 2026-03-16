@@ -212,13 +212,6 @@ export default function ProviderDetailScreen() {
             </Text>
           </Pressable>
 
-          <Pressable
-            onPress={() => router.push("/referral")}
-            style={({ pressed }) => [styles.referralBtn, pressed && { opacity: 0.85 }]}
-          >
-            <Feather name="send" size={16} color={Colors.primary} />
-            <Text style={styles.referralBtnText}>Request Info</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -511,23 +504,6 @@ export default function ProviderDetailScreen() {
         </View>
       )}
 
-      <Pressable
-        onPress={() => router.push("/referral")}
-        style={({ pressed }) => [styles.referralBanner, pressed && { opacity: 0.9 }]}
-      >
-        <View style={styles.referralBannerIcon}>
-          <Feather name="send" size={20} color="#FFFFFF" />
-        </View>
-        <View style={styles.referralBannerText}>
-          <Text style={styles.referralBannerTitle}>
-            Start a Referral or Request
-          </Text>
-          <Text style={styles.referralBannerSubtitle}>
-            Submit a referral request or request information from this provider
-          </Text>
-        </View>
-        <Feather name="chevron-right" size={16} color="#FFFFFF" />
-      </Pressable>
 
       <View style={styles.disclaimer}>
         <Feather name="info" size={13} color={Colors.textSubtle} />
@@ -943,22 +919,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
   },
-  referralBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: Colors.primaryPale,
-  },
-  referralBtnText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: Colors.primary,
-  },
   section: {
     gap: 10,
   },
@@ -1043,38 +1003,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     fontStyle: "italic",
-  },
-  referralBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: Colors.accent,
-    borderRadius: 16,
-    padding: 16,
-  },
-  referralBannerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  referralBannerText: {
-    flex: 1,
-    gap: 3,
-  },
-  referralBannerTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-    color: "#FFFFFF",
-    letterSpacing: -0.2,
-  },
-  referralBannerSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.8)",
-    lineHeight: 17,
   },
   disclaimer: {
     flexDirection: "row",

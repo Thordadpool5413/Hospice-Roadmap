@@ -150,7 +150,6 @@ export default function JourneyScreen() {
           {[
             { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation", desc: "Understand hospice readiness" },
             { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", desc: "Search in your area" },
-            { label: "Request Information", icon: "send", route: "/referral", desc: "Start a referral or inquiry" },
             { label: "Contact Support", icon: "message-circle", route: "/support", desc: "Talk with our team" },
           ].map((item) => (
             <Pressable

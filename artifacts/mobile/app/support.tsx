@@ -19,7 +19,6 @@ import { SupportTopic } from "@/types";
 const topics: { id: SupportTopic; label: string; icon: string }[] = [
   { id: "general_question", label: "General Question", icon: "help-circle" },
   { id: "provider_search", label: "Provider Search Help", icon: "map-pin" },
-  { id: "referral_help", label: "Referral Assistance", icon: "send" },
   { id: "caregiver_support", label: "Caregiver Support", icon: "heart" },
   { id: "bereavement", label: "Grief & Bereavement", icon: "sun" },
   { id: "eligibility_question", label: "Eligibility Question", icon: "clipboard" },

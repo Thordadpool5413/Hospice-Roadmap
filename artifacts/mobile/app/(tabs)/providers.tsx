@@ -373,21 +373,6 @@ export default function ProvidersScreen() {
           </View>
         )}
 
-        <Pressable
-          onPress={() => router.push("/referral")}
-          style={({ pressed }) => [styles.referralBanner, pressed && { opacity: 0.9 }]}
-        >
-          <View style={styles.referralIcon}>
-            <Feather name="send" size={18} color="#FFFFFF" />
-          </View>
-          <View style={styles.referralText}>
-            <Text style={styles.referralTitle}>Submit a Referral or Inquiry</Text>
-            <Text style={styles.referralSubtitle}>
-              Request information or start the referral process
-            </Text>
-          </View>
-          <Feather name="chevron-right" size={16} color="#FFFFFF" />
-        </Pressable>
 
         <View style={styles.resultsHeader}>
           <Text style={styles.resultsCount}>
@@ -717,37 +702,6 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: "#FFFFFF",
-  },
-  referralBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    padding: 14,
-  },
-  referralIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  referralText: {
-    flex: 1,
-    gap: 2,
-  },
-  referralTitle: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    color: "#FFFFFF",
-    letterSpacing: -0.2,
-  },
-  referralSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.8)",
   },
   resultsHeader: {
     marginTop: 4,
