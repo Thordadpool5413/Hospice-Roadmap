@@ -92,6 +92,14 @@ function RootLayoutNav() {
           headerTintColor: "#1C2228",
         }}
       />
+      <Stack.Screen
+        name="situation-finder"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="guidance/[id]"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
