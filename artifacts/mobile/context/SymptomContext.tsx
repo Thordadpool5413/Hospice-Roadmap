@@ -95,11 +95,11 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     const avgPain = avg(recent.map((e) => e.pain));
     const avgBreath = avg(recent.map((e) => e.breathlessness));
     const avgNausea = avg(recent.map((e) => e.nausea));
-    const agitationCounts = recent.map((e) => e.agitation);
+    const agitationCounts = recent.map((e) => e.agitation as number);
     const avgAgitation = agitationCounts.length
       ? AGITATION_LABELS[Math.round(agitationCounts.reduce((s, v) => s + v, 0) / agitationCounts.length)]
       : "—";
-    const appetiteCounts = recent.map((e) => e.appetite);
+    const appetiteCounts = recent.map((e) => e.appetite as number);
     const avgAppetite = appetiteCounts.length
       ? APPETITE_LABELS[Math.round(appetiteCounts.reduce((s, v) => s + v, 0) / appetiteCounts.length)]
       : "—";

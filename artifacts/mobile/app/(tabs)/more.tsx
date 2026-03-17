@@ -82,7 +82,7 @@ export default function MoreScreen() {
           { label: "Pain Assessment Tool", icon: "activity", route: "/painad" } as MenuItem,
         ] : []),
         { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation" },
-        { label: "Resource Library", icon: "book-open", route: "/(tabs)/resources" },
+        { label: "Resource Library", icon: "book-open", route: "/resources" },
       ],
     },
     {
