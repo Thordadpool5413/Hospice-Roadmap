@@ -56,7 +56,7 @@ function MoodChart({ entries }: { entries: JournalEntry[] }) {
   const hasMoodData = moodEntries.some((d) => d.level !== null);
   if (!hasMoodData) return null;
 
-  const levelColors = ["#D9534F", "#E8843A", "#B8A020", "#5A9A6A", "#5A8A7A"];
+  const levelColors = ["#D9534F", "#E8843A", "#D4881A", "#5A9A6A", "#C85A1C"];
   const levelLabels = ["Very Low", "Low", "Neutral", "Good", "Great"];
 
   return (

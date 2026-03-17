@@ -1,40 +1,55 @@
 const palette = {
-  sage: "#5A8A7A",
-  sageDark: "#3D6B5C",
-  sageLight: "#7BAE9E",
-  sagePale: "#E8F3EF",
-  teal: "#2C6E6A",
-  tealDeep: "#1A4A47",
-  tealLight: "#4A9090",
-  cream: "#FAF8F5",
+  // Warm sunset oranges (from icon road/glow)
+  ember: "#C85A1C",
+  emberDark: "#9E4414",
+  emberLight: "#E47A3C",
+  emberPale: "#FEF1E8",
+
+  // Golden amber (from icon path highlight)
+  gold: "#D4881A",
+  goldDark: "#9A5C10",
+  goldLight: "#F0AA3C",
+  goldPale: "#FEF6E0",
+
+  // Deep navy (from icon bottom dark band)
+  navy: "#1A2840",
+  navyMid: "#2A3D5C",
+  navyLight: "#3D5478",
+
+  // Warm neutral backgrounds
+  cream: "#FBF6F0",
+  stone: "#F5EDE0",
+  sand: "#EEE0CC",
+
+  // Text
+  charcoal: "#1C1810",
+  slate: "#3A3020",
+  muted: "#6B5D4A",
+  subtle: "#9B8E7C",
+
+  divider: "#E8DDD0",
+
+  // Semantic
+  rose: "#C04A3A",
+  rosePale: "#FDF0EE",
+  sky: "#2A5C8A",
+  skyPale: "#EBF0FA",
+  success: "#3A7A4A",
+  successPale: "#EBF5EE",
+
+  // Warm white
   warmWhite: "#FFFFFF",
-  stone: "#F5F2ED",
-  sand: "#EDE9E2",
-  charcoal: "#1C2228",
-  slate: "#3A4550",
-  muted: "#6B7A84",
-  subtle: "#9BA8B0",
-  divider: "#E2E8EC",
-  amber: "#C8842A",
-  amberLight: "#F0B855",
-  amberPale: "#FDF3E0",
-  rose: "#C45A5A",
-  rosePale: "#FDF0F0",
-  sky: "#4A90B8",
-  skyPale: "#EBF4FA",
-  success: "#4A8A5E",
-  successPale: "#EBF6EE",
 };
 
 export const Colors = {
-  primary: palette.sage,
-  primaryDark: palette.sageDark,
-  primaryLight: palette.sageLight,
-  primaryPale: palette.sagePale,
+  primary: palette.ember,
+  primaryDark: palette.emberDark,
+  primaryLight: palette.emberLight,
+  primaryPale: palette.emberPale,
 
-  accent: palette.teal,
-  accentDeep: palette.tealDeep,
-  accentLight: palette.tealLight,
+  accent: palette.gold,
+  accentDeep: palette.goldDark,
+  accentLight: palette.goldLight,
 
   background: palette.cream,
   backgroundSecondary: palette.stone,
@@ -50,12 +65,12 @@ export const Colors = {
 
   divider: palette.divider,
 
-  amber: palette.amber,
-  amberLight: palette.amberLight,
-  amberPale: palette.amberPale,
+  amber: palette.gold,
+  amberLight: palette.goldLight,
+  amberPale: palette.goldPale,
 
-  warning: palette.amber,
-  warningPale: palette.amberPale,
+  warning: palette.gold,
+  warningPale: palette.goldPale,
 
   error: palette.rose,
   errorPale: palette.rosePale,
@@ -67,15 +82,15 @@ export const Colors = {
   successPale: palette.successPale,
 
   tabIconDefault: palette.subtle,
-  tabIconSelected: palette.sage,
-  tint: palette.sage,
+  tabIconSelected: palette.ember,
+  tint: palette.ember,
 
-  journeyBefore: "#5A7FA8",
-  journeyBeforePale: "#EBF2FA",
-  journeyDuring: palette.sage,
-  journeyDuringPale: palette.sagePale,
-  journeyAfter: "#8A6A9A",
-  journeyAfterPale: "#F0EBF6",
+  journeyBefore: palette.sky,
+  journeyBeforePale: palette.skyPale,
+  journeyDuring: palette.ember,
+  journeyDuringPale: palette.emberPale,
+  journeyAfter: "#7A5C8A",
+  journeyAfterPale: "#F2EEF8",
 };
 
 export default Colors;
