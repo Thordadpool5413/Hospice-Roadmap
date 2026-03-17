@@ -217,7 +217,7 @@ router.get("/cms/quality/:ccn", async (req: Request, res: Response) => {
       if (row.measure_code === "H_012_00_OBSERVED") hciScore = row.score;
       if (row.measure_code === "H_012_07_OBSERVED") perBeneficiarySpending = row.score;
       if (row.measure_code === "Average_Daily_Census") avgDailyCensus = row.score;
-      if (row.measure_code === "H_012_10_OBSERVED") visitsNearDeath = row.score;
+      if (row.measure_code === "H_011_01_OBSERVED") visitsNearDeath = row.score;
       if (row.measure_code === "H_008_01_OBSERVED") compositeProcessMeasure = row.score;
     }
 
