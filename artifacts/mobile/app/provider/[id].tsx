@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  type DimensionValue,
   Linking,
   Pressable,
   ScrollView,
@@ -17,55 +16,62 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { getCmsProvider } from "@/context/cmsProviderStore";
-import { mockProviders } from "@/data/mockProviders";
-import { fetchQualityData, fetchSpendingData } from "@/services/cmsProviderService";
-import type { CmsQualityData, CmsSpendingData, Provider } from "@/types";
+import { fetchQualityData } from "@/services/cmsProviderService";
+import type { CmsQualityData, Provider } from "@/types";
 
-function parseCmsNum(val: string | null | undefined): number {
-  if (!val) return NaN;
-  return parseFloat(val.replace(/,/g, ""));
+function parseNum(val: string | null | undefined): number | null {
+  if (!val) return null;
+  const n = parseFloat(val.replace(/,/g, ""));
+  return isNaN(n) ? null : n;
 }
 
-function fmtAmount(val: string | null | undefined): string {
-  if (!val) return "N/A";
-  const n = parseCmsNum(val);
-  return isNaN(n) ? val : `$${n.toLocaleString()}`;
+function formatCertDate(dateStr: string | undefined): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
-function fmtCopay(val: string | null | undefined): string {
-  if (!val) return "N/A";
-  const n = parseFloat(val);
-  return isNaN(n) ? val : `$${n.toFixed(2)}`;
-}
-
-function QualityScoreBar({
-  label,
-  value,
-  suffix,
-  color,
-}: {
-  label: string;
-  value: number | null;
-  suffix?: string;
-  color?: string;
-}) {
-  if (value === null || isNaN(value)) return null;
-  const barColor = color || Colors.primary;
+function StarRating({ count, max = 5 }: { count: number; max?: number }) {
   return (
-    <View style={qStyles.barRow}>
-      <Text style={qStyles.barLabel}>{label}</Text>
-      <View style={qStyles.barTrack}>
-        <View
-          style={[
-            qStyles.barFill,
-            { width: `${Math.min(value, 100)}%` as DimensionValue, backgroundColor: barColor },
-          ]}
+    <View style={{ flexDirection: "row", gap: 3, alignItems: "center" }}>
+      {Array.from({ length: max }).map((_, i) => (
+        <Feather
+          key={i}
+          name={i < count ? "star" : "star"}
+          size={16}
+          color={i < count ? Colors.accent : Colors.divider}
+          style={i < count ? {} : { opacity: 0.35 }}
         />
+      ))}
+    </View>
+  );
+}
+
+function SurveyRow({ question, pct }: { question: string; pct: string | null | undefined }) {
+  const num = parseNum(pct);
+  if (num === null) return null;
+  const barWidth = `${Math.min(num, 100)}%`;
+  const color = num >= 80 ? Colors.success : num >= 60 ? Colors.accent : Colors.error;
+
+  return (
+    <View style={styles.surveyRow}>
+      <Text style={styles.surveyQuestion}>{question}</Text>
+      <View style={styles.surveyBarRow}>
+        <View style={styles.surveyTrack}>
+          <View style={[styles.surveyFill, { width: barWidth as `${number}%`, backgroundColor: color }]} />
+        </View>
+        <Text style={[styles.surveyPct, { color }]}>{Math.round(num)}%</Text>
       </View>
-      <Text style={[qStyles.barValue, { color: barColor }]}>
-        {value}
-        {suffix || "%"}
-      </Text>
+    </View>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -76,809 +82,377 @@ export default function ProviderDetailScreen() {
   const { toggleSavedProvider, isSavedProvider } = useApp();
   const [qualityData, setQualityData] = useState<CmsQualityData | null>(null);
   const [qualityLoading, setQualityLoading] = useState(false);
-  const [qualityError, setQualityError] = useState<string | null>(null);
-  const [spendingData, setSpendingData] = useState<CmsSpendingData | null>(null);
-  const [spendingLoading, setSpendingLoading] = useState(false);
 
-  const cmsProvider = id ? getCmsProvider(id) : undefined;
-  const mockProvider = mockProviders.find((p) => p.id === id);
-  const provider: Provider | undefined = cmsProvider || mockProvider;
-  const isCms = !!cmsProvider?.ccn;
+  const provider: Provider | undefined = id ? getCmsProvider(id) : undefined;
+  const isCms = !!provider?.ccn;
 
   useEffect(() => {
-    if (isCms && cmsProvider?.ccn) {
+    if (isCms && provider?.ccn) {
       setQualityLoading(true);
-      setQualityError(null);
-      fetchQualityData(cmsProvider.ccn)
+      fetchQualityData(provider.ccn)
         .then(setQualityData)
-        .catch((err: unknown) => setQualityError(err instanceof Error ? err.message : "Failed to load quality data"))
-        .finally(() => setQualityLoading(false));
-
-      setSpendingLoading(true);
-      fetchSpendingData(cmsProvider.ccn)
-        .then(setSpendingData)
         .catch(() => {})
-        .finally(() => setSpendingLoading(false));
+        .finally(() => setQualityLoading(false));
     }
-  }, [isCms, cmsProvider?.ccn]);
+  }, [isCms, provider?.ccn]);
 
   if (!provider) {
     return (
       <View style={[styles.container, styles.center]}>
-        <Text style={styles.notFound}>Provider not found</Text>
+        <Text style={styles.notFound}>Provider not found.</Text>
+        <Pressable onPress={() => router.back()} style={styles.backLink}>
+          <Text style={styles.backLinkText}>Go back</Text>
+        </Pressable>
       </View>
     );
   }
 
   const saved = isSavedProvider(provider.id);
-  const stars = provider.rating ? Math.round(provider.rating) : 0;
 
   const handleCall = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Linking.openURL(`tel:${provider.phone.replace(/[^0-9]/g, "")}`);
   };
 
-  const cahpsItems = qualityData
-    ? [
-        { label: "Overall Rating (9-10)", value: qualityData.cahps.overallRating9or10 },
-        { label: "Would Recommend", value: qualityData.cahps.wouldDefinitelyRecommend },
-        { label: "Treated With Respect", value: qualityData.cahps.alwaysTreatedWithRespect },
-        { label: "Pain & Symptom Help", value: qualityData.cahps.alwaysGotPainHelp },
-        { label: "Team Communication", value: qualityData.cahps.alwaysCommunicatedWell },
-        { label: "Timely Help", value: qualityData.cahps.alwaysTimelyHelp },
-        { label: "Emotional Support", value: qualityData.cahps.alwaysRightEmotionalSupport },
-        { label: "Caregiver Training", value: qualityData.cahps.definitelyReceivedTraining },
-      ]
-    : [];
+  const starRating = qualityData?.summaryStarRating
+    ? parseInt(qualityData.summaryStarRating, 10) || null
+    : null;
+
+  const hciScore = parseNum(qualityData?.hciScore);
+  const visitsNearDeath = parseNum(qualityData?.visitsNearDeath);
+  const compositeScore = parseNum(qualityData?.compositeProcessMeasure);
+  const avgCensus = parseNum(qualityData?.avgDailyCensus);
+
+  const certDateFormatted = formatCertDate(provider.certificationDate);
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: insets.bottom + 40 },
-      ]}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 48 }]}
       showsVerticalScrollIndicator={false}
     >
-      {isCms && (
-        <View style={styles.cmsBadge}>
-          <Feather name="shield" size={13} color="#1A6DAA" />
-          <Text style={styles.cmsBadgeText}>CMS Medicare Certified Provider</Text>
-        </View>
-      )}
+      <Pressable
+        onPress={() => router.back()}
+        style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
+      >
+        <Feather name="arrow-left" size={20} color={Colors.text} />
+        <Text style={styles.backBtnText}>Back to results</Text>
+      </Pressable>
 
-      <View style={styles.header}>
-        <Text style={styles.name}>{provider.name}</Text>
-        <Text style={styles.location}>
-          {provider.address}, {provider.city}, {provider.state}{" "}
-          {provider.zip}
+      <View style={styles.certBadge}>
+        <Feather name="shield" size={13} color={Colors.success} />
+        <Text style={styles.certBadgeText}>Medicare-Certified Hospice</Text>
+      </View>
+
+      <Text style={styles.providerName}>{provider.name}</Text>
+
+      <View style={styles.locationRow}>
+        <Feather name="map-pin" size={14} color={Colors.textMuted} />
+        <Text style={styles.locationText}>
+          {provider.address ? `${provider.address}, ` : ""}
+          {provider.city}, {provider.state} {provider.zip}
         </Text>
+      </View>
 
-        {provider.county && (
-          <Text style={styles.countyText}>
-            {provider.county} County
+      {certDateFormatted && (
+        <Text style={styles.certSince}>
+          Medicare-certified since {certDateFormatted}
+        </Text>
+      )}
+
+      <View style={styles.ctaRow}>
+        <Pressable
+          onPress={handleCall}
+          style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.85 }]}
+        >
+          <Feather name="phone" size={16} color="#FFFFFF" />
+          <Text style={styles.callBtnText}>
+            {provider.phone ? provider.phone : "Call Now"}
           </Text>
-        )}
+        </Pressable>
 
-        {provider.distance != null && (
-          <View style={styles.distanceRow}>
-            <Feather name="navigation" size={13} color={Colors.primary} />
-            <Text style={styles.distance}>{provider.distance} miles away</Text>
-          </View>
-        )}
-
-        {provider.rating != null && (
-          <View style={styles.ratingRow}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Feather
-                key={i}
-                name="star"
-                size={14}
-                color={i < stars ? Colors.amberLight : Colors.divider}
-              />
-            ))}
-            <Text style={styles.ratingText}>
-              {provider.rating.toFixed(1)} ({provider.reviewCount} reviews)
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.ctaRow}>
-          <Pressable
-            onPress={handleCall}
-            style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.85 }]}
-          >
-            <Feather name="phone" size={16} color="#FFFFFF" />
-            <Text style={styles.callBtnText}>Call Now</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              toggleSavedProvider(provider.id);
-            }}
-            style={({ pressed }) => [
-              styles.saveBtn,
-              saved && styles.saveBtnActive,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Feather
-              name="bookmark"
-              size={16}
-              color={saved ? Colors.primary : Colors.textSecondary}
-            />
-            <Text style={[styles.saveBtnText, saved && { color: Colors.primary }]}>
-              {saved ? "Saved" : "Save"}
-            </Text>
-          </Pressable>
-
-        </View>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            toggleSavedProvider(provider.id);
+          }}
+          style={({ pressed }) => [
+            styles.saveBtn,
+            saved && styles.saveBtnActive,
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          <Feather
+            name="bookmark"
+            size={16}
+            color={saved ? Colors.primary : Colors.textSecondary}
+          />
+          <Text style={[styles.saveBtnText, saved && { color: Colors.primary }]}>
+            {saved ? "Saved" : "Save"}
+          </Text>
+        </Pressable>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <Text style={styles.description}>{provider.description}</Text>
-      </View>
-
-      {isCms && qualityLoading && (
-        <View style={qStyles.loadingBox}>
+      {qualityLoading && (
+        <View style={styles.loadingBox}>
           <ActivityIndicator size="small" color={Colors.primary} />
-          <Text style={qStyles.loadingText}>Loading quality metrics...</Text>
+          <Text style={styles.loadingText}>Loading quality information…</Text>
         </View>
       )}
 
-      {isCms && qualityData && (
+      {qualityData && !qualityLoading && (
         <>
-          <View style={qStyles.qualityHeader}>
-            <Text style={qStyles.qualityTitle}>Medicare Quality Metrics</Text>
-            <Text style={qStyles.qualitySource}>
-              Source: CMS Hospice Quality Reporting Program
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Medicare Quality Rating</Text>
+            <Text style={styles.sectionSubtitle}>
+              Assigned by Medicare based on family surveys and clinical quality measures. 5 stars is the best.
             </Text>
-          </View>
 
-          <View style={qStyles.scoreCardsRow}>
-            <View style={qStyles.scoreCard}>
-              <Text style={qStyles.scoreCardLabel}>Hospice Care Index</Text>
-              <Text style={qStyles.scoreCardValue}>
-                {qualityData.hciScore ?? "N/A"}
-                {qualityData.hciScore ? "/10" : ""}
-              </Text>
-            </View>
-            <View style={qStyles.scoreCard}>
-              <Text style={qStyles.scoreCardLabel}>Star Rating</Text>
-              <View style={qStyles.starRow}>
-                {qualityData.summaryStarRating &&
-                qualityData.summaryStarRating !== "Not Applicable" ? (
-                  <>
-                    {Array.from({
-                      length: parseInt(qualityData.summaryStarRating, 10) || 0,
-                    }).map((_, i) => (
-                      <Feather key={i} name="star" size={14} color={Colors.amberLight} />
-                    ))}
-                    <Text style={qStyles.starText}>
-                      {qualityData.summaryStarRating}/5
-                    </Text>
-                  </>
-                ) : (
-                  <Text style={qStyles.scoreCardValue}>N/A</Text>
-                )}
+            {starRating !== null ? (
+              <View style={styles.starBlock}>
+                <StarRating count={starRating} />
+                <Text style={styles.starLabel}>{starRating} out of 5 stars</Text>
               </View>
-            </View>
-          </View>
+            ) : (
+              <Text style={styles.noDataText}>Star rating not yet available for this provider.</Text>
+            )}
 
-          <View style={qStyles.scoreCardsRow}>
-            <View style={qStyles.scoreCard}>
-              <Text style={qStyles.scoreCardLabel}>Avg Daily Census</Text>
-              <Text style={qStyles.scoreCardValue}>
-                {qualityData.avgDailyCensus ?? "N/A"}
-              </Text>
-            </View>
-            <View style={qStyles.scoreCard}>
-              <Text style={qStyles.scoreCardLabel}>Visits Near Death</Text>
-              <Text style={qStyles.scoreCardValue}>
-                {qualityData.visitsNearDeath
-                  ? `${qualityData.visitsNearDeath}%`
-                  : "N/A"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={qStyles.section}>
-            <Text style={qStyles.sectionTitle}>
-              Family Caregiver Survey (CAHPS)
-            </Text>
-            <Text style={qStyles.sectionSubtitle}>
-              Percentage of caregivers reporting the best experience
-            </Text>
-            <View style={qStyles.barList}>
-              {cahpsItems.map((item) => (
-                <QualityScoreBar
-                  key={item.label}
-                  label={item.label}
-                  value={item.value ? parseFloat(item.value) : null}
-                  color={Colors.primary}
-                />
-              ))}
-            </View>
-          </View>
-
-          {qualityData.perBeneficiarySpending && (
-            <View style={qStyles.spendingCard}>
-              <View style={qStyles.spendingRow}>
-                <View>
-                  <Text style={qStyles.spendingLabel}>
-                    Per-Beneficiary Spending
-                  </Text>
-                  <Text style={qStyles.spendingValue}>
-                    {fmtAmount(qualityData.perBeneficiarySpending)}
+            {hciScore !== null && (
+              <View style={styles.hciRow}>
+                <View style={styles.hciScoreBox}>
+                  <Text style={styles.hciNumber}>{hciScore}</Text>
+                  <Text style={styles.hciDenom}>/10</Text>
+                </View>
+                <View style={styles.hciDesc}>
+                  <Text style={styles.hciTitle}>Overall Quality Score</Text>
+                  <Text style={styles.hciBody}>
+                    Medicare's combined measure of how well this hospice performs on 10 key quality indicators. Higher is better.
                   </Text>
                 </View>
-                <Feather name="dollar-sign" size={20} color={Colors.textMuted} />
               </View>
+            )}
+          </View>
+
+          {qualityData.cahps && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>What Families Reported</Text>
+              <Text style={styles.sectionSubtitle}>
+                Based on surveys of families who received care from this hospice. Percentages show how often families had a good experience.
+              </Text>
+
+              <SurveyRow
+                question="Would recommend this hospice to others"
+                pct={qualityData.cahps.wouldDefinitelyRecommend}
+              />
+              <SurveyRow
+                question="Rated care 9 or 10 out of 10 overall"
+                pct={qualityData.cahps.overallRating9or10}
+              />
+              <SurveyRow
+                question="Patient was always treated with dignity and respect"
+                pct={qualityData.cahps.alwaysTreatedWithRespect}
+              />
+              <SurveyRow
+                question="Pain and discomfort were always well managed"
+                pct={qualityData.cahps.alwaysGotPainHelp}
+              />
+              <SurveyRow
+                question="Got help from the team as quickly as needed"
+                pct={qualityData.cahps.alwaysTimelyHelp}
+              />
+              <SurveyRow
+                question="Team communicated clearly with the family"
+                pct={qualityData.cahps.alwaysCommunicatedWell}
+              />
+              <SurveyRow
+                question="Family received the emotional support they needed"
+                pct={qualityData.cahps.alwaysRightEmotionalSupport}
+              />
+              <SurveyRow
+                question="Family felt trained and prepared to give care at home"
+                pct={qualityData.cahps.definitelyReceivedTraining}
+              />
             </View>
           )}
 
-          {qualityData.compositeProcessMeasure && (
-            <View style={qStyles.compositeCard}>
-              <Text style={qStyles.compositeLabel}>
-                Composite Process Quality
-              </Text>
-              <Text style={qStyles.compositeValue}>
-                {qualityData.compositeProcessMeasure}%
-              </Text>
-              <View style={qStyles.compositeBar}>
-                <View
-                  style={[
-                    qStyles.compositeFill,
-                    {
-                      width:
-                        `${Math.min(parseFloat(qualityData.compositeProcessMeasure), 100)}%` as DimensionValue,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={qStyles.compositeDesc}>
-                Measures whether patients received recommended care processes
-              </Text>
-            </View>
-          )}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Care Quality Details</Text>
 
-          {provider.medicareGovUrl && (
-            <Pressable
-              onPress={() => Linking.openURL(provider.medicareGovUrl!)}
-              style={({ pressed }) => [
-                qStyles.medicareLink,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Feather name="external-link" size={14} color={Colors.info} />
-              <Text style={qStyles.medicareLinkText}>
-                View on Medicare.gov Care Compare
-              </Text>
-            </Pressable>
-          )}
+            {visitsNearDeath !== null && (
+              <View style={styles.qualDetailRow}>
+                <View style={styles.qualDetailPct}>
+                  <Text style={styles.qualDetailNum}>{Math.round(visitsNearDeath)}%</Text>
+                </View>
+                <View style={styles.qualDetailDesc}>
+                  <Text style={styles.qualDetailTitle}>Visits in the final days</Text>
+                  <Text style={styles.qualDetailBody}>
+                    How often a nurse or aide visited the patient in the last 3 days of life. Higher means the hospice was more present when it mattered most.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {compositeScore !== null && (
+              <View style={styles.qualDetailRow}>
+                <View style={styles.qualDetailPct}>
+                  <Text style={styles.qualDetailNum}>{Math.round(compositeScore)}%</Text>
+                </View>
+                <View style={styles.qualDetailDesc}>
+                  <Text style={styles.qualDetailTitle}>Followed recommended care steps</Text>
+                  <Text style={styles.qualDetailBody}>
+                    How consistently this hospice completed all the care processes Medicare recommends — things like pain assessments, medication reviews, and care planning.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {avgCensus !== null && (
+              <InfoRow
+                label="Patients currently served"
+                value={`~${Math.round(avgCensus).toLocaleString()} patients`}
+              />
+            )}
+          </View>
         </>
       )}
 
-      {isCms && qualityError && (
-        <View style={qStyles.errorBox}>
-          <Feather name="alert-triangle" size={14} color={Colors.error} />
-          <Text style={qStyles.errorText}>{qualityError}</Text>
-        </View>
-      )}
-
-      {isCms && spendingLoading && (
-        <View style={qStyles.loadingBox}>
-          <ActivityIndicator size="small" color={Colors.primary} />
-          <Text style={qStyles.loadingText}>Loading spending data...</Text>
-        </View>
-      )}
-
-      {isCms && spendingData?.found && (
-        <View style={qStyles.spendingSection}>
-          <Text style={qStyles.spendingSectionTitle}>Spending & Utilization</Text>
-          <Text style={qStyles.qualitySource}>
-            Source: CMS Hospice Quality Reporting Program
-          </Text>
-          <View style={qStyles.spendingCards}>
-            {spendingData.perBeneficiarySpending && (
-              <View style={qStyles.spendingCard}>
-                <Text style={qStyles.spendingCardLabel}>Per-Beneficiary Spending</Text>
-                <Text style={qStyles.spendingCardValue}>
-                  {fmtAmount(spendingData.perBeneficiarySpending)}
-                </Text>
-              </View>
-            )}
-            {spendingData.avgDailyCensus && (
-              <View style={qStyles.spendingCard}>
-                <Text style={qStyles.spendingCardLabel}>Avg Daily Census</Text>
-                <Text style={qStyles.spendingCardValue}>
-                  {parseCmsNum(spendingData.avgDailyCensus).toLocaleString()}
-                </Text>
-              </View>
-            )}
-          </View>
-          {spendingData.utilizationMeasures.length > 0 && (
-            <View style={qStyles.utilizationList}>
-              {spendingData.utilizationMeasures
-                .filter((m) => m.score && m.name && m.code.endsWith("_OBSERVED"))
-                .map((m) => (
-                  <View key={m.code} style={qStyles.utilizationRow}>
-                    <Text style={qStyles.utilizationName} numberOfLines={2}>{m.name}</Text>
-                    <Text style={qStyles.utilizationScore}>
-                      {m.code.includes("_07_") ? fmtAmount(m.score) : m.score}
-                    </Text>
-                  </View>
-                ))}
-            </View>
-          )}
-          {spendingData.officeVisitCosts && (
-            <View style={qStyles.officeVisitBox}>
-              <Text style={qStyles.officeVisitTitle}>
-                Office Visit Costs (ZIP {spendingData.officeVisitCosts.zip})
-              </Text>
-              <View style={qStyles.officeVisitRow}>
-                <Text style={qStyles.officeVisitLabel}>New Patient Copay</Text>
-                <Text style={qStyles.officeVisitValue}>
-                  {fmtCopay(spendingData.officeVisitCosts.newPatientCopay)}
-                </Text>
-              </View>
-              <View style={qStyles.officeVisitRow}>
-                <Text style={qStyles.officeVisitLabel}>Established Patient Copay</Text>
-                <Text style={qStyles.officeVisitValue}>
-                  {fmtCopay(spendingData.officeVisitCosts.establishedPatientCopay)}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-      )}
-
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Insurance & Accreditation</Text>
-        <View style={styles.chipRow}>
-          {provider.acceptsMedicare && (
-            <View style={[styles.chip, styles.chipGreen]}>
-              <Feather name="check" size={12} color={Colors.success} />
-              <Text style={[styles.chipText, { color: Colors.success }]}>
-                Medicare Accepted
-              </Text>
-            </View>
-          )}
-          {provider.acceptsMedicaid && (
-            <View style={[styles.chip, styles.chipGreen]}>
-              <Feather name="check" size={12} color={Colors.success} />
-              <Text style={[styles.chipText, { color: Colors.success }]}>
-                Medicaid Accepted
-              </Text>
-            </View>
-          )}
-          {provider.accreditations.map((acc) => (
-            <View key={acc} style={[styles.chip, styles.chipBlue]}>
-              <Feather name="award" size={12} color={Colors.info} />
-              <Text style={[styles.chipText, { color: Colors.info }]}>{acc}</Text>
-            </View>
-          ))}
-        </View>
-        {provider.cmsOwnershipType && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Ownership</Text>
-            <Text style={styles.detailValue}>{provider.cmsOwnershipType}</Text>
-          </View>
-        )}
+        <Text style={styles.sectionTitle}>Provider Information</Text>
+
+        <InfoRow label="Medicare accepted" value="Yes — no cost to you for covered hospice services" />
         {provider.certificationDate && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Medicare Certified Since</Text>
-            <Text style={styles.detailValue}>{provider.certificationDate}</Text>
-          </View>
+          <InfoRow label="Certified since" value={certDateFormatted || provider.certificationDate} />
+        )}
+        {provider.cmsOwnershipType && (
+          <InfoRow
+            label="Organization type"
+            value={provider.cmsOwnershipType}
+          />
+        )}
+        {provider.county && (
+          <InfoRow label="County" value={`${provider.county} County`} />
         )}
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Services Provided</Text>
-        {isCms && (
-          <Text style={styles.servicesNote}>
-            Standard Medicare-required hospice services. Contact provider directly for specialty or additional services.
-          </Text>
-        )}
+        <Text style={styles.sectionTitle}>Services Included</Text>
+        <Text style={styles.sectionSubtitle}>
+          Medicare requires all certified hospices to provide these services at no additional cost to you.
+        </Text>
         <View style={styles.serviceList}>
           {provider.services.map((service) => (
             <View key={service} style={styles.serviceRow}>
-              <View style={styles.serviceDot} />
+              <Feather name="check-circle" size={14} color={Colors.success} />
               <Text style={styles.serviceText}>{service}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      {provider.specialties.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Specialties</Text>
-          <View style={styles.chipRow}>
-            {provider.specialties.map((spec) => (
-              <View key={spec} style={styles.chip}>
-                <Text style={styles.chipText}>{spec}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
+      <View style={styles.nextStepsCard}>
+        <Text style={styles.nextStepsTitle}>Ready to learn more?</Text>
+        <Text style={styles.nextStepsBody}>
+          Call to ask about availability, the intake process, and whether they serve your specific area. It's okay to call multiple hospices and compare — most families speak with 2–3 before deciding.
+        </Text>
+        <Pressable
+          onPress={handleCall}
+          style={({ pressed }) => [styles.callBtnLarge, pressed && { opacity: 0.85 }]}
+        >
+          <Feather name="phone" size={16} color="#FFFFFF" />
+          <Text style={styles.callBtnLargeText}>
+            {provider.phone ? `Call ${provider.phone}` : "Call Now"}
+          </Text>
+        </Pressable>
 
+        {provider.medicareGovUrl && (
+          <Pressable
+            onPress={() => Linking.openURL(provider.medicareGovUrl!)}
+            style={({ pressed }) => [styles.medicareLink, pressed && { opacity: 0.8 }]}
+          >
+            <Feather name="external-link" size={13} color={Colors.info} />
+            <Text style={styles.medicareLinkText}>
+              View full profile on Medicare.gov
+            </Text>
+          </Pressable>
+        )}
+      </View>
 
       <View style={styles.disclaimer}>
         <Feather name="info" size={13} color={Colors.textSubtle} />
         <Text style={styles.disclaimerText}>
-          {isCms
-            ? "Quality data sourced from CMS Hospice Quality Reporting Program and CAHPS Hospice Survey. Verify current information directly with the provider."
-            : "Provider information is for educational reference. Verify services, credentials, and insurance coverage directly with the provider."}
+          Quality data from CMS Hospice Quality Reporting Program and CAHPS Hospice Survey. Always verify current services, availability, and insurance acceptance directly with the provider.
         </Text>
       </View>
     </ScrollView>
   );
 }
 
-const qStyles = StyleSheet.create({
-  qualityHeader: {
-    gap: 2,
-  },
-  qualityTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.4,
-  },
-  qualitySource: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  loadingBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    padding: 20,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-  },
-  loadingText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  scoreCardsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  scoreCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  scoreCardLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
-  },
-  scoreCardValue: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.5,
-  },
-  starRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  starText: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    marginLeft: 4,
-  },
-  section: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.3,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    marginTop: -4,
-  },
-  barList: {
-    gap: 10,
-    marginTop: 4,
-  },
-  barRow: {
-    gap: 4,
-  },
-  barLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textSecondary,
-  },
-  barTrack: {
-    height: 8,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: 8,
-    borderRadius: 4,
-  },
-  barValue: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    textAlign: "right",
-    marginTop: -2,
-  },
-  spendingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  spendingLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
-  },
-  spendingValue: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.5,
-  },
-  compositeCard: {
-    backgroundColor: Colors.primaryPale,
-    borderRadius: 12,
-    padding: 16,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: Colors.primary + "30",
-  },
-  compositeLabel: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
-  },
-  compositeValue: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: Colors.primary,
-    letterSpacing: -0.5,
-  },
-  compositeBar: {
-    height: 6,
-    backgroundColor: "rgba(255,255,255,0.6)",
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  compositeFill: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-  },
-  compositeDesc: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 15,
-  },
-  medicareLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.infoPale,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#BCD9EE",
-  },
-  medicareLinkText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.info,
-  },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FFF0F0",
-    borderRadius: 8,
-    padding: 12,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.error,
-  },
-  spendingSection: {
-    gap: 8,
-  },
-  spendingSectionTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.4,
-  },
-  spendingCards: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  spendingCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  spendingCardLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
-  },
-  spendingCardValue: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.4,
-  },
-  utilizationList: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  utilizationRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-  },
-  utilizationName: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 17,
-  },
-  utilizationScore: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
-    minWidth: 50,
-    textAlign: "right",
-  },
-  officeVisitBox: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  officeVisitTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
-  },
-  officeVisitRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  officeVisitLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  officeVisitValue: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-  },
-});
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    paddingTop: 100,
-    paddingHorizontal: 20,
-    gap: 20,
-  },
-  notFound: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
-  },
-  cmsBadge: {
+  container: { flex: 1, backgroundColor: Colors.background },
+  center: { alignItems: "center", justifyContent: "center" },
+  content: { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
+
+  notFound: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  backLink: { marginTop: 12 },
+  backLinkText: { fontSize: 14, color: Colors.primary, fontFamily: "Inter_600SemiBold" },
+
+  backBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#E8F4FD",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#B8DAEF",
+    paddingVertical: 4,
+    marginBottom: 4,
     alignSelf: "flex-start",
   },
-  cmsBadgeText: {
+  backBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+  },
+
+  certBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: Colors.successPale,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  certBadgeText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
-    color: "#1A6DAA",
+    color: Colors.success,
   },
-  header: {
-    gap: 10,
-  },
-  name: {
+
+  providerName: {
     fontSize: 24,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
     letterSpacing: -0.5,
-    lineHeight: 32,
+    lineHeight: 30,
   },
-  location: {
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: -4,
+  },
+  locationText: {
+    flex: 1,
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: Colors.textSecondary,
     lineHeight: 20,
   },
-  countyText: {
+  certSince: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textSecondary,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    marginTop: -4,
   },
-  distanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  distance: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: Colors.primary,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  ratingText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textSecondary,
-    marginLeft: 4,
-  },
+
   ctaRow: {
     flexDirection: "row",
     gap: 10,
@@ -892,35 +466,55 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: Colors.primary,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   callBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
   },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.divider,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
     backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.divider,
   },
-  saveBtnActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryPale,
-  },
+  saveBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryPale },
   saveBtnText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
     color: Colors.textSecondary,
   },
-  section: {
+
+  loadingBox: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  loadingText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+
+  section: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.divider,
   },
   sectionTitle: {
     fontSize: 17,
@@ -928,95 +522,233 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.3,
   },
-  description: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 22,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  chipGreen: {
-    backgroundColor: Colors.successPale,
-    borderColor: "#BFDDCC",
-  },
-  chipBlue: {
-    backgroundColor: Colors.infoPale,
-    borderColor: "#BCD9EE",
-  },
-  chipText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textSecondary,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4,
-  },
-  detailLabel: {
+  sectionSubtitle: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
+    lineHeight: 18,
+    marginTop: -4,
   },
-  detailValue: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+
+  starBlock: {
+    gap: 6,
   },
-  serviceList: {
-    gap: 8,
-  },
-  serviceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  serviceDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-  },
-  serviceText: {
+  starLabel: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_500Medium",
     color: Colors.textSecondary,
   },
-  servicesNote: {
-    fontSize: 12,
+  noDataText: {
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     fontStyle: "italic",
   },
-  disclaimer: {
+
+  hciRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 14,
     alignItems: "flex-start",
-    backgroundColor: Colors.backgroundSecondary,
-    padding: 12,
+    backgroundColor: Colors.primaryPale,
     borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.primary + "25",
   },
-  disclaimerText: {
-    fontSize: 11,
+  hciScoreBox: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 1,
+  },
+  hciNumber: {
+    fontSize: 32,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primary,
+    letterSpacing: -1,
+  },
+  hciDenom: {
+    fontSize: 16,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primary,
+    opacity: 0.7,
+    paddingBottom: 2,
+  },
+  hciDesc: { flex: 1, gap: 3 },
+  hciTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  hciBody: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 17,
+  },
+
+  surveyRow: {
+    gap: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+  },
+  surveyQuestion: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  surveyBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  surveyTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  surveyFill: {
+    height: 8,
+    borderRadius: 4,
+  },
+  surveyPct: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    minWidth: 40,
+    textAlign: "right",
+  },
+
+  qualDetailRow: {
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "flex-start",
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+  },
+  qualDetailPct: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: Colors.primaryPale,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  qualDetailNum: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primary,
+    letterSpacing: -0.5,
+  },
+  qualDetailDesc: { flex: 1, gap: 4 },
+  qualDetailTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  qualDetailBody: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 17,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingVertical: 2,
+  },
+  infoLabel: {
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     flex: 1,
-    lineHeight: 16,
+  },
+  infoValue: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+    flex: 2,
+    textAlign: "right",
+  },
+
+  serviceList: { gap: 8 },
+  serviceRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  serviceText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+
+  nextStepsCard: {
+    backgroundColor: Colors.primaryPale,
+    borderRadius: 16,
+    padding: 18,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+  },
+  nextStepsTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.3,
+  },
+  nextStepsBody: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  callBtnLarge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  callBtnLargeText: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+  },
+  medicareLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "center",
+    paddingTop: 4,
+  },
+  medicareLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.info,
+  },
+
+  disclaimer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  disclaimerText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSubtle,
+    lineHeight: 17,
   },
 });
