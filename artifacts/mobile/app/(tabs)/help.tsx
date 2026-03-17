@@ -326,16 +326,16 @@ export default function HelpScreen() {
             </View>
 
             <View style={styles.profileNudge}>
-              <Feather name="info" size={14} color={Colors.primary} />
+              <Feather name="user" size={14} color={Colors.primary} />
               <Text style={styles.profileNudgeText}>
-                Add your patient's diagnosis, medications, and hospice phone number in{" "}
+                Add your patient's name, diagnosis, and medications in{" "}
                 <Text
                   style={styles.profileNudgeLink}
-                  onPress={() => router.push("/(tabs)/more" as any)}
+                  onPress={() => router.push("/patient-profile" as any)}
                 >
-                  Settings
+                  Patient Profile
                 </Text>{" "}
-                for personalized guidance.
+                and Vera's responses will be tailored to your specific situation.
               </Text>
             </View>
           </>
