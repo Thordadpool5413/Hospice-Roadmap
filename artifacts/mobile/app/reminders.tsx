@@ -24,7 +24,7 @@ import { Reminder, ReminderRecurrence, ReminderType } from "@/types";
 
 const TYPE_META: Record<ReminderType, { label: string; icon: string; color: string; bg: string }> = {
   medication: { label: "Medication", icon: "package", color: "#5A7FA8", bg: "#EBF2FA" },
-  appointment: { label: "Appointment", icon: "calendar", color: "#5A8A7A", bg: "#E8F3EF" },
+  appointment: { label: "Appointment", icon: "calendar", color: "#C85A1C", bg: "#FEF1E8" },
 };
 
 const RECURRENCE_OPTIONS: { value: ReminderRecurrence; label: string }[] = [

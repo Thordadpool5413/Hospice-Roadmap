@@ -40,7 +40,7 @@ const URGENT_TILES = [
   { label: "Swallowing problems", icon: "droplet", color: "#1A5276", bg: "#EBF5FB", prompt: "My patient is having trouble swallowing medications or food. What should I do?" },
   { label: "Medication question", icon: "package", color: "#1E8449", bg: "#EAFAF1", prompt: "I have a question about a hospice medication." },
   { label: "Equipment issue", icon: "tool", color: "#2E86C1", bg: "#EBF5FB", prompt: "I'm having a problem with medical equipment in the home." },
-  { label: "Caregiver task", icon: "user-check", color: "#5A8A7A", bg: "#EAF4F2", prompt: "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer." },
+  { label: "Caregiver task", icon: "user-check", color: "#C85A1C", bg: "#FEF1E8", prompt: "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer." },
   { label: "I'm overwhelmed", icon: "cloud", color: "#884EA0", bg: "#F4ECF7", prompt: "I'm feeling overwhelmed and exhausted as a caregiver. I need support." },
 ];
 

@@ -84,7 +84,7 @@ export const JOURNAL_TYPE_META: Record<
 > = {
   symptom: { label: "Symptom", icon: "activity", color: "#C45A5A", bg: "#FDF0F0" },
   medication: { label: "Medication", icon: "package", color: "#5A7FA8", bg: "#EBF2FA" },
-  observation: { label: "Observation", icon: "eye", color: "#5A8A7A", bg: "#E8F3EF" },
+  observation: { label: "Observation", icon: "eye", color: "#C85A1C", bg: "#FEF1E8" },
   mood: { label: "Mood", icon: "heart", color: "#8A6A9A", bg: "#F0EBF6" },
   general: { label: "General", icon: "edit-3", color: "#7A8A6A", bg: "#F0F4EB" },
 };
