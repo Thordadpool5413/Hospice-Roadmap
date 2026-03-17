@@ -50,20 +50,24 @@ export default function MoreScreen() {
   const { user, updateJourneyStage } = useApp();
   const { fontScale, highContrast, setFontScale, setHighContrast } = useA11y();
 
+  const isPatient = user?.role === "patient";
+
   const menuSections: { title: string; subtitle?: string; items: MenuItem[] }[] = [
     {
       title: "Your Profile",
       subtitle: "Personalizes Vera's guidance for your situation",
       items: [
-        { label: "Patient Profile", icon: "user", route: "/patient-profile" },
+        { label: isPatient ? "My Profile" : "Patient Profile", icon: "user", route: "/patient-profile" },
         { label: "Goals of Care", icon: "star", route: "/goals-of-care" },
       ],
     },
     {
       title: "Daily Care",
-      subtitle: "Tools to help with everyday caregiving",
+      subtitle: isPatient
+        ? "Tools for your daily care and wellbeing"
+        : "Tools to help with everyday caregiving",
       items: [
-        { label: "Caregiver Journal", icon: "edit-3", route: "/journal" },
+        { label: isPatient ? "Journal" : "Caregiver Journal", icon: "edit-3", route: "/journal" },
         { label: "Reminders", icon: "bell", route: "/reminders" },
         { label: "Symptom Tracker", icon: "bar-chart-2", route: "/symptom-tracker" },
       ],
@@ -73,9 +77,12 @@ export default function MoreScreen() {
       subtitle: "Guidance tools for specific care situations",
       items: [
         { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder" },
-        { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying" },
-        { label: "Pain Assessment Tool", icon: "activity", route: "/painad" },
+        ...(!isPatient ? [
+          { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying" } as MenuItem,
+          { label: "Pain Assessment Tool", icon: "activity", route: "/painad" } as MenuItem,
+        ] : []),
         { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation" },
+        { label: "Resource Library", icon: "book-open", route: "/(tabs)/resources" },
       ],
     },
     {
