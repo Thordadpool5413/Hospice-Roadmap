@@ -48,6 +48,17 @@ function StarRating({ count, max = 5 }: { count: number; max?: number }) {
   );
 }
 
+const CLINICAL_LABELS: Record<string, string> = {
+  "H_001_01_OBSERVED": "Treatment preferences were documented",
+  "H_002_01_OBSERVED": "Spiritual or personal values were addressed",
+  "H_003_01_OBSERVED": "Pain was regularly screened",
+  "H_004_01_OBSERVED": "Pain was thoroughly assessed when present",
+  "H_005_01_OBSERVED": "Breathing problems were screened",
+  "H_006_01_OBSERVED": "Breathing problems were treated",
+  "H_007_01_OBSERVED": "Bowel care provided when on opioids",
+  "H_011_01_OBSERVED": "Nurse or aide visited in the final days",
+};
+
 function SurveyRow({ question, pct }: { question: string; pct: string | null | undefined }) {
   const num = parseNum(pct);
   if (num === null) return null;
@@ -224,9 +235,9 @@ export default function ProviderDetailScreen() {
                   <Text style={styles.hciDenom}>/10</Text>
                 </View>
                 <View style={styles.hciDesc}>
-                  <Text style={styles.hciTitle}>Overall Quality Score</Text>
+                  <Text style={styles.hciTitle}>Hospice Care Index</Text>
                   <Text style={styles.hciBody}>
-                    Medicare's combined measure of how well this hospice performs on 10 key quality indicators. Higher is better.
+                    Medicare tracks 10 quality benchmarks. This number shows how many this hospice meets. Most high-performing hospices score 9–10.
                   </Text>
                 </View>
               </View>
@@ -275,8 +286,30 @@ export default function ProviderDetailScreen() {
             </View>
           )}
 
+          {(() => {
+            const clinicalMeasures = (qualityData.qualityMeasures || []).filter(
+              (m) => CLINICAL_LABELS[m.code]
+            );
+            if (clinicalMeasures.length === 0) return null;
+            return (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Clinical Quality Measures</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Percentage of patients who received each care practice. Based on Medicare clinical data — higher is better.
+                </Text>
+                {clinicalMeasures.map((m) => (
+                  <SurveyRow
+                    key={m.code}
+                    question={CLINICAL_LABELS[m.code]}
+                    pct={m.score}
+                  />
+                ))}
+              </View>
+            );
+          })()}
+
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Care Quality Details</Text>
+            <Text style={styles.sectionTitle}>Care Details</Text>
 
             {visitsNearDeath !== null && (
               <View style={styles.qualDetailRow}>
@@ -284,23 +317,9 @@ export default function ProviderDetailScreen() {
                   <Text style={styles.qualDetailNum}>{Math.round(visitsNearDeath)}%</Text>
                 </View>
                 <View style={styles.qualDetailDesc}>
-                  <Text style={styles.qualDetailTitle}>Visits in the final days</Text>
+                  <Text style={styles.qualDetailTitle}>Nurse or aide visited in final days</Text>
                   <Text style={styles.qualDetailBody}>
-                    How often a nurse or aide visited the patient in the last 3 days of life. Higher means the hospice was more present when it mattered most.
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {compositeScore !== null && (
-              <View style={styles.qualDetailRow}>
-                <View style={styles.qualDetailPct}>
-                  <Text style={styles.qualDetailNum}>{Math.round(compositeScore)}%</Text>
-                </View>
-                <View style={styles.qualDetailDesc}>
-                  <Text style={styles.qualDetailTitle}>Followed recommended care steps</Text>
-                  <Text style={styles.qualDetailBody}>
-                    How consistently this hospice completed all the care processes Medicare recommends — things like pain assessments, medication reviews, and care planning.
+                    How often patients received a nursing or aide visit in the last 3 days of life. Reflects how present the hospice team was at the most critical time.
                   </Text>
                 </View>
               </View>
