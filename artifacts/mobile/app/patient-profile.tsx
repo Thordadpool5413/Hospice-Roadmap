@@ -15,9 +15,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { MedicationPicker } from "@/components/MedicationPicker";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { PatientProfile } from "@/types";
+import { MedicationEntry, PatientProfile } from "@/types";
 
 interface FieldConfig {
   key: keyof PatientProfile;
@@ -40,13 +41,6 @@ const FIELDS: FieldConfig[] = [
     label: "Primary diagnosis",
     placeholder: "e.g. end-stage COPD, CHF, dementia",
     hint: "Compass tailors symptom guidance to the specific disease.",
-  },
-  {
-    key: "comfortKitMedications",
-    label: "Comfort kit medications in the home",
-    placeholder: "e.g. morphine 5mg, lorazepam 1mg, glycopyrrolate",
-    hint: "Compass can give you precise guidance on when and how to use these.",
-    multiline: true,
   },
   {
     key: "equipmentInHome",
@@ -98,6 +92,9 @@ export default function PatientProfileScreen() {
   const [profile, setProfile] = useState<PatientProfile>(
     user?.patientProfile ?? {}
   );
+  const [medications, setMedications] = useState<MedicationEntry[]>(
+    user?.patientProfile?.medications ?? []
+  );
 
   const update = (key: keyof PatientProfile, value: string) => {
     setProfile((prev) => ({ ...prev, [key]: value || undefined }));
@@ -105,7 +102,11 @@ export default function PatientProfileScreen() {
 
   const handleSave = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    updatePatientProfile(profile);
+    const comfortKitMedications =
+      medications.length > 0
+        ? medications.map((m) => (m.doseNote ? `${m.name} ${m.doseNote}` : m.name)).join(", ")
+        : undefined;
+    updatePatientProfile({ ...profile, medications, comfortKitMedications });
     Alert.alert(
       "Profile Saved",
       "Compass will now use this information to give you personalized guidance.",
@@ -124,6 +125,7 @@ export default function PatientProfileScreen() {
           style: "destructive",
           onPress: () => {
             setProfile({});
+            setMedications([]);
             updatePatientProfile({});
           },
         },
@@ -170,12 +172,38 @@ export default function PatientProfileScreen() {
           </View>
         </View>
 
-        {FIELDS.map((field) => (
+        {FIELDS.slice(0, 2).map((field) => (
           <View key={field.key} style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>{field.label}</Text>
             <TextInput
               style={[styles.fieldInput, field.multiline && styles.fieldInputMulti]}
-              value={profile[field.key] ?? ""}
+              value={(profile[field.key] as string) ?? ""}
+              onChangeText={(text) => update(field.key, text)}
+              placeholder={field.placeholder}
+              placeholderTextColor={Colors.textMuted}
+              multiline={field.multiline}
+              numberOfLines={field.multiline ? 3 : 1}
+              keyboardType={field.keyboardType ?? "default"}
+              returnKeyType={field.multiline ? "default" : "next"}
+            />
+            <Text style={styles.fieldHint}>{field.hint}</Text>
+          </View>
+        ))}
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.fieldLabel}>Comfort kit medications in the home</Text>
+          <MedicationPicker medications={medications} onChange={setMedications} />
+          <Text style={styles.fieldHint}>
+            Search for medications by name — Vera can give precise guidance on when and how to use each one. Tap any added medication to record its dose and route.
+          </Text>
+        </View>
+
+        {FIELDS.slice(2).map((field) => (
+          <View key={field.key} style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>{field.label}</Text>
+            <TextInput
+              style={[styles.fieldInput, field.multiline && styles.fieldInputMulti]}
+              value={(profile[field.key] as string) ?? ""}
               onChangeText={(text) => update(field.key, text)}
               placeholder={field.placeholder}
               placeholderTextColor={Colors.textMuted}

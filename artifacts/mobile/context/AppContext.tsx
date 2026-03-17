@@ -110,7 +110,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     lines.push(`Journey stage: ${user.journeyStage}`);
     if (p?.patientName) lines.push(`Patient name: ${p.patientName}`);
     if (p?.diagnosis) lines.push(`Primary diagnosis: ${p.diagnosis}`);
-    if (p?.comfortKitMedications) lines.push(`Comfort kit medications in home: ${p.comfortKitMedications}`);
+    if (p?.medications && p.medications.length > 0) {
+      lines.push("Comfort kit medications in home:");
+      for (const med of p.medications) {
+        const parts = [`  - ${med.name}`];
+        if (med.rxcui) parts.push(`(RxCUI: ${med.rxcui})`);
+        if (med.tty) parts.push(`[${med.tty}]`);
+        if (med.doseNote) parts.push(`— ${med.doseNote}`);
+        lines.push(parts.join(" "));
+      }
+    } else if (p?.comfortKitMedications) {
+      lines.push(`Comfort kit medications in home: ${p.comfortKitMedications}`);
+    }
     if (p?.equipmentInHome) lines.push(`Medical equipment in home: ${p.equipmentInHome}`);
     if (p?.hospicePhone) lines.push(`Hospice main phone: ${p.hospicePhone}`);
     if (p?.hospiceAfterHoursPhone) lines.push(`Hospice after-hours phone: ${p.hospiceAfterHoursPhone}`);

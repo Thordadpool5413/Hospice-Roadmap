@@ -14,10 +14,19 @@ export interface GoalsOfCare {
   updatedAt?: string;
 }
 
+export interface MedicationEntry {
+  id: string;
+  name: string;
+  rxcui?: string;
+  tty?: string;
+  doseNote?: string;
+}
+
 export interface PatientProfile {
   patientName?: string;
   diagnosis?: string;
   comfortKitMedications?: string;
+  medications?: MedicationEntry[];
   equipmentInHome?: string;
   hospicePhone?: string;
   hospiceAfterHoursPhone?: string;
