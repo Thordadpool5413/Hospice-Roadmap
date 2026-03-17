@@ -197,7 +197,7 @@ export default function HelpScreen() {
 
   const handleClearConversation = useCallback(async () => {
     if (!conversation) return;
-    Alert.alert("New Conversation", "Start a fresh conversation with Compass?", [
+    Alert.alert("New Conversation", "Start a fresh conversation with Vera?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Start Fresh",
@@ -233,8 +233,8 @@ export default function HelpScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={0}
     >
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -242,8 +242,8 @@ export default function HelpScreen() {
             <Feather name="compass" size={18} color="#FFFFFF" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Compass</Text>
-            <Text style={styles.headerSubtitle}>Your hospice care partner</Text>
+            <Text style={styles.headerTitle}>Vera</Text>
+            <Text style={styles.headerSubtitle}>Your hospice care companion</Text>
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -282,7 +282,7 @@ export default function HelpScreen() {
                 <Feather name="compass" size={32} color="#FFFFFF" />
               </View>
               <Text style={styles.welcomeTitle}>
-                I'm here to help.
+                Hi, I'm Vera.
               </Text>
               <Text style={styles.welcomeSubtitle}>
                 Ask me anything about symptoms, medications, caregiving tasks, equipment, or what to expect. I'll give you clear, step-by-step guidance.
@@ -339,7 +339,7 @@ export default function HelpScreen() {
             {isLoading && (
               <View style={styles.loadingBubble}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.loadingText}>Compass is thinking…</Text>
+                <Text style={styles.loadingText}>Vera is thinking…</Text>
               </View>
             )}
             {suggestions.length > 0 && !isStreaming && (
@@ -369,7 +369,7 @@ export default function HelpScreen() {
         )}
       </ScrollView>
 
-      <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 84 : 0) }]}>
         {!isOnline ? (
           <View style={styles.offlineInputNotice}>
             <Feather name="wifi-off" size={15} color={Colors.amber} />

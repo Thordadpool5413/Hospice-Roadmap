@@ -52,7 +52,7 @@ export default function MoreScreen() {
 
   const menuSections: { title: string; items: MenuItem[] }[] = [
     {
-      title: "Compass AI",
+      title: "Vera — Your AI Companion",
       items: [
         { label: "Patient Profile", icon: "user", route: "/patient-profile" },
       ],
@@ -62,7 +62,7 @@ export default function MoreScreen() {
       items: [
         { label: "Caregiver Journal", icon: "edit-3", route: "/journal" },
         { label: "Reminders", icon: "bell", route: "/reminders" },
-        { label: "Get Help Now — Situation Finder", icon: "alert-circle", route: "/situation-finder" },
+        { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder" },
         { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation" },
         { label: "Contact Support", icon: "message-circle", route: "/support" },
       ],
