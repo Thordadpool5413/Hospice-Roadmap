@@ -21,15 +21,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useSymptoms } from "@/context/SymptomContext";
+import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
   AiConversation,
   AiMessage,
   createConversation,
   deleteConversation,
+  generateConversationMemory,
   getConversation,
   streamMessage,
 } from "@/services/aiService";
+import { VeraEmotionalTone } from "@/types";
 
 const URGENT_TILES = [
   {
@@ -115,6 +118,7 @@ export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext } = useApp();
   const { getRecentSummary } = useSymptoms();
+  const { addMemory, getMemorySummary, memoryCount } = useVeraMemory();
   const { isOnline } = useNetworkStatus();
   const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
   const lastInitialRef = useRef("");
@@ -206,9 +210,12 @@ export default function HelpScreen() {
 
       const baseContext = buildPatientContext();
       const symptomSummary = getRecentSummary(7);
-      const patientContext = symptomSummary
-        ? `${baseContext}\n\n--- Recent Symptom Tracking ---\n${symptomSummary}`
-        : baseContext;
+      const memorySummary = getMemorySummary();
+      const patientContext = [
+        baseContext,
+        symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
+        memorySummary,
+      ].filter(Boolean).join("\n\n");
 
       await streamMessage(
         activeConv.id,
@@ -267,8 +274,23 @@ export default function HelpScreen() {
       { text: "Cancel", style: "cancel" },
       {
         text: "Start Fresh",
-        style: "destructive",
         onPress: async () => {
+          try {
+            const memory = await generateConversationMemory(conversation.id);
+            if (memory && memory.summary) {
+              await addMemory({
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                date: new Date().toISOString(),
+                conversationId: conversation.id,
+                summary: memory.summary,
+                keyFacts: memory.keyFacts ?? [],
+                emotionalTone: (memory.emotionalTone as VeraEmotionalTone) ?? "calm",
+                mainTopics: memory.mainTopics ?? [],
+              });
+            }
+          } catch {
+            // memory generation is best-effort — still clear the conversation
+          }
           try {
             await deleteConversation(conversation.id);
           } catch {
@@ -278,7 +300,7 @@ export default function HelpScreen() {
         },
       },
     ]);
-  }, [conversation, startNewConversation]);
+  }, [conversation, startNewConversation, addMemory]);
 
   const handleShareMessage = useCallback((content: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -317,7 +339,15 @@ export default function HelpScreen() {
           </View>
           <View>
             <Text style={styles.headerTitle}>Vera</Text>
-            <Text style={styles.headerSubtitle}>Your hospice care companion</Text>
+            <View style={styles.headerSubRow}>
+              <Text style={styles.headerSubtitle}>Your hospice care companion</Text>
+              {memoryCount > 0 && (
+                <View style={styles.memoryPill}>
+                  <Feather name="zap" size={9} color={Colors.primary} />
+                  <Text style={styles.memoryPillText}>Knows your story</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -356,10 +386,12 @@ export default function HelpScreen() {
                 <Feather name="compass" size={32} color="#FFFFFF" />
               </View>
               <Text style={styles.welcomeTitle}>
-                Hi, I'm Vera.
+                {memoryCount > 0 ? "Welcome back." : "Hi, I'm Vera."}
               </Text>
               <Text style={styles.welcomeSubtitle}>
-                {isPatient
+                {memoryCount > 0
+                  ? "I remember our previous conversations. I'm here whenever you need guidance, support, or just someone to talk through what's happening."
+                  : isPatient
                   ? "Ask me anything about your symptoms, medications, comfort, or what to expect. I'm here to support you."
                   : "Ask me anything about symptoms, medications, caregiving tasks, equipment, or what to expect. I'll give you clear, step-by-step guidance."}
               </Text>
@@ -660,6 +692,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
+  },
+  headerSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  memoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: Colors.primaryPale,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+  },
+  memoryPillText: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+    letterSpacing: 0.2,
   },
   headerRight: {
     flexDirection: "row",

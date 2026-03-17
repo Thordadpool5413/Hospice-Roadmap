@@ -182,4 +182,67 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
   }
 });
 
+router.post("/conversations/:id/memory", async (req: Request, res: Response) => {
+  const id = Number(req.params["id"]);
+  try {
+    const msgs = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(messages.createdAt);
+
+    if (msgs.length < 2) {
+      res.status(422).json({ error: "Not enough messages to generate memory" });
+      return;
+    }
+
+    const transcript = msgs
+      .map((m) => `${m.role === "user" ? "User" : "Vera"}: ${m.content}`)
+      .join("\n\n");
+
+    const memoryPrompt = `You are a memory extraction system for Vera, a hospice care AI companion. Given the following conversation transcript, extract a concise memory in JSON format that Vera can use in future sessions to feel continuous and aware of this family's journey.
+
+Output ONLY valid JSON — no markdown, no explanation, no code fences. Use this exact format:
+{
+  "summary": "2-sentence plain English summary of what was discussed and any key outcomes or guidance given",
+  "keyFacts": ["specific fact 1 about patient or caregiver situation", "specific fact 2", "specific fact 3"],
+  "emotionalTone": "one of exactly: distressed, calm, seeking-info, grieving, hopeful, mixed",
+  "mainTopics": ["topic label 1", "topic label 2"]
+}
+
+Rules:
+- keyFacts: 2-5 items, each a concrete specific fact (e.g. "Patient is named John, 78yo with CHF" not "patient has a diagnosis")
+- summary: focus on what the person needed, what they were feeling, what guidance helped
+- emotionalTone: pick the single best word from the allowed list
+- mainTopics: 1-3 short topic labels (e.g. "pain management", "breathing difficulty", "caregiver support")
+
+Transcript:
+${transcript.slice(0, 12000)}`;
+
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 400,
+      messages: [{ role: "user", content: memoryPrompt }],
+    });
+
+    const raw = response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
+    let memory: unknown;
+    try {
+      memory = JSON.parse(raw);
+    } catch {
+      const jsonMatch = raw.match(/\{[\s\S]+\}/);
+      if (!jsonMatch) {
+        res.status(500).json({ error: "Failed to parse memory" });
+        return;
+      }
+      memory = JSON.parse(jsonMatch[0]);
+    }
+
+    res.json(memory);
+  } catch (err: unknown) {
+    console.error("Error generating memory:", err);
+    res.status(500).json({ error: "Failed to generate memory" });
+  }
+});
+
 export default router;

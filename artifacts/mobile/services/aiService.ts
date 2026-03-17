@@ -42,6 +42,31 @@ export async function deleteConversation(id: number): Promise<void> {
   await fetch(`${apiBase()}/anthropic/conversations/${id}`, { method: "DELETE" });
 }
 
+export async function generateConversationMemory(
+  conversationId: number
+): Promise<{
+  summary: string;
+  keyFacts: string[];
+  emotionalTone: string;
+  mainTopics: string[];
+} | null> {
+  try {
+    const res = await fetch(
+      `${apiBase()}/anthropic/conversations/${conversationId}/memory`,
+      { method: "POST" }
+    );
+    if (!res.ok) return null;
+    return res.json() as Promise<{
+      summary: string;
+      keyFacts: string[];
+      emotionalTone: string;
+      mainTopics: string[];
+    }>;
+  } catch {
+    return null;
+  }
+}
+
 export async function streamMessage(
   conversationId: number,
   content: string,

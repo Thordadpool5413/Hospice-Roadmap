@@ -36,6 +36,24 @@ export interface PatientProfile {
   goalsOfCare?: GoalsOfCare;
 }
 
+export type VeraEmotionalTone =
+  | "distressed"
+  | "calm"
+  | "seeking-info"
+  | "grieving"
+  | "hopeful"
+  | "mixed";
+
+export interface VeraMemory {
+  id: string;
+  date: string;
+  conversationId: number;
+  summary: string;
+  keyFacts: string[];
+  emotionalTone: VeraEmotionalTone;
+  mainTopics: string[];
+}
+
 export interface SymptomEntry {
   id: string;
   date: string;

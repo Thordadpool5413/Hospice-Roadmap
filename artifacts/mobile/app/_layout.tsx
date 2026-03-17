@@ -21,6 +21,7 @@ import { AppProvider } from "@/context/AppContext";
 import { JournalProvider } from "@/context/JournalContext";
 import { RemindersProvider } from "@/context/RemindersContext";
 import { SymptomProvider } from "@/context/SymptomContext";
+import { VeraMemoryProvider } from "@/context/VeraMemoryContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -170,6 +171,7 @@ export default function RootLayout() {
           <JournalProvider>
           <RemindersProvider>
           <SymptomProvider>
+          <VeraMemoryProvider>
           <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
@@ -180,6 +182,7 @@ export default function RootLayout() {
               </KeyboardProvider>
             </GestureHandlerRootView>
           </QueryClientProvider>
+          </VeraMemoryProvider>
           </SymptomProvider>
           </RemindersProvider>
           </JournalProvider>
