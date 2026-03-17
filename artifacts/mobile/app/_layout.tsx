@@ -138,6 +138,10 @@ function RootLayoutNav() {
         name="reminders"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="resources"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

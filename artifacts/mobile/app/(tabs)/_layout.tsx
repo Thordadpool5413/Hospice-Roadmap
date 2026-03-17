@@ -127,10 +127,6 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="resources"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
         name="more"
         options={{
           title: "More",
