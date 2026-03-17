@@ -106,7 +106,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!user) return "";
     const p = user.patientProfile;
     const lines: string[] = [];
-    lines.push(`Caregiver/user role: ${user.role}`);
+    const roleDescription = user.role === "patient"
+      ? "The person using this app IS THE PATIENT themselves"
+      : user.role === "caregiver"
+      ? "The person using this app is a CAREGIVER for the patient"
+      : "The person using this app is a family member or other person";
+    lines.push(`Who is using this app: ${roleDescription}`);
     lines.push(`Journey stage: ${user.journeyStage}`);
     if (p?.patientName) lines.push(`Patient name: ${p.patientName}`);
     if (p?.diagnosis) lines.push(`Primary diagnosis: ${p.diagnosis}`);
