@@ -17,6 +17,13 @@ function apiBase(): string {
   return getApiBase();
 }
 
+function makeSignal(ms: number): AbortSignal {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  controller.signal.addEventListener("abort", () => clearTimeout(id));
+  return controller.signal;
+}
+
 interface SearchProvidersResponse {
   providers: Provider[];
   total: number;
@@ -41,7 +48,7 @@ export async function searchCmsProviders(params: {
   const fetchUrl = `${base}/cms/providers?${url.searchParams.toString()}`;
   const res = await fetch(fetchUrl, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(20000),
+    signal: makeSignal(20000),
   });
 
   if (!res.ok) {
@@ -55,7 +62,7 @@ export async function searchCmsProviders(params: {
 export async function fetchQualityData(ccn: string): Promise<CmsQualityData> {
   const res = await fetch(`${apiBase()}/cms/quality/${ccn}`, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(20000),
+    signal: makeSignal(20000),
   });
 
   if (!res.ok) {
@@ -80,7 +87,7 @@ export async function fetchQualitySummary(
     `${apiBase()}/cms/quality-summary?ccns=${ccns.join(",")}`,
     {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(30000),
+      signal: makeSignal(30000),
     }
   );
 
@@ -93,7 +100,7 @@ export async function fetchQualitySummary(
 export async function fetchSpendingData(ccn: string): Promise<CmsSpendingData> {
   const res = await fetch(`${apiBase()}/cms/spending/${ccn}`, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(20000),
+    signal: makeSignal(20000),
   });
 
   if (!res.ok) {
