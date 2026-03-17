@@ -86,12 +86,20 @@ const STAGE_ACTIONS: Record<JourneyStage, QuickAction[]> = {
   ],
 };
 
-const URGENT = [
+const URGENT_CAREGIVER = [
   { label: "Breathing difficulty", id: "breathing-changes" },
   { label: "Worsening pain", id: "pain-worsening" },
   { label: "Agitation", id: "agitation-restlessness" },
   { label: "Patient has fallen", id: "fall-recovery" },
   { label: "Signs of dying", id: "approaching-death" },
+  { label: "Not sure what's happening", id: "not-sure-whats-happening" },
+];
+
+const URGENT_PATIENT = [
+  { label: "Breathing difficulty", id: "breathing-changes" },
+  { label: "Worsening pain", id: "pain-worsening" },
+  { label: "Feeling agitated", id: "agitation-restlessness" },
+  { label: "I've fallen", id: "fall-recovery" },
   { label: "Not sure what's happening", id: "not-sure-whats-happening" },
 ];
 
@@ -116,6 +124,8 @@ export default function HomeScreen() {
   const stage = user?.journeyStage ?? "during";
   const stageMeta = STAGE_META[stage];
   const quickActions = STAGE_ACTIONS[stage];
+  const isPatient = user?.role === "patient";
+  const urgentItems = isPatient ? URGENT_PATIENT : URGENT_CAREGIVER;
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -201,8 +211,13 @@ export default function HomeScreen() {
           <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.75)" />
         </Pressable>
 
-        <View style={styles.chips}>
-          {URGENT.map((s) => (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chips}
+          style={styles.chipsScroll}
+        >
+          {urgentItems.map((s) => (
             <Pressable
               key={s.id}
               onPress={() => tap(`/guidance/${s.id}`)}
@@ -211,7 +226,7 @@ export default function HomeScreen() {
               <Text style={styles.chipText}>{s.label}</Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {/* ── Quick Access ── */}
@@ -237,8 +252,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Active Dying Protocol Card (during stage) ── */}
-      {stage === "during" && (
+      {/* ── Active Dying Protocol Card (during stage, caregivers only) ── */}
+      {stage === "during" && !isPatient && (
         <Pressable
           onPress={() => tap("/active-dying")}
           style={({ pressed }) => [
@@ -343,7 +358,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    gap: 26,
+    gap: 20,
   },
 
   // Header
@@ -451,17 +466,19 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.82)",
     marginTop: 2,
   },
+  chipsScroll: {
+    marginTop: 10,
+  },
   chips: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 7,
-    marginTop: 10,
+    paddingRight: 20,
   },
   chip: {
     backgroundColor: Colors.primaryPale,
     borderRadius: 20,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
     borderWidth: 1,
     borderColor: Colors.primary + "28",
   },
@@ -488,19 +505,19 @@ const styles = StyleSheet.create({
   },
   toolCard: {
     width: "47.5%",
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
+    borderRadius: 14,
+    padding: 13,
+    gap: 9,
   },
   toolIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   toolLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: -0.2,
   },

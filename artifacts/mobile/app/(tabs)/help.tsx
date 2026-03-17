@@ -32,16 +32,64 @@ import {
 } from "@/services/aiService";
 
 const URGENT_TILES = [
-  { label: "Breathing difficulty", icon: "wind", color: "#C0392B", bg: "#FDEDEC", prompt: "My patient is having breathing difficulty. What should I do right now?" },
-  { label: "Pain or discomfort", icon: "alert-circle", color: "#E67E22", bg: "#FEF9E7", prompt: "My patient seems to be in pain or discomfort. How can I help them?" },
-  { label: "Confusion or agitation", icon: "alert-triangle", color: "#D35400", bg: "#FDF2E9", prompt: "My patient is confused or agitated. What is happening and what should I do?" },
-  { label: "Not responding", icon: "moon", color: "#7D3C98", bg: "#F5EEF8", prompt: "My patient is not responding or very hard to wake. What should I do?" },
-  { label: "I think they died", icon: "heart", color: "#2C3E50", bg: "#EAECEE", prompt: "I think my patient may have died. What do I do right now?" },
-  { label: "Swallowing problems", icon: "droplet", color: "#1A5276", bg: "#EBF5FB", prompt: "My patient is having trouble swallowing medications or food. What should I do?" },
-  { label: "Medication question", icon: "package", color: "#1E8449", bg: "#EAFAF1", prompt: "I have a question about a hospice medication." },
-  { label: "Equipment issue", icon: "tool", color: "#2E86C1", bg: "#EBF5FB", prompt: "I'm having a problem with medical equipment in the home." },
-  { label: "Caregiver task", icon: "user-check", color: "#C85A1C", bg: "#FEF1E8", prompt: "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer." },
-  { label: "I'm overwhelmed", icon: "cloud", color: "#884EA0", bg: "#F4ECF7", prompt: "I'm feeling overwhelmed and exhausted as a caregiver. I need support." },
+  {
+    label: "Breathing difficulty",
+    icon: "wind", color: "#C0392B", bg: "#FDEDEC",
+    prompt: "My patient is having breathing difficulty. What should I do right now?",
+    patientPrompt: "I'm having difficulty breathing. What can be done to help me right now?",
+  },
+  {
+    label: "Pain or discomfort",
+    icon: "alert-circle", color: "#E67E22", bg: "#FEF9E7",
+    prompt: "My patient seems to be in pain or discomfort. How can I help them?",
+    patientPrompt: "I'm experiencing pain or discomfort. How can I get relief?",
+  },
+  {
+    label: "Confusion or agitation",
+    icon: "alert-triangle", color: "#D35400", bg: "#FDF2E9",
+    prompt: "My patient is confused or agitated. What is happening and what should I do?",
+    patientPrompt: "I'm feeling confused and very agitated. What might be causing this and what can I do?",
+  },
+  {
+    label: "Not responding",
+    icon: "moon", color: "#7D3C98", bg: "#F5EEF8",
+    prompt: "My patient is not responding or very hard to wake. What should I do?",
+    caregiverOnly: true,
+  },
+  {
+    label: "I think they died",
+    icon: "heart", color: "#2C3E50", bg: "#EAECEE",
+    prompt: "I think my patient may have died. What do I do right now?",
+    caregiverOnly: true,
+  },
+  {
+    label: "Swallowing problems",
+    icon: "droplet", color: "#1A5276", bg: "#EBF5FB",
+    prompt: "My patient is having trouble swallowing medications or food. What should I do?",
+    patientPrompt: "I'm having trouble swallowing my medications or food. What should I do?",
+  },
+  {
+    label: "Medication question",
+    icon: "package", color: "#1E8449", bg: "#EAFAF1",
+    prompt: "I have a question about a hospice medication.",
+  },
+  {
+    label: "Equipment issue",
+    icon: "tool", color: "#2E86C1", bg: "#EBF5FB",
+    prompt: "I'm having a problem with medical equipment in the home.",
+  },
+  {
+    label: "Caregiver task",
+    icon: "user-check", color: "#C85A1C", bg: "#FEF1E8",
+    prompt: "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer.",
+    caregiverOnly: true,
+  },
+  {
+    label: "I'm overwhelmed",
+    icon: "cloud", color: "#884EA0", bg: "#F4ECF7",
+    prompt: "I'm feeling overwhelmed and exhausted as a caregiver. I need support.",
+    patientPrompt: "I'm feeling overwhelmed, scared, and exhausted. I'm the patient and I need emotional support.",
+  },
 ];
 
 interface LocalMessage {
@@ -72,6 +120,14 @@ export default function HelpScreen() {
   const lastInitialRef = useRef("");
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+
+  const isPatient = user?.role === "patient";
+  const visibleTiles = URGENT_TILES
+    .filter((t) => !isPatient || !t.caregiverOnly)
+    .map((t) => ({
+      ...t,
+      activePrompt: isPatient && t.patientPrompt ? t.patientPrompt : t.prompt,
+    }));
 
   const [conversation, setConversation] = useState<AiConversation | null>(null);
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
@@ -301,16 +357,18 @@ export default function HelpScreen() {
                 Hi, I'm Vera.
               </Text>
               <Text style={styles.welcomeSubtitle}>
-                Ask me anything about symptoms, medications, caregiving tasks, equipment, or what to expect. I'll give you clear, step-by-step guidance.
+                {isPatient
+                  ? "Ask me anything about your symptoms, medications, comfort, or what to expect. I'm here to support you."
+                  : "Ask me anything about symptoms, medications, caregiving tasks, equipment, or what to expect. I'll give you clear, step-by-step guidance."}
               </Text>
             </View>
 
             <Text style={styles.tilesLabel}>What's happening right now?</Text>
             <View style={styles.tilesGrid}>
-              {URGENT_TILES.map((tile) => (
+              {visibleTiles.map((tile) => (
                 <Pressable
                   key={tile.label}
-                  onPress={() => handleTilePress(tile.prompt)}
+                  onPress={() => handleTilePress(tile.activePrompt)}
                   style={({ pressed }) => [
                     styles.tile,
                     { backgroundColor: tile.bg, borderColor: tile.color + "30" },

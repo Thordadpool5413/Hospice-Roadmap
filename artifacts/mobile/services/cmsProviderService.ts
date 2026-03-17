@@ -3,6 +3,8 @@ import { Platform } from "react-native";
 import { CmsQualityData, CmsSpendingData, Provider } from "@/types";
 
 function getApiBase(): string {
+  const envUrl = process.env["EXPO_PUBLIC_API_URL"];
+  if (envUrl) return envUrl;
   if (Platform.OS === "web" && typeof window !== "undefined") {
     const hostname = window.location.hostname;
     const apiHostname = hostname.replace(".expo.", ".");
