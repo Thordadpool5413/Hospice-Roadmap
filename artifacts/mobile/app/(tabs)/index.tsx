@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React from "react";
+import React, { useMemo } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,12 +12,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { JourneyStageCard } from "@/components/JourneyStageCard";
-import { ResourceCard } from "@/components/ResourceCard";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { mockResources } from "@/data/mockResources";
+import { JOURNAL_TYPE_META, useJournal } from "@/context/JournalContext";
+import { useReminders } from "@/context/RemindersContext";
+import { JourneyStage } from "@/types";
 
 const roleLabels: Record<string, string> = {
   patient: "Patient",
@@ -23,206 +24,294 @@ const roleLabels: Record<string, string> = {
   other: "User",
 };
 
-const quickActions = [
-  { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
-  { label: "Evaluate Readiness", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
-  { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.journeyDuring, bg: Colors.journeyDuringPale },
-  { label: "Get Support", icon: "message-circle", route: "/support", color: Colors.amber, bg: Colors.amberPale },
-];
+const STAGE_META: Record<
+  JourneyStage,
+  { label: string; color: string; bg: string; icon: string; desc: string }
+> = {
+  before: {
+    label: "Before Hospice",
+    color: Colors.journeyBefore,
+    bg: Colors.journeyBeforePale,
+    icon: "search",
+    desc: "Research, planning & eligibility guidance",
+  },
+  during: {
+    label: "During Hospice",
+    color: Colors.journeyDuring,
+    bg: Colors.journeyDuringPale,
+    icon: "heart",
+    desc: "Day-to-day care support & navigation",
+  },
+  after: {
+    label: "After Hospice",
+    color: Colors.journeyAfter,
+    bg: Colors.journeyAfterPale,
+    icon: "sun",
+    desc: "Grief, bereavement & moving forward",
+  },
+};
 
-const urgentSituations = [
+type QuickAction = {
+  label: string;
+  icon: string;
+  route: string;
+  color: string;
+  bg: string;
+};
+
+const STAGE_ACTIONS: Record<JourneyStage, QuickAction[]> = {
+  before: [
+    { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
+    { label: "Evaluate Eligibility", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
+    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: "#5A7FA8", bg: "#EBF2FA" },
+    { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder", color: Colors.error, bg: Colors.errorPale },
+  ],
+  during: [
+    { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
+    { label: "Journal", icon: "edit-3", route: "/journal", color: "#7A8A6A", bg: "#F0F4EB" },
+    { label: "Reminders", icon: "bell", route: "/reminders", color: "#5A7FA8", bg: "#EBF2FA" },
+    { label: "Emergency Card", icon: "credit-card", route: "/emergency-card", color: Colors.error, bg: Colors.errorPale },
+  ],
+  after: [
+    { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
+    { label: "Journal", icon: "edit-3", route: "/journal", color: "#7A8A6A", bg: "#F0F4EB" },
+    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.journeyAfter, bg: Colors.journeyAfterPale },
+    { label: "Get Support", icon: "message-circle", route: "/support", color: "#8A6A9A", bg: "#F0EBF6" },
+  ],
+};
+
+const URGENT = [
   { label: "Breathing difficulty", id: "breathing-changes" },
   { label: "Worsening pain", id: "pain-worsening" },
-  { label: "Agitation or restlessness", id: "agitation-restlessness" },
+  { label: "Agitation", id: "agitation-restlessness" },
   { label: "Patient has fallen", id: "fall-recovery" },
   { label: "Signs of dying", id: "approaching-death" },
-  { label: "I'm not sure what's happening", id: "not-sure-whats-happening" },
+  { label: "Not sure what's happening", id: "not-sure-whats-happening" },
 ];
+
+function formatReminderTime(dt: string): string {
+  try {
+    const d = new Date(dt);
+    return d.toLocaleString("en-US", {
+      weekday: "short", month: "short", day: "numeric",
+      hour: "numeric", minute: "2-digit",
+    });
+  } catch {
+    return dt;
+  }
+}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { user, toggleSavedResource, isSavedResource } = useApp();
+  const { user } = useApp();
+  const { entries } = useJournal();
+  const { reminders } = useReminders();
 
-  const featuredResources = mockResources.filter((r) => r.isFeatured).slice(0, 3);
+  const stage = user?.journeyStage ?? "during";
+  const stageMeta = STAGE_META[stage];
+  const quickActions = STAGE_ACTIONS[stage];
 
   const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
     return "Good evening";
+  };
+
+  const nextReminder = useMemo(() => {
+    const now = Date.now();
+    return reminders
+      .filter((r) => r.enabled && new Date(r.datetime).getTime() > now)
+      .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())[0] ?? null;
+  }, [reminders]);
+
+  const lastEntry = entries[0] ?? null;
+  const hasActivity = !!nextReminder || !!lastEntry;
+
+  const tap = (route: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(route as any);
   };
 
   return (
     <ScrollView
-      style={[styles.container]}
+      style={styles.container}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 16), paddingBottom: insets.bottom + 100 },
+        { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 18), paddingBottom: insets.bottom + 110 },
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.logoMark}>
-            <Feather name="map" size={16} color="#FFFFFF" />
+            <Feather name="map" size={16} color="#fff" />
           </View>
           <View>
             <Text style={styles.greeting}>{greeting()}</Text>
-            {user?.role && (
-              <Text style={styles.roleLabel}>
-                {roleLabels[user.role] ?? ""}
-              </Text>
-            )}
+            <Text style={styles.roleLabel}>
+              {user?.role ? roleLabels[user.role] : "Welcome"}
+            </Text>
           </View>
         </View>
-        <Pressable
-          onPress={() => router.push("/(tabs)/more")}
-          style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.6 }]}
-        >
-          <Feather name="settings" size={20} color={Colors.textSecondary} />
-        </Pressable>
+        <View style={styles.headerRight}>
+          {/* Stage pill */}
+          <View style={[styles.stagePill, { backgroundColor: stageMeta.bg }]}>
+            <View style={[styles.stagePillDot, { backgroundColor: stageMeta.color }]} />
+            <Text style={[styles.stagePillText, { color: stageMeta.color }]}>
+              {stageMeta.label}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/(tabs)/more")}
+            style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.6 }]}
+          >
+            <Feather name="settings" size={20} color={Colors.textSecondary} />
+          </Pressable>
+        </View>
       </View>
 
-      {/* Hero Banner */}
-      <View style={styles.heroBanner}>
-        <Text style={styles.heroTitle}>Hospice Roadmap</Text>
-        <Text style={styles.heroTagline}>
-          Guidance before, during, and after hospice.
-        </Text>
-        <View style={styles.heroDivider} />
-        <Text style={styles.heroDescription}>
-          Trusted information and tools for every step of the hospice journey —
-          for patients, families, and care teams.
-        </Text>
-      </View>
-
-      {/* Get Help Now */}
+      {/* ── Get Help Now ── */}
       <View>
         <Pressable
-          onPress={() => router.push("/situation-finder" as any)}
+          onPress={() => tap("/situation-finder")}
           style={({ pressed }) => [
-            styles.helpNowBanner,
-            pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+            styles.helpBanner,
+            pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] },
           ]}
         >
-          <View style={styles.helpNowLeft}>
-            <View style={styles.helpNowIcon}>
+          <View style={styles.helpBannerLeft}>
+            <View style={styles.helpBannerIcon}>
               <Feather name="alert-circle" size={22} color="#fff" />
             </View>
             <View>
-              <Text style={styles.helpNowTitle}>Get Help Now</Text>
-              <Text style={styles.helpNowSubtitle}>
-                Find guidance for any situation
-              </Text>
+              <Text style={styles.helpBannerTitle}>Get Help Now</Text>
+              <Text style={styles.helpBannerSub}>Find guidance for any situation</Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.8)" />
+          <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.75)" />
         </Pressable>
 
-        <View style={styles.urgentChips}>
-          {urgentSituations.map((s) => (
+        <View style={styles.chips}>
+          {URGENT.map((s) => (
             <Pressable
               key={s.id}
-              onPress={() =>
-                router.push({
-                  pathname: "/guidance/[id]",
-                  params: { id: s.id },
-                } as any)
-              }
-              style={({ pressed }) => [
-                styles.urgentChip,
-                pressed && { opacity: 0.75 },
-              ]}
+              onPress={() => tap(`/guidance/${s.id}`)}
+              style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
             >
-              <Text style={styles.urgentChipText}>{s.label}</Text>
+              <Text style={styles.chipText}>{s.label}</Text>
             </Pressable>
           ))}
         </View>
       </View>
 
-      {/* Quick Actions */}
+      {/* ── Today's Tools ── */}
       <View>
-        <SectionHeader title="Quick Actions" />
-        <View style={styles.quickGrid}>
-          {quickActions.map((action) => (
+        <Text style={styles.sectionTitle}>Today's Tools</Text>
+        <View style={styles.toolGrid}>
+          {quickActions.map((a) => (
             <Pressable
-              key={action.label}
-              onPress={() => router.push(action.route as any)}
+              key={a.label}
+              onPress={() => tap(a.route)}
               style={({ pressed }) => [
-                styles.quickCard,
-                { backgroundColor: action.bg },
+                styles.toolCard,
+                { backgroundColor: a.bg },
                 pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
               ]}
             >
-              <View style={[styles.quickIcon, { backgroundColor: action.color }]}>
-                <Feather name={action.icon as any} size={18} color="#FFFFFF" />
+              <View style={[styles.toolIcon, { backgroundColor: a.color }]}>
+                <Feather name={a.icon as any} size={18} color="#fff" />
               </View>
-              <Text style={[styles.quickLabel, { color: action.color }]}>
-                {action.label}
-              </Text>
+              <Text style={[styles.toolLabel, { color: a.color }]}>{a.label}</Text>
             </Pressable>
           ))}
         </View>
       </View>
 
-      {/* Journey Stages */}
-      <View>
-        <SectionHeader
-          title="Journey Navigator"
-          subtitle="Where are you in the hospice journey?"
-          onSeeAll={() => router.push("/(tabs)/journey")}
-        />
-        <View style={styles.journeyList}>
-          {(["before", "during", "after"] as const).map((stage) => (
-            <JourneyStageCard
-              key={stage}
-              stage={stage}
-              isActive={user?.journeyStage === stage}
-              onPress={() => router.push({ pathname: "/journey/[stage]", params: { stage } })}
-            />
-          ))}
-        </View>
-      </View>
+      {/* ── Activity Snapshot ── */}
+      {hasActivity && (
+        <View>
+          <Text style={styles.sectionTitle}>Activity</Text>
+          <View style={styles.snapshotCol}>
+            {nextReminder && (
+              <Pressable
+                onPress={() => tap("/reminders")}
+                style={({ pressed }) => [styles.snapshotCard, pressed && { opacity: 0.88 }]}
+              >
+                <View style={[styles.snapshotIconWrap, { backgroundColor: "#EBF2FA" }]}>
+                  <Feather name="bell" size={16} color="#5A7FA8" />
+                </View>
+                <View style={styles.snapshotText}>
+                  <Text style={styles.snapshotMeta}>Next reminder</Text>
+                  <Text style={styles.snapshotTitle} numberOfLines={1}>{nextReminder.label}</Text>
+                  <Text style={styles.snapshotSub}>{formatReminderTime(nextReminder.datetime)}</Text>
+                </View>
+                <Feather name="chevron-right" size={15} color={Colors.textSubtle} />
+              </Pressable>
+            )}
 
-      {/* Featured Resources */}
-      <View>
-        <SectionHeader
-          title="Featured Resources"
-          onSeeAll={() => router.push("/(tabs)/resources")}
-        />
-        <View style={styles.resourceList}>
-          {featuredResources.map((resource) => (
-            <ResourceCard
-              key={resource.id}
-              resource={resource}
-              onPress={() =>
-                router.push({
-                  pathname: "/resource/[id]",
-                  params: { id: resource.id },
-                })
-              }
-              onSave={() => toggleSavedResource(resource.id)}
-              isSaved={isSavedResource(resource.id)}
-            />
-          ))}
-        </View>
-      </View>
+            {lastEntry && (() => {
+              const meta = JOURNAL_TYPE_META[lastEntry.type];
+              return (
+                <Pressable
+                  onPress={() => tap("/journal")}
+                  style={({ pressed }) => [styles.snapshotCard, pressed && { opacity: 0.88 }]}
+                >
+                  <View style={[styles.snapshotIconWrap, { backgroundColor: meta.bg }]}>
+                    <Feather name={meta.icon as any} size={16} color={meta.color} />
+                  </View>
+                  <View style={styles.snapshotText}>
+                    <Text style={styles.snapshotMeta}>Latest journal entry</Text>
+                    <Text style={styles.snapshotTitle} numberOfLines={1}>{lastEntry.title}</Text>
+                    <Text style={styles.snapshotSub}>{lastEntry.date}</Text>
+                  </View>
+                  <Feather name="chevron-right" size={15} color={Colors.textSubtle} />
+                </Pressable>
+              );
+            })()}
 
-      {/* Disclaimer */}
-      <View style={styles.disclaimer}>
-        <Feather name="info" size={13} color={Colors.textSubtle} />
-        <Text style={styles.disclaimerText}>
-          Content on Hospice Roadmap is for educational purposes only and does
-          not constitute medical advice. Consult a qualified healthcare provider
-          for clinical decisions.
-        </Text>
+            {!nextReminder && !lastEntry && null}
+          </View>
+        </View>
+      )}
+
+      {/* ── Your Journey ── */}
+      <View>
+        <Text style={styles.sectionTitle}>Your Journey</Text>
+        <Pressable
+          onPress={() => tap("/(tabs)/journey")}
+          style={({ pressed }) => [
+            styles.journeyCard,
+            { borderLeftColor: stageMeta.color, backgroundColor: stageMeta.bg },
+            pressed && { opacity: 0.88 },
+          ]}
+        >
+          <View style={[styles.journeyIconWrap, { backgroundColor: stageMeta.color + "22" }]}>
+            <Feather name={stageMeta.icon as any} size={22} color={stageMeta.color} />
+          </View>
+          <View style={styles.journeyCardText}>
+            <Text style={[styles.journeyCardStage, { color: stageMeta.color }]}>
+              {stageMeta.label}
+            </Text>
+            <Text style={styles.journeyCardDesc}>{stageMeta.desc}</Text>
+            <Text style={[styles.journeyCardLink, { color: stageMeta.color }]}>
+              Open Journey Navigator →
+            </Text>
+          </View>
+        </Pressable>
+
+        {/* Stage switcher hint */}
+        <View style={styles.stageHint}>
+          <Feather name="info" size={12} color={Colors.textSubtle} />
+          <Text style={styles.stageHintText}>
+            Change your stage anytime in More → Journey Stage.
+          </Text>
+        </View>
       </View>
     </ScrollView>
   );
 }
-
-import { Platform } from "react-native";
 
 const styles = StyleSheet.create({
   container: {
@@ -231,17 +320,21 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    gap: 28,
+    gap: 26,
   },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 10,
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
   },
   logoMark: {
     width: 36,
@@ -252,7 +345,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   greeting: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
   },
@@ -262,94 +355,39 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.2,
   },
-  settingsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroBanner: {
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-    gap: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  heroTitle: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.5,
-  },
-  heroTagline: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.primary,
-  },
-  heroDivider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-    marginVertical: 4,
-  },
-  heroDescription: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 21,
-  },
-  quickGrid: {
+  headerRight: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  quickCard: {
-    width: "47%",
-    borderRadius: 14,
-    padding: 14,
-    gap: 10,
-  },
-  quickIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
     alignItems: "center",
-    justifyContent: "center",
-  },
-  quickLabel: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: -0.1,
-  },
-  journeyList: {
-    gap: 10,
-  },
-  resourceList: {
-    gap: 12,
-  },
-  disclaimer: {
-    flexDirection: "row",
     gap: 8,
-    alignItems: "flex-start",
-    backgroundColor: Colors.backgroundSecondary,
-    padding: 12,
-    borderRadius: 12,
   },
-  disclaimerText: {
+  stagePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  stagePillDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  stagePillText: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    flex: 1,
-    lineHeight: 16,
+    fontFamily: "Inter_600SemiBold",
   },
-  helpNowBanner: {
+  settingsBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // Get Help Now
+  helpBanner: {
     backgroundColor: Colors.error,
     borderRadius: 16,
     padding: 16,
@@ -358,16 +396,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     shadowColor: Colors.error,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.22,
     shadowRadius: 10,
     elevation: 4,
   },
-  helpNowLeft: {
+  helpBannerLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  helpNowIcon: {
+  helpBannerIcon: {
     width: 42,
     height: 42,
     borderRadius: 12,
@@ -375,35 +413,164 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  helpNowTitle: {
+  helpBannerTitle: {
     fontSize: 17,
     fontFamily: "Inter_700Bold",
     color: "#fff",
     letterSpacing: -0.3,
   },
-  helpNowSubtitle: {
+  helpBannerSub: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.85)",
+    color: "rgba(255,255,255,0.82)",
     marginTop: 2,
   },
-  urgentChips: {
+  chips: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 7,
     marginTop: 10,
   },
-  urgentChip: {
+  chip: {
     backgroundColor: Colors.errorPale,
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: Colors.error + "30",
+    borderColor: Colors.error + "28",
   },
-  urgentChipText: {
+  chipText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
     color: Colors.error,
+  },
+
+  // Section title
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.3,
+    marginBottom: 12,
+  },
+
+  // Tool grid
+  toolGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  toolCard: {
+    width: "47.5%",
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  toolIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toolLabel: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.2,
+  },
+
+  // Activity snapshot
+  snapshotCol: {
+    gap: 8,
+  },
+  snapshotCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  snapshotIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  snapshotText: {
+    flex: 1,
+    gap: 1,
+  },
+  snapshotMeta: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSubtle,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  snapshotTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+    letterSpacing: -0.1,
+  },
+  snapshotSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+
+  // Journey card
+  journeyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "transparent",
+    borderLeftWidth: 4,
+  },
+  journeyIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  journeyCardText: {
+    flex: 1,
+    gap: 3,
+  },
+  journeyCardStage: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.2,
+  },
+  journeyCardDesc: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  journeyCardLink: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    marginTop: 4,
+  },
+  stageHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 8,
+    paddingHorizontal: 2,
+  },
+  stageHintText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSubtle,
   },
 });
