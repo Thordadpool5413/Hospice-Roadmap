@@ -235,6 +235,7 @@ export default function HelpScreen() {
           );
           setIsStreaming(false);
           scrollToBottom(150);
+          setTimeout(() => inputRef.current?.focus(), 500);
         },
         (err) => {
           setLocalMessages((prev) =>
@@ -245,6 +246,7 @@ export default function HelpScreen() {
             )
           );
           setIsStreaming(false);
+          setTimeout(() => inputRef.current?.focus(), 300);
         }
       );
     },
@@ -305,8 +307,8 @@ export default function HelpScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top }]}
-      behavior="padding"
-      keyboardVerticalOffset={0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -453,33 +455,52 @@ export default function HelpScreen() {
           </View>
         ) : (
           <>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder={hasMessages ? "Ask a follow-up question…" : "Describe what's happening or ask anything…"}
-              placeholderTextColor={Colors.textMuted}
-              multiline
-              maxLength={2000}
-              returnKeyType="default"
-              editable={!isStreaming}
-            />
-            <Pressable
-              onPress={() => sendMessage(inputText)}
-              disabled={!inputText.trim() || isStreaming}
-              style={({ pressed }) => [
-                styles.sendBtn,
-                (!inputText.trim() || isStreaming) && styles.sendBtnDisabled,
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              {isStreaming ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Feather name="send" size={18} color="#FFFFFF" />
-              )}
-            </Pressable>
+            {isStreaming && (
+              <View style={styles.streamingBanner}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.streamingBannerText}>Vera is responding…</Text>
+              </View>
+            )}
+            <View style={styles.inputRow}>
+              <TextInput
+                ref={inputRef}
+                style={[
+                  styles.input,
+                  hasMessages && !isStreaming && styles.inputReady,
+                ]}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder={
+                  isStreaming
+                    ? "Vera is responding…"
+                    : hasMessages
+                    ? "Reply to Vera…"
+                    : "Describe what's happening or ask anything…"
+                }
+                placeholderTextColor={
+                  hasMessages && !isStreaming ? Colors.primary : Colors.textMuted
+                }
+                multiline
+                maxLength={2000}
+                returnKeyType="default"
+                editable={!isStreaming}
+              />
+              <Pressable
+                onPress={() => sendMessage(inputText)}
+                disabled={!inputText.trim() || isStreaming}
+                style={({ pressed }) => [
+                  styles.sendBtn,
+                  (!inputText.trim() || isStreaming) && styles.sendBtnDisabled,
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                {isStreaming ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Feather name="send" size={18} color="#FFFFFF" />
+                )}
+              </Pressable>
+            </View>
           </>
         )}
       </View>
@@ -896,14 +917,35 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   inputBar: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 10,
+    flexDirection: "column",
+    gap: 8,
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: Colors.divider,
     backgroundColor: Colors.background,
+  },
+  streamingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  streamingBannerText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+    fontStyle: "italic",
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 10,
+  },
+  inputReady: {
+    borderColor: Colors.primary + "60",
+    borderWidth: 1.5,
+    backgroundColor: Colors.primaryPale,
   },
   input: {
     flex: 1,
