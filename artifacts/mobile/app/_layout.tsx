@@ -20,6 +20,7 @@ import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AppProvider } from "@/context/AppContext";
 import { JournalProvider } from "@/context/JournalContext";
 import { RemindersProvider } from "@/context/RemindersContext";
+import { SymptomProvider } from "@/context/SymptomContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -98,6 +99,14 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="symptom-tracker"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="goals-of-care"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="active-dying"
         options={{ headerShown: false }}
       />
@@ -156,6 +165,7 @@ export default function RootLayout() {
         <AppProvider>
           <JournalProvider>
           <RemindersProvider>
+          <SymptomProvider>
           <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
@@ -166,6 +176,7 @@ export default function RootLayout() {
               </KeyboardProvider>
             </GestureHandlerRootView>
           </QueryClientProvider>
+          </SymptomProvider>
           </RemindersProvider>
           </JournalProvider>
         </AppProvider>

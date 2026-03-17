@@ -68,9 +68,9 @@ const STAGE_ACTIONS: Record<JourneyStage, QuickAction[]> = {
   ],
   during: [
     { label: "Ask Vera", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
+    { label: "Symptom Log", icon: "bar-chart-2", route: "/symptom-tracker", color: "#5A7FA8", bg: "#EBF2FA" },
     { label: "Journal", icon: "edit-3", route: "/journal", color: "#7A8A6A", bg: "#F0F4EB" },
-    { label: "Reminders", icon: "bell", route: "/reminders", color: "#5A7FA8", bg: "#EBF2FA" },
-    { label: "Emergency Card", icon: "credit-card", route: "/emergency-card", color: Colors.error, bg: Colors.errorPale },
+    { label: "Goals of Care", icon: "star", route: "/goals-of-care", color: "#7A5C8A", bg: "#F5EFF8" },
   ],
   after: [
     { label: "Ask Vera", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
