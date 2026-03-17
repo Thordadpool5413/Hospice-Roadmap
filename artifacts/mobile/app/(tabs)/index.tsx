@@ -24,6 +24,12 @@ const roleLabels: Record<string, string> = {
   other: "User",
 };
 
+function getSupportingLabel(user: { role: string; patientProfile?: { patientName?: string } } | null): string {
+  const name = user?.patientProfile?.patientName?.trim();
+  if (name) return `Supporting ${name}`;
+  return roleLabels[user?.role ?? "other"] ?? "Welcome";
+}
+
 const STAGE_META: Record<
   JourneyStage,
   { label: string; color: string; bg: string; icon: string; desc: string }
@@ -150,19 +156,21 @@ export default function HomeScreen() {
           </View>
           <View>
             <Text style={styles.greeting}>{greeting()}</Text>
-            <Text style={styles.roleLabel}>
-              {user?.role ? roleLabels[user.role] : "Welcome"}
+            <Text style={styles.roleLabel} numberOfLines={1}>
+              {getSupportingLabel(user)}
             </Text>
           </View>
         </View>
         <View style={styles.headerRight}>
-          {/* Stage pill */}
-          <View style={[styles.stagePill, { backgroundColor: stageMeta.bg }]}>
+          <Pressable
+            onPress={() => router.push("/(tabs)/more")}
+            style={({ pressed }) => [styles.stagePill, { backgroundColor: stageMeta.bg }, pressed && { opacity: 0.75 }]}
+          >
             <View style={[styles.stagePillDot, { backgroundColor: stageMeta.color }]} />
             <Text style={[styles.stagePillText, { color: stageMeta.color }]}>
               {stageMeta.label}
             </Text>
-          </View>
+          </Pressable>
           <Pressable
             onPress={() => router.push("/(tabs)/more")}
             style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.6 }]}
@@ -172,7 +180,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Get Help Now ── */}
+      {/* ── Situation Guide ── */}
       <View>
         <Pressable
           onPress={() => tap("/situation-finder")}
@@ -183,11 +191,11 @@ export default function HomeScreen() {
         >
           <View style={styles.helpBannerLeft}>
             <View style={styles.helpBannerIcon}>
-              <Feather name="alert-circle" size={22} color="#fff" />
+              <Feather name="book-open" size={22} color="#fff" />
             </View>
             <View>
-              <Text style={styles.helpBannerTitle}>Get Help Now</Text>
-              <Text style={styles.helpBannerSub}>Find guidance for any situation</Text>
+              <Text style={styles.helpBannerTitle}>What's happening right now?</Text>
+              <Text style={styles.helpBannerSub}>Step-by-step guidance for any situation</Text>
             </View>
           </View>
           <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.75)" />
@@ -206,9 +214,9 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Today's Tools ── */}
+      {/* ── Quick Access ── */}
       <View>
-        <Text style={styles.sectionTitle}>Today's Tools</Text>
+        <Text style={styles.sectionTitle}>Quick access</Text>
         <View style={styles.toolGrid}>
           {quickActions.map((a) => (
             <Pressable
@@ -323,13 +331,6 @@ export default function HomeScreen() {
           </View>
         </Pressable>
 
-        {/* Stage switcher hint */}
-        <View style={styles.stageHint}>
-          <Feather name="info" size={12} color={Colors.textSubtle} />
-          <Text style={styles.stageHintText}>
-            Change your stage anytime in More → Journey Stage.
-          </Text>
-        </View>
       </View>
     </ScrollView>
   );
@@ -408,17 +409,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // Get Help Now
+  // Situation Guide banner
   helpBanner: {
-    backgroundColor: Colors.error,
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: Colors.error,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.18,
     shadowRadius: 10,
     elevation: 4,
   },
@@ -426,6 +427,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
   },
   helpBannerIcon: {
     width: 42,
@@ -434,12 +436,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   helpBannerTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: "#fff",
     letterSpacing: -0.3,
+    flexShrink: 1,
   },
   helpBannerSub: {
     fontSize: 12,
@@ -454,17 +458,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   chip: {
-    backgroundColor: Colors.errorPale,
+    backgroundColor: Colors.primaryPale,
     borderRadius: 20,
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: Colors.error + "28",
+    borderColor: Colors.primary + "28",
   },
   chipText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: Colors.error,
+    color: Colors.primaryDark,
   },
 
   // Section title
@@ -616,17 +620,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     marginTop: 4,
-  },
-  stageHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 8,
-    paddingHorizontal: 2,
-  },
-  stageHintText: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
   },
 });

@@ -50,37 +50,40 @@ export default function MoreScreen() {
   const { user, updateJourneyStage } = useApp();
   const { fontScale, highContrast, setFontScale, setHighContrast } = useA11y();
 
-  const menuSections: { title: string; items: MenuItem[] }[] = [
+  const menuSections: { title: string; subtitle?: string; items: MenuItem[] }[] = [
     {
-      title: "Vera — Your AI Companion",
+      title: "Your Profile",
+      subtitle: "Personalizes Vera's guidance for your situation",
       items: [
         { label: "Patient Profile", icon: "user", route: "/patient-profile" },
+        { label: "Goals of Care", icon: "star", route: "/goals-of-care" },
       ],
     },
     {
-      title: "Tools",
+      title: "Daily Care",
+      subtitle: "Tools to help with everyday caregiving",
       items: [
         { label: "Caregiver Journal", icon: "edit-3", route: "/journal" },
         { label: "Reminders", icon: "bell", route: "/reminders" },
         { label: "Symptom Tracker", icon: "bar-chart-2", route: "/symptom-tracker" },
-        { label: "Goals of Care", icon: "star", route: "/goals-of-care" },
-        { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder" },
-        { label: "Active Dying Protocol", icon: "heart", route: "/active-dying" },
-        { label: "Pain Assessment (PAINAD)", icon: "activity", route: "/painad" },
-        { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation" },
-        { label: "Contact Support", icon: "message-circle", route: "/support" },
       ],
     },
     {
-      title: "Legal & Privacy",
+      title: "Clinical Reference",
+      subtitle: "Guidance tools for specific care situations",
       items: [
+        { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder" },
+        { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying" },
+        { label: "Pain Assessment Tool", icon: "activity", route: "/painad" },
+        { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation" },
+      ],
+    },
+    {
+      title: "Help & Support",
+      items: [
+        { label: "Contact Support", icon: "message-circle", route: "/support" },
         { label: "Privacy Policy", icon: "shield", route: "/privacy" },
         { label: "Terms of Use", icon: "file-text", route: "/terms" },
-      ],
-    },
-    {
-      title: "About",
-      items: [
         {
           label: "About Hospice Roadmap",
           icon: "info",
@@ -124,7 +127,7 @@ export default function MoreScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.title}>More</Text>
+      <Text style={styles.title}>Your Tools</Text>
 
       {/* Emergency Card Banner */}
       <Pressable
@@ -280,7 +283,12 @@ export default function MoreScreen() {
       {/* Menu Sections */}
       {menuSections.map((section) => (
         <View key={section.title} style={styles.section}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            {section.subtitle && (
+              <Text style={styles.sectionSubtitle}>{section.subtitle}</Text>
+            )}
+          </View>
           <View style={styles.sectionList}>
             {section.items.map((item, idx) => (
               <Pressable
@@ -429,12 +437,20 @@ const styles = StyleSheet.create({
   section: {
     gap: 8,
   },
+  sectionHeader: {
+    gap: 2,
+  },
   sectionTitle: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: Colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSubtle,
   },
   sectionList: {
     backgroundColor: Colors.surface,
