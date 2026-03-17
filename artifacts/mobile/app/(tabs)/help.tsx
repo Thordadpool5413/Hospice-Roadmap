@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useSymptoms } from "@/context/SymptomContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
   AiConversation,
@@ -65,6 +66,7 @@ function parseSuggestions(raw: string): { text: string; suggestions: string[] } 
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext } = useApp();
+  const { getRecentSummary } = useSymptoms();
   const { isOnline } = useNetworkStatus();
   const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
   const lastInitialRef = useRef("");
@@ -146,7 +148,11 @@ export default function HelpScreen() {
       setIsStreaming(true);
       scrollToBottom(150);
 
-      const patientContext = buildPatientContext();
+      const baseContext = buildPatientContext();
+      const symptomSummary = getRecentSummary(7);
+      const patientContext = symptomSummary
+        ? `${baseContext}\n\n--- Recent Symptom Tracking ---\n${symptomSummary}`
+        : baseContext;
 
       await streamMessage(
         activeConv.id,

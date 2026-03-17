@@ -117,6 +117,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (p?.equipmentProviderPhone) lines.push(`Equipment provider phone: ${p.equipmentProviderPhone}`);
     if (p?.pharmacyPhone) lines.push(`Pharmacy phone: ${p.pharmacyPhone}`);
     if (p?.additionalNotes) lines.push(`Additional notes: ${p.additionalNotes}`);
+    const g = p?.goalsOfCare;
+    if (g) {
+      lines.push("--- Goals of Care ---");
+      if (g.whatMattersMost) lines.push(`What matters most: ${g.whatMattersMost}`);
+      if (g.goodDayLooksLike) lines.push(`What a good day looks like: ${g.goodDayLooksLike}`);
+      if (g.thingsToAvoid) lines.push(`Things to avoid: ${g.thingsToAvoid}`);
+      if (g.dnrStatus && g.dnrStatus !== "not-discussed") {
+        const dnrLabels: Record<string, string> = {
+          "dnr": "DNR / Allow Natural Death",
+          "full-code": "Full Code (CPR)",
+          "unknown": "Not yet discussed",
+        };
+        lines.push(`Resuscitation preference: ${dnrLabels[g.dnrStatus] ?? g.dnrStatus}`);
+      }
+      if (g.additionalDirectives) lines.push(`Additional directives: ${g.additionalDirectives}`);
+    }
     return lines.join("\n");
   }, [user]);
 

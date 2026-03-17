@@ -5,6 +5,15 @@ export type UserRole =
   | "caregiver"
   | "other";
 
+export interface GoalsOfCare {
+  whatMattersMost?: string;
+  goodDayLooksLike?: string;
+  thingsToAvoid?: string;
+  dnrStatus?: "dnr" | "full-code" | "unknown" | "not-discussed";
+  additionalDirectives?: string;
+  updatedAt?: string;
+}
+
 export interface PatientProfile {
   patientName?: string;
   diagnosis?: string;
@@ -15,6 +24,20 @@ export interface PatientProfile {
   equipmentProviderPhone?: string;
   pharmacyPhone?: string;
   additionalNotes?: string;
+  goalsOfCare?: GoalsOfCare;
+}
+
+export interface SymptomEntry {
+  id: string;
+  date: string;
+  time: string;
+  pain: number;
+  breathlessness: number;
+  nausea: number;
+  agitation: 0 | 1 | 2 | 3;
+  restlessness: boolean;
+  appetite: 0 | 1 | 2 | 3;
+  notes?: string;
 }
 
 export interface User {
