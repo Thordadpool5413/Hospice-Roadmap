@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
@@ -234,6 +235,30 @@ export default function GuidanceDetailScreen() {
 
         {/* Call Hospice CTA */}
         <CallHospiceCTA urgent={scenario.urgencyLevel === "immediate"} />
+
+        {/* Ask Vera */}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push({
+              pathname: "/(tabs)/help",
+              params: { initialMessage: `I'm reading the guidance on "${scenario.title}" and have questions. Can you help me understand this better and what I should watch for?` },
+            } as any);
+          }}
+          style={({ pressed }) => [
+            styles.askVeraBtn,
+            pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={styles.askVeraBtnIcon}>
+            <Feather name="compass" size={18} color="#fff" />
+          </View>
+          <View style={styles.askVeraBtnText}>
+            <Text style={styles.askVeraBtnTitle}>Ask Vera about this</Text>
+            <Text style={styles.askVeraBtnSub}>Get personalized guidance on "{scenario.title}"</Text>
+          </View>
+          <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />
+        </Pressable>
 
         {/* Disclaimer */}
         <View style={styles.disclaimer}>
@@ -618,6 +643,40 @@ const styles = StyleSheet.create({
     gap: 14,
     borderRadius: 16,
     padding: 18,
+  },
+  askVeraBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  askVeraBtnIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  askVeraBtnText: { flex: 1 },
+  askVeraBtnTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: -0.2,
+  },
+  askVeraBtnSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 2,
   },
   ctaText: {
     flex: 1,

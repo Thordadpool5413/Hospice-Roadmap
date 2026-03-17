@@ -37,6 +37,94 @@ function groupByDate(entries: JournalEntry[]): { date: string; items: JournalEnt
     .map(([date, items]) => ({ date, items }));
 }
 
+function MoodChart({ entries }: { entries: JournalEntry[] }) {
+  const moodEntries = useMemo(() => {
+    const today = new Date();
+    const days: { date: string; level: number | null }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const match = entries
+        .filter((e) => e.type === "mood" && e.date === ds && (e as any).moodLevel)
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+      days.push({ date: ds, level: match ? (match as any).moodLevel : null });
+    }
+    return days;
+  }, [entries]);
+
+  const hasMoodData = moodEntries.some((d) => d.level !== null);
+  if (!hasMoodData) return null;
+
+  const levelColors = ["#D9534F", "#E8843A", "#B8A020", "#5A9A6A", "#5A8A7A"];
+  const levelLabels = ["Very Low", "Low", "Neutral", "Good", "Great"];
+
+  return (
+    <View style={moodStyles.container}>
+      <View style={moodStyles.header}>
+        <Text style={moodStyles.title}>Mood Trend</Text>
+        <Text style={moodStyles.sub}>Last 14 days</Text>
+      </View>
+      <View style={moodStyles.chart}>
+        {moodEntries.map((d, i) => {
+          const barHeight = d.level ? (d.level / 5) * 60 : 0;
+          const barColor = d.level ? levelColors[d.level - 1] : Colors.divider;
+          const isToday = i === 13;
+          const dayLabel = new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "narrow" });
+          return (
+            <View key={d.date} style={moodStyles.barWrap}>
+              <View style={moodStyles.barContainer}>
+                {d.level ? (
+                  <View style={[moodStyles.bar, { height: barHeight, backgroundColor: barColor }]} />
+                ) : (
+                  <View style={[moodStyles.barEmpty, { height: 4 }]} />
+                )}
+              </View>
+              <Text style={[moodStyles.dayLabel, isToday && { fontFamily: "Inter_700Bold", color: Colors.primary }]}>
+                {isToday ? "•" : dayLabel}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+      <View style={moodStyles.legend}>
+        {levelColors.map((c, i) => (
+          <View key={i} style={moodStyles.legendItem}>
+            <View style={[moodStyles.legendDot, { backgroundColor: c }]} />
+            <Text style={moodStyles.legendLabel}>{levelLabels[i]}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const moodStyles = StyleSheet.create({
+  container: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    gap: 12,
+  },
+  header: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  title: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text, letterSpacing: -0.2 },
+  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  chart: { flexDirection: "row", alignItems: "flex-end", gap: 3, height: 74 },
+  barWrap: { flex: 1, alignItems: "center", gap: 4 },
+  barContainer: { flex: 1, justifyContent: "flex-end", width: "100%" },
+  bar: { borderRadius: 3, width: "100%", minHeight: 4 },
+  barEmpty: { backgroundColor: Colors.divider + "80", borderRadius: 2, width: "100%" },
+  dayLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textSubtle },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+});
+
 export default function JournalScreen() {
   const insets = useSafeAreaInsets();
   const { entries, deleteEntry } = useJournal();
@@ -104,6 +192,7 @@ export default function JournalScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
         >
+          <MoodChart entries={entries} />
           {grouped.map(({ date, items }) => (
             <View key={date} style={styles.group}>
               <Text style={styles.groupDate}>{formatDate(date)}</Text>

@@ -229,6 +229,28 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* ── Active Dying Protocol Card (during stage) ── */}
+      {stage === "during" && (
+        <Pressable
+          onPress={() => tap("/active-dying")}
+          style={({ pressed }) => [
+            styles.activeDyingCard,
+            pressed && { opacity: 0.88, transform: [{ scale: 0.99 }] },
+          ]}
+        >
+          <View style={styles.activeDyingIconWrap}>
+            <Feather name="heart" size={20} color="#7A5C8A" />
+          </View>
+          <View style={styles.activeDyingText}>
+            <Text style={styles.activeDyingTitle}>Active Dying Protocol</Text>
+            <Text style={styles.activeDyingBody}>
+              Signs to expect in the final hours, what they mean, and what to do.
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={16} color="rgba(122,92,138,0.5)" />
+        </Pressable>
+      )}
+
       {/* ── Activity Snapshot ── */}
       {hasActivity && (
         <View>
@@ -521,6 +543,40 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
+  },
+
+  activeDyingCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: "#F5EFF8",
+    borderWidth: 1,
+    borderColor: "#C4A8D440",
+    borderLeftWidth: 4,
+    borderLeftColor: "#7A5C8A",
+  },
+  activeDyingIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#7A5C8A18",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeDyingText: { flex: 1, gap: 2 },
+  activeDyingTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#7A5C8A",
+    letterSpacing: -0.2,
+  },
+  activeDyingBody: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 17,
   },
 
   // Journey card

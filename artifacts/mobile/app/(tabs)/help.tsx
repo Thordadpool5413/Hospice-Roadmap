@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -66,6 +66,8 @@ export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext } = useApp();
   const { isOnline } = useNetworkStatus();
+  const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
+  const lastInitialRef = useRef("");
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -227,6 +229,14 @@ export default function HelpScreen() {
     }
     Linking.openURL(`tel:${phone}`);
   }, [user]);
+
+  useEffect(() => {
+    if (initialMessage && initialMessage !== lastInitialRef.current) {
+      lastInitialRef.current = initialMessage;
+      const timer = setTimeout(() => sendMessage(initialMessage), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [initialMessage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasMessages = localMessages.length > 0;
 

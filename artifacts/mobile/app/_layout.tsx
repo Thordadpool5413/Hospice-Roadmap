@@ -98,6 +98,14 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="active-dying"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="painad"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="situation-finder"
         options={{ headerShown: false }}
       />
