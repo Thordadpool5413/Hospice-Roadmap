@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useJournal } from "@/context/JournalContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
@@ -31,6 +32,7 @@ import {
   generateConversationMemory,
   getConversation,
   streamMessage,
+  synthesizeProfile,
 } from "@/services/aiService";
 import { VeraEmotionalTone } from "@/types";
 
@@ -118,7 +120,8 @@ export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext } = useApp();
   const { getRecentSummary } = useSymptoms();
-  const { addMemory, getMemorySummary, memoryCount } = useVeraMemory();
+  const { entries: journalEntries } = useJournal();
+  const { addMemory, getMemorySummary, memoryCount, livingProfile, updateLivingProfile, recentTiles, recordTile } = useVeraMemory();
   const { isOnline } = useNetworkStatus();
   const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
   const lastInitialRef = useRef("");
@@ -211,10 +214,27 @@ export default function HelpScreen() {
       const baseContext = buildPatientContext();
       const symptomSummary = getRecentSummary(7);
       const memorySummary = getMemorySummary();
+
+      const now = new Date();
+      const timeContext = [
+        `Current date/time: ${now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at ${now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
+        now.getHours() < 6 || now.getHours() >= 22 ? "Note: This person is reaching out in the middle of the night — that often signals urgency, fear, or exhaustion." : "",
+      ].filter(Boolean).join("\n");
+
+      const recentJournal = journalEntries.slice(0, 3);
+      const journalContext = recentJournal.length > 0
+        ? `--- Recent Caregiver Journal Entries ---\n${recentJournal.map((e) => {
+            const dateStr = e.date || new Date(e.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            return `[${dateStr} · ${e.type}] ${e.title}: ${e.body.slice(0, 200)}${e.body.length > 200 ? "…" : ""}`;
+          }).join("\n")}`
+        : "";
+
       const patientContext = [
         baseContext,
         symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
+        journalContext,
         memorySummary,
+        timeContext,
       ].filter(Boolean).join("\n\n");
 
       await streamMessage(
@@ -257,15 +277,16 @@ export default function HelpScreen() {
         }
       );
     },
-    [conversation, isStreaming, buildPatientContext, scrollToBottom]
+    [conversation, isStreaming, buildPatientContext, getRecentSummary, getMemorySummary, journalEntries, scrollToBottom]
   );
 
   const handleTilePress = useCallback(
-    (prompt: string) => {
+    (tile: { label: string; activePrompt: string }) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      sendMessage(prompt);
+      recordTile(tile.label);
+      sendMessage(tile.activePrompt);
     },
-    [sendMessage]
+    [sendMessage, recordTile]
   );
 
   const handleClearConversation = useCallback(async () => {
@@ -275,21 +296,43 @@ export default function HelpScreen() {
       {
         text: "Start Fresh",
         onPress: async () => {
+          let newMemory: {
+            summary: string;
+            keyFacts: string[];
+            emotionalTone: string;
+            mainTopics: string[];
+            date: string;
+          } | null = null;
           try {
             const memory = await generateConversationMemory(conversation.id);
             if (memory && memory.summary) {
-              await addMemory({
-                id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                date: new Date().toISOString(),
-                conversationId: conversation.id,
+              newMemory = {
                 summary: memory.summary,
                 keyFacts: memory.keyFacts ?? [],
-                emotionalTone: (memory.emotionalTone as VeraEmotionalTone) ?? "calm",
+                emotionalTone: memory.emotionalTone ?? "calm",
                 mainTopics: memory.mainTopics ?? [],
+                date: new Date().toISOString(),
+              };
+              await addMemory({
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                date: newMemory.date,
+                conversationId: conversation.id,
+                summary: newMemory.summary,
+                keyFacts: newMemory.keyFacts,
+                emotionalTone: (newMemory.emotionalTone as VeraEmotionalTone) ?? "calm",
+                mainTopics: newMemory.mainTopics,
               });
+              const updatedProfile = await synthesizeProfile(
+                livingProfile,
+                newMemory,
+                recentTiles
+              );
+              if (updatedProfile) {
+                await updateLivingProfile(updatedProfile);
+              }
             }
           } catch {
-            // memory generation is best-effort — still clear the conversation
+            // memory + profile generation is best-effort — still clear the conversation
           }
           try {
             await deleteConversation(conversation.id);
@@ -300,7 +343,7 @@ export default function HelpScreen() {
         },
       },
     ]);
-  }, [conversation, startNewConversation, addMemory]);
+  }, [conversation, startNewConversation, addMemory, livingProfile, updateLivingProfile, recentTiles]);
 
   const handleShareMessage = useCallback((content: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -402,7 +445,7 @@ export default function HelpScreen() {
               {visibleTiles.map((tile) => (
                 <Pressable
                   key={tile.label}
-                  onPress={() => handleTilePress(tile.activePrompt)}
+                  onPress={() => handleTilePress(tile)}
                   style={({ pressed }) => [
                     styles.tile,
                     { backgroundColor: tile.bg, borderColor: tile.color + "30" },

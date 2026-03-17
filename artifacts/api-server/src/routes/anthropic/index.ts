@@ -182,6 +182,60 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
   }
 });
 
+router.post("/profile-synthesize", async (req: Request, res: Response) => {
+  const { currentProfile, memory, tileHistory } = req.body as {
+    currentProfile?: string;
+    memory: {
+      summary: string;
+      keyFacts: string[];
+      emotionalTone: string;
+      mainTopics: string[];
+      date: string;
+    };
+    tileHistory?: string[];
+  };
+
+  const tileContext = tileHistory && tileHistory.length > 0
+    ? `\nRecent concern areas the user has selected (most recent first): ${tileHistory.slice(0, 10).join(", ")}`
+    : "";
+
+  const prompt = `You are maintaining Vera's living understanding of a family navigating the hospice journey. Vera is a hospice care AI companion. This understanding deepens with every conversation.
+
+${currentProfile ? `Current understanding:\n${currentProfile}` : "This is the first conversation — no prior understanding yet."}
+
+New conversation memory:
+Date: ${new Date(memory.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+Summary: ${memory.summary}
+Key facts: ${memory.keyFacts.join("; ")}
+Emotional tone this session: ${memory.emotionalTone}
+Topics discussed: ${memory.mainTopics.join(", ")}${tileContext}
+
+Write an updated, synthesized understanding in 3-5 sentences. This is Vera's "living knowledge" of this family — not a transcript summary, but a deepening human understanding:
+- Who they are (patient name/age/diagnosis if known, caregiver role and name if known)
+- What they are carrying emotionally (fears, recurring worries, what seems unresolved)
+- What patterns have emerged across conversations (what topics keep coming up, what they need most)
+- How their emotional state has changed over time, if at all
+- What Vera should keep in mind going forward — what to gently follow up on, what they may not be ready for yet
+
+Write in third person as if Vera is describing her understanding of this family to herself. Be specific and human, not clinical. If the same concern keeps appearing, name it explicitly. If something seems unresolved, say so.
+
+Output ONLY the 3-5 sentence paragraph. No preamble, no labels, no explanation.`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 450,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const profile = response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
+    res.json({ profile });
+  } catch (err: unknown) {
+    console.error("Error synthesizing profile:", err);
+    res.status(500).json({ error: "Failed to synthesize profile" });
+  }
+});
+
 router.post("/conversations/:id/memory", async (req: Request, res: Response) => {
   const id = Number(req.params["id"]);
   try {

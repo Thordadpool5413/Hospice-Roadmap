@@ -42,6 +42,31 @@ export async function deleteConversation(id: number): Promise<void> {
   await fetch(`${apiBase()}/anthropic/conversations/${id}`, { method: "DELETE" });
 }
 
+export async function synthesizeProfile(
+  currentProfile: string,
+  memory: {
+    summary: string;
+    keyFacts: string[];
+    emotionalTone: string;
+    mainTopics: string[];
+    date: string;
+  },
+  tileHistory: string[]
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${apiBase()}/anthropic/profile-synthesize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentProfile, memory, tileHistory }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { profile: string };
+    return data.profile ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateConversationMemory(
   conversationId: number
 ): Promise<{
