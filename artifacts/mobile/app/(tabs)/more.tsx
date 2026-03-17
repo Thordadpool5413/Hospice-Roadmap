@@ -63,6 +63,8 @@ export default function MoreScreen() {
         { label: "Caregiver Journal", icon: "edit-3", route: "/journal" },
         { label: "Reminders", icon: "bell", route: "/reminders" },
         { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder" },
+        { label: "Active Dying Protocol", icon: "heart", route: "/active-dying" },
+        { label: "Pain Assessment (PAINAD)", icon: "activity", route: "/painad" },
         { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation" },
         { label: "Contact Support", icon: "message-circle", route: "/support" },
       ],

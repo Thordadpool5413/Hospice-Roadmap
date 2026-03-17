@@ -34,6 +34,9 @@ export default function JournalEntryScreen() {
   const [type, setType] = useState<JournalEntryType>(existing?.type ?? "general");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
+  const [moodLevel, setMoodLevel] = useState<1|2|3|4|5|undefined>(
+    (existing as any)?.moodLevel ?? undefined
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   const isEditing = !!existing;
@@ -43,10 +46,11 @@ export default function JournalEntryScreen() {
     if (!canSave || isSaving) return;
     setIsSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const moodData = type === "mood" && moodLevel ? { moodLevel } : {};
     if (isEditing) {
-      await updateEntry(id!, { type, title: title.trim(), body: body.trim() });
+      await updateEntry(id!, { type, title: title.trim(), body: body.trim(), ...moodData });
     } else {
-      await addEntry({ type, title: title.trim(), body: body.trim(), date: todayIsoDate() });
+      await addEntry({ type, title: title.trim(), body: body.trim(), date: todayIsoDate(), ...moodData });
     }
     setIsSaving(false);
     router.back();
@@ -155,6 +159,40 @@ export default function JournalEntryScreen() {
             })}
           </ScrollView>
         </View>
+
+        {/* Mood level selector — only visible for "mood" type entries */}
+        {type === "mood" && (
+          <View style={styles.moodSection}>
+            <Text style={styles.fieldLabel}>How are you feeling today?</Text>
+            <View style={styles.moodRow}>
+              {([1, 2, 3, 4, 5] as const).map((level) => {
+                const emoji = ["😞", "😟", "😐", "🙂", "😊"][level - 1];
+                const label = ["Very Low", "Low", "Neutral", "Good", "Great"][level - 1];
+                const colors = ["#D9534F", "#E8843A", "#B8A020", "#5A9A6A", "#5A8A7A"];
+                const selected = moodLevel === level;
+                return (
+                  <Pressable
+                    key={level}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setMoodLevel(selected ? undefined : level);
+                    }}
+                    style={({ pressed }) => [
+                      styles.moodBtn,
+                      selected && { borderColor: colors[level - 1], backgroundColor: colors[level - 1] + "18" },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Text style={styles.moodEmoji}>{emoji}</Text>
+                    <Text style={[styles.moodLabel, selected && { color: colors[level - 1], fontFamily: "Inter_600SemiBold" }]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Title */}
         <View style={styles.field}>
@@ -342,6 +380,18 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: Colors.primary + "25",
+  },
+  moodSection: { gap: 8 },
+  moodRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  moodBtn: {
+    flex: 1, minWidth: 56, alignItems: "center", paddingVertical: 10,
+    borderRadius: 12, borderWidth: 1.5, borderColor: Colors.divider,
+    backgroundColor: Colors.surface, gap: 4,
+  },
+  moodEmoji: { fontSize: 24 },
+  moodLabel: {
+    fontSize: 10, fontFamily: "Inter_500Medium",
+    color: Colors.textMuted, textAlign: "center",
   },
   tipsTitle: {
     fontSize: 13,

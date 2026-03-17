@@ -218,6 +218,7 @@ export interface JournalEntry {
   body: string;
   date: string;
   timestamp: number;
+  moodLevel?: 1 | 2 | 3 | 4 | 5;
 }
 
 export type ReminderRecurrence = "none" | "daily" | "weekly";
