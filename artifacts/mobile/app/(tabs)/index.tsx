@@ -61,19 +61,19 @@ type QuickAction = {
 
 const STAGE_ACTIONS: Record<JourneyStage, QuickAction[]> = {
   before: [
-    { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
+    { label: "Ask Vera", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
     { label: "Evaluate Eligibility", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
     { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: "#5A7FA8", bg: "#EBF2FA" },
     { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder", color: Colors.error, bg: Colors.errorPale },
   ],
   during: [
-    { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
+    { label: "Ask Vera", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
     { label: "Journal", icon: "edit-3", route: "/journal", color: "#7A8A6A", bg: "#F0F4EB" },
     { label: "Reminders", icon: "bell", route: "/reminders", color: "#5A7FA8", bg: "#EBF2FA" },
     { label: "Emergency Card", icon: "credit-card", route: "/emergency-card", color: Colors.error, bg: Colors.errorPale },
   ],
   after: [
-    { label: "Ask Compass", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
+    { label: "Ask Vera", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
     { label: "Journal", icon: "edit-3", route: "/journal", color: "#7A8A6A", bg: "#F0F4EB" },
     { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.journeyAfter, bg: Colors.journeyAfterPale },
     { label: "Get Support", icon: "message-circle", route: "/support", color: "#8A6A9A", bg: "#F0EBF6" },

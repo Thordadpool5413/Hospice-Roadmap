@@ -44,7 +44,7 @@ const stages: { id: JourneyStage; label: string; description: string; color: str
 
 const APP_FEATURES = [
   { icon: "map", color: Colors.journeyBefore, label: "Journey Guide", desc: "Step-by-step roadmap for every stage" },
-  { icon: "compass", color: Colors.primary, label: "AI Compass", desc: "24/7 answers to your questions" },
+  { icon: "compass", color: Colors.primary, label: "Vera AI", desc: "24/7 answers to your questions" },
   { icon: "book-open", color: "#7A8A6A", label: "60+ Scenarios", desc: "Practical guidance for real situations" },
   { icon: "map-pin", color: Colors.journeyAfter, label: "Provider Search", desc: "Find hospice providers near you" },
 ];
@@ -59,17 +59,17 @@ const TAB_TOUR = [
   },
   {
     icon: "map",
-    label: "Journey",
+    label: "Guide",
     color: Colors.journeyDuring,
     bg: Colors.journeyDuringPale,
     desc: "Navigate hospice step by step — before, during, and after care. Articles, resources, and education.",
   },
   {
     icon: "compass",
-    label: "Compass",
+    label: "Vera",
     color: Colors.primary,
     bg: Colors.primaryPale,
-    desc: "Your AI companion. Ask anything about symptoms, medications, caregiving tasks, or what to expect.",
+    desc: "Your AI companion. Ask Vera anything about symptoms, medications, caregiving tasks, or what to expect.",
   },
   {
     icon: "map-pin",
