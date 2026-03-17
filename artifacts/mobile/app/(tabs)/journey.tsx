@@ -116,7 +116,7 @@ export default function JourneyScreen() {
             Your Current Focus
           </Text>
           <Pressable
-            onPress={() => {}}
+            onPress={() => router.push("/(tabs)/more" as any)}
             style={({ pressed }) => [styles.changeBtn, pressed && { opacity: 0.6 }]}
           >
             <Text style={styles.changeBtnText}>Change</Text>
@@ -127,10 +127,20 @@ export default function JourneyScreen() {
 
         <View style={styles.topicList}>
           {activeDesc.topics.map((topic, i) => (
-            <View key={i} style={styles.topicRow}>
+            <Pressable
+              key={i}
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/help",
+                  params: { initialMessage: `Tell me about: ${topic}` },
+                } as any)
+              }
+              style={({ pressed }) => [styles.topicRow, pressed && { opacity: 0.6 }]}
+            >
               <View style={styles.topicDot} />
-              <Text style={styles.topicText}>{topic}</Text>
-            </View>
+              <Text style={[styles.topicText, { flex: 1 }]}>{topic}</Text>
+              <Feather name="chevron-right" size={13} color={Colors.textSubtle} />
+            </Pressable>
           ))}
         </View>
 
