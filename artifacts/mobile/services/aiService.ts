@@ -92,6 +92,25 @@ export async function generateConversationMemory(
   }
 }
 
+function parseSseText(raw: string, onChunk: (t: string) => void, onDone: () => void, onError: (e: string) => void) {
+  const lines = raw.split("\n");
+  for (const line of lines) {
+    if (!line.startsWith("data: ")) continue;
+    try {
+      const data = JSON.parse(line.slice(6)) as {
+        content?: string;
+        done?: boolean;
+        error?: string;
+      };
+      if (data.error) { onError(data.error); return; }
+      if (data.done) { onDone(); return; }
+      if (data.content) onChunk(data.content);
+    } catch {
+      // ignore malformed SSE lines
+    }
+  }
+}
+
 export async function streamMessage(
   conversationId: number,
   content: string,
@@ -110,8 +129,17 @@ export async function streamMessage(
       }
     );
 
-    if (!res.ok || !res.body) {
+    if (!res.ok) {
       onError("Failed to connect to AI");
+      return;
+    }
+
+    // React Native native may not support ReadableStream — fall back to full text
+    if (!res.body) {
+      const raw = await res.text();
+      parseSseText(raw, onChunk, onDone, onError);
+      // If parseSseText didn't call onDone, call it now
+      onDone();
       return;
     }
 

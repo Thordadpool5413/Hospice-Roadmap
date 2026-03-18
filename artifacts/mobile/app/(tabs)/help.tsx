@@ -643,63 +643,61 @@ export default function HelpScreen() {
       </ScrollView>
 
       <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 84 : 0) }]}>
-        {!isOnline ? (
+        {!isOnline && (
           <View style={styles.offlineInputNotice}>
             <Feather name="wifi-off" size={15} color={Colors.amber} />
             <Text style={styles.offlineInputText}>
-              Internet required for Ragna — all guidance content works offline.
+              No connection — check your internet and try again.
             </Text>
           </View>
-        ) : (
-          <>
-            {isStreaming && (
-              <View style={styles.streamingBanner}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.streamingBannerText}>Ragna is responding…</Text>
-              </View>
-            )}
-            <View style={styles.inputRow}>
-              <TextInput
-                ref={inputRef}
-                style={[
-                  styles.input,
-                  hasMessages && !isStreaming && styles.inputReady,
-                ]}
-                value={inputText}
-                onChangeText={setInputText}
-                placeholder={
-                  isStreaming
-                    ? "Ragna is responding…"
-                    : hasMessages
-                    ? "Reply to Ragna…"
-                    : "Describe what's happening or ask anything…"
-                }
-                placeholderTextColor={
-                  hasMessages && !isStreaming ? Colors.primary : Colors.textMuted
-                }
-                multiline
-                maxLength={2000}
-                returnKeyType="default"
-                editable={!isStreaming}
-              />
-              <Pressable
-                onPress={() => sendMessage(inputText)}
-                disabled={!inputText.trim() || isStreaming}
-                style={({ pressed }) => [
-                  styles.sendBtn,
-                  (!inputText.trim() || isStreaming) && styles.sendBtnDisabled,
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                {isStreaming ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Feather name="send" size={18} color="#FFFFFF" />
-                )}
-              </Pressable>
-            </View>
-          </>
         )}
+        {isStreaming && (
+          <View style={styles.streamingBanner}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.streamingBannerText}>Ragna is responding…</Text>
+          </View>
+        )}
+        <View style={styles.inputRow}>
+          <TextInput
+            ref={inputRef}
+            style={[
+              styles.input,
+              hasMessages && !isStreaming && isOnline && styles.inputReady,
+              !isOnline && styles.inputOffline,
+            ]}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder={
+              !isOnline
+                ? "Reconnecting to Ragna…"
+                : isStreaming
+                ? "Ragna is responding…"
+                : hasMessages
+                ? "Reply to Ragna…"
+                : "Describe what's happening or ask anything…"
+            }
+            placeholderTextColor={Colors.textMuted}
+            multiline
+            maxLength={2000}
+            returnKeyType="default"
+            editable={!isStreaming && isOnline}
+          />
+          <Pressable
+            onPress={() => sendMessage(inputText)}
+            disabled={!inputText.trim() || isStreaming || !isOnline}
+            style={({ pressed }) => [
+              styles.sendBtn,
+              (!inputText.trim() || isStreaming || !isOnline) && styles.sendBtnDisabled,
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            {isStreaming ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Feather name="send" size={18} color="#FFFFFF" />
+            )}
+          </Pressable>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -1177,6 +1175,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     color: Colors.text,
+  },
+  inputOffline: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.amber + "40",
+    opacity: 0.6,
   },
   sendBtn: {
     width: 44,
