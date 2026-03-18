@@ -23,10 +23,10 @@ const palette = {
   emberPale: "#2C1808",  // dark tint for on-navy
 
   // ── Surfaces ──
-  surfaceDark: "#192040",    // elevated card on navy bg
-  surfaceMid: "#212C52",     // mid-level card
-  surfaceLight: "#2A3668",   // lighter card
-  cardBorder: "#304080",
+  surfaceDark: "#1E2B58",    // elevated card on navy bg
+  surfaceMid: "#253470",     // mid-level card
+  surfaceLight: "#2E3E88",   // lighter card
+  cardBorder: "#3A52A8",
 
   // ── Light cream ── for bright white mode contexts only
   white: "#FFFFFF",
@@ -46,7 +46,7 @@ const palette = {
   textMutedOnLight: "#4A5E90",
 
   // ── Dividers ──
-  dividerDark: "#253060",
+  dividerDark: "#2A3878",
   dividerLight: "#DDE4F0",
 
   // ── Semantic ──
@@ -61,11 +61,11 @@ const palette = {
 
   // ── Journey ──
   journeyBefore: "#4A7EC8",
-  journeyBeforePale: "#152038",
+  journeyBeforePale: "#1C2E54",
   journeyDuring: "#C85020",
-  journeyDuringPale: "#2C1808",
+  journeyDuringPale: "#2E1E10",
   journeyAfter: "#7A5AAA",
-  journeyAfterPale: "#1E1230",
+  journeyAfterPale: "#241844",
 };
 
 export const Colors = {
