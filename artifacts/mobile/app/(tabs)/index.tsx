@@ -70,12 +70,12 @@ const STAGE_ACTIONS: Record<JourneyStage, QuickAction[]> = {
   before: [
     { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
     { label: "Evaluate Eligibility", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
-    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: "#5A7FA8", bg: "#EBF2FA" },
+    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.navy, bg: "#E4EAF4" },
     { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder", color: Colors.error, bg: Colors.errorPale },
   ],
   during: [
     { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
-    { label: "Symptom Log", icon: "bar-chart-2", route: "/symptom-tracker", color: "#5A7FA8", bg: "#EBF2FA" },
+    { label: "Symptom Log", icon: "bar-chart-2", route: "/symptom-tracker", color: Colors.navy, bg: "#E4EAF4" },
     { label: "Journal", icon: "edit-3", route: "/journal", color: "#7A8A6A", bg: "#F0F4EB" },
     { label: "Goals of Care", icon: "star", route: "/goals-of-care", color: "#7A5C8A", bg: "#F5EFF8" },
   ],
@@ -297,8 +297,8 @@ export default function HomeScreen() {
                 onPress={() => tap("/reminders")}
                 style={({ pressed }) => [styles.snapshotCard, pressed && { opacity: 0.88 }]}
               >
-                <View style={[styles.snapshotIconWrap, { backgroundColor: "#EBF2FA" }]}>
-                  <Feather name="bell" size={16} color="#5A7FA8" />
+                <View style={[styles.snapshotIconWrap, { backgroundColor: "#E4EAF4" }]}>
+                  <Feather name="bell" size={16} color={Colors.navy} />
                 </View>
                 <View style={styles.snapshotText}>
                   <Text style={styles.snapshotMeta}>Next reminder</Text>
