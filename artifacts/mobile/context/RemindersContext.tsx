@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
@@ -7,14 +7,26 @@ import { Reminder, ReminderRecurrence, ReminderType } from "@/types";
 
 const STORAGE_KEY = "@hospice_roadmap_reminders";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+const isExpoGo = Constants.executionEnvironment === "storeClient";
+const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
+
+let Notifications: typeof import("expo-notifications") | null = null;
+
+if (notificationsAvailable) {
+  try {
+    Notifications = require("expo-notifications");
+    Notifications!.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch {
+    Notifications = null;
+  }
+}
 
 interface RemindersContextValue {
   reminders: Reminder[];
@@ -35,12 +47,12 @@ interface RemindersContextValue {
 const RemindersContext = createContext<RemindersContextValue | null>(null);
 
 async function scheduleNotification(reminder: Reminder): Promise<string | undefined> {
-  if (Platform.OS === "web") return undefined;
+  if (!Notifications) return undefined;
   try {
     const dt = new Date(reminder.datetime);
     if (isNaN(dt.getTime())) return undefined;
 
-    const trigger: Notifications.NotificationTriggerInput =
+    const trigger: any =
       reminder.recurrence === "daily"
         ? { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: dt.getHours(), minute: dt.getMinutes() }
         : reminder.recurrence === "weekly"
@@ -62,7 +74,7 @@ async function scheduleNotification(reminder: Reminder): Promise<string | undefi
 }
 
 async function cancelNotification(notificationId?: string) {
-  if (Platform.OS === "web" || !notificationId) return;
+  if (!Notifications || !notificationId) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(notificationId);
   } catch {}
@@ -71,15 +83,15 @@ async function cancelNotification(notificationId?: string) {
 export function RemindersProvider({ children }: { children: React.ReactNode }) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [permissionStatus, setPermissionStatus] = useState<RemindersContextValue["permissionStatus"]>("undetermined");
+  const [permissionStatus, setPermissionStatus] = useState<RemindersContextValue["permissionStatus"]>(
+    notificationsAvailable ? "undetermined" : "unavailable"
+  );
 
   useEffect(() => {
-    if (Platform.OS !== "web") {
+    if (Notifications) {
       Notifications.getPermissionsAsync()
         .then((s) => setPermissionStatus(s.status as any))
         .catch(() => setPermissionStatus("unavailable"));
-    } else {
-      setPermissionStatus("unavailable");
     }
 
     AsyncStorage.getItem(STORAGE_KEY)
@@ -93,7 +105,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestPermissions = useCallback(async (): Promise<boolean> => {
-    if (Platform.OS === "web") { setPermissionStatus("unavailable"); return false; }
+    if (!Notifications) { setPermissionStatus("unavailable"); return false; }
     try {
       const { status } = await Notifications.requestPermissionsAsync();
       setPermissionStatus(status as any);
