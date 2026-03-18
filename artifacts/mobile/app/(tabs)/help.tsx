@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -343,7 +344,7 @@ export default function HelpScreen() {
 
   const handleClearConversation = useCallback(async () => {
     if (!conversation) return;
-    Alert.alert("New Conversation", "Start a fresh conversation with Vera?", [
+    Alert.alert("New Conversation", "Start a fresh conversation with Ragna?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Start Fresh",
@@ -430,10 +431,13 @@ export default function HelpScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.compassBadge}>
-            <Feather name="compass" size={18} color="#FFFFFF" />
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 26, height: 26, borderRadius: 6 }}
+            />
           </View>
           <View>
-            <Text style={styles.headerTitle}>Vera</Text>
+            <Text style={styles.headerTitle}>Ragna</Text>
             <View style={styles.headerSubRow}>
               <Text style={styles.headerSubtitle}>Your hospice care companion</Text>
               {memoryCount > 0 && (
@@ -478,10 +482,13 @@ export default function HelpScreen() {
           <>
             <View style={styles.welcomeSection}>
               <View style={styles.compassLarge}>
-                <Feather name="compass" size={32} color="#FFFFFF" />
+                <Image
+                  source={require("@/assets/images/ragna-icon.png")}
+                  style={{ width: 52, height: 52, borderRadius: 14 }}
+                />
               </View>
               <Text style={styles.welcomeTitle}>
-                {memoryCount > 0 ? "Welcome back." : "Hi, I'm Vera."}
+                {memoryCount > 0 ? "Welcome back." : "Hi, I'm Ragna."}
               </Text>
               <Text style={styles.welcomeSubtitle}>
                 {memoryCount > 0
@@ -501,10 +508,13 @@ export default function HelpScreen() {
                 ]}
               >
                 <View style={styles.veraOpenerAvatar}>
-                  <Feather name="compass" size={14} color="#FFFFFF" />
+                  <Image
+                    source={require("@/assets/images/ragna-icon.png")}
+                    style={{ width: 32, height: 32, borderRadius: 8 }}
+                  />
                 </View>
                 <View style={styles.veraOpenerContent}>
-                  <Text style={styles.veraOpenerName}>Vera</Text>
+                  <Text style={styles.veraOpenerName}>Ragna</Text>
                   <Text style={styles.veraOpenerText}>{proactiveOpener.display}</Text>
                 </View>
                 <Feather name="arrow-right" size={16} color={Colors.primary} />
@@ -557,7 +567,7 @@ export default function HelpScreen() {
               >
                 <View style={styles.knowsHeader}>
                   <Feather name="zap" size={13} color={Colors.accent} />
-                  <Text style={styles.knowsTitle}>What Vera knows about you</Text>
+                  <Text style={styles.knowsTitle}>What Ragna knows about you</Text>
                   <Feather
                     name={knowsExpanded ? "chevron-up" : "chevron-down"}
                     size={14}
@@ -580,7 +590,7 @@ export default function HelpScreen() {
                 >
                   Patient Profile
                 </Text>{" "}
-                and Vera's responses will be tailored to your specific situation.
+                and Ragna's responses will be tailored to your specific situation.
               </Text>
             </View>
           </>
@@ -600,7 +610,7 @@ export default function HelpScreen() {
             {isLoading && (
               <View style={styles.loadingBubble}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.loadingText}>Vera is thinking…</Text>
+                <Text style={styles.loadingText}>Ragna is thinking…</Text>
               </View>
             )}
             {suggestions.length > 0 && !isStreaming && (
@@ -643,7 +653,7 @@ export default function HelpScreen() {
             {isStreaming && (
               <View style={styles.streamingBanner}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.streamingBannerText}>Vera is responding…</Text>
+                <Text style={styles.streamingBannerText}>Ragna is responding…</Text>
               </View>
             )}
             <View style={styles.inputRow}>
@@ -657,9 +667,9 @@ export default function HelpScreen() {
                 onChangeText={setInputText}
                 placeholder={
                   isStreaming
-                    ? "Vera is responding…"
+                    ? "Ragna is responding…"
                     : hasMessages
-                    ? "Reply to Vera…"
+                    ? "Reply to Ragna…"
                     : "Describe what's happening or ask anything…"
                 }
                 placeholderTextColor={
@@ -707,9 +717,10 @@ function MessageBubble({
   return (
     <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
       {!isUser && (
-        <View style={styles.avatarSmall}>
-          <Feather name="compass" size={12} color="#FFFFFF" />
-        </View>
+        <Image
+          source={require("@/assets/images/ragna-icon.png")}
+          style={{ width: 26, height: 26, borderRadius: 8 }}
+        />
       )}
       <Pressable
         onLongPress={onLongPress}
@@ -1257,10 +1268,8 @@ const styles = StyleSheet.create({
   veraOpenerAvatar: {
     width: 32,
     height: 32,
-    borderRadius: 10,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 8,
+    overflow: "hidden",
     flexShrink: 0,
   },
   veraOpenerContent: {

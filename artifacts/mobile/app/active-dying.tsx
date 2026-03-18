@@ -275,7 +275,7 @@ export default function ActiveDyingScreen() {
           </Text>
         </View>
 
-        {/* Ask Vera */}
+        {/* Ask Ragna */}
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -290,7 +290,7 @@ export default function ActiveDyingScreen() {
             <Feather name="compass" size={18} color="#fff" />
           </View>
           <View style={styles.veraBtnText}>
-            <Text style={styles.veraBtnTitle}>Ask Vera right now</Text>
+            <Text style={styles.veraBtnTitle}>Ask Ragna right now</Text>
             <Text style={styles.veraBtnSub}>Describe what you're seeing for personalized guidance</Text>
           </View>
           <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.7)" />

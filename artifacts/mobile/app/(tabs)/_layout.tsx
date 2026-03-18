@@ -25,7 +25,7 @@ function NativeTabLayout() {
         {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
         {/* @ts-ignore safari is a valid SF Symbol (compass icon) */}
         <Icon sf={{ default: "safari" as any, selected: "safari.fill" as any }} />
-        <Label>Vera</Label>
+        <Label>Ragna</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="providers">
         <Icon sf={{ default: "mappin.and.ellipse", selected: "mappin.and.ellipse" }} />
@@ -105,7 +105,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="help"
         options={{
-          title: "Vera",
+          title: "Ragna",
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="safari" tintColor={color} size={24} />

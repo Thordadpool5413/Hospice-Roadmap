@@ -63,7 +63,7 @@ function QuestionField({ label, hint, icon, value, onChange, placeholder, why }:
         style={styles.whyRow}
       >
         <Feather name="help-circle" size={12} color={Colors.primary} />
-        <Text style={styles.whyToggle}>Why does Vera need this?</Text>
+        <Text style={styles.whyToggle}>Why does Ragna need this?</Text>
         <Feather name={expanded ? "chevron-up" : "chevron-down"} size={12} color={Colors.textMuted} />
       </Pressable>
       {expanded && <Text style={styles.whyText}>{why}</Text>}
@@ -101,7 +101,7 @@ export default function GoalsOfCareScreen() {
     setIsSaving(false);
     Alert.alert(
       "Goals Saved",
-      "Vera will use this to personalize every conversation with you.",
+      "Ragna will use this to personalize every conversation with you.",
       [{ text: "Great", onPress: () => router.back() }]
     );
   };
@@ -143,9 +143,9 @@ export default function GoalsOfCareScreen() {
           <View style={styles.introIconWrap}>
             <Feather name="heart" size={22} color={Colors.primary} />
           </View>
-          <Text style={styles.introTitle}>Help Vera know your loved one</Text>
+          <Text style={styles.introTitle}>Help Ragna know your loved one</Text>
           <Text style={styles.introBody}>
-            These answers are private and will be shared only with Vera to make her guidance personal and meaningful — not generic. Answer as much or as little as you're comfortable with.
+            These answers are private and will be shared only with Ragna to make her guidance personal and meaningful — not generic. Answer as much or as little as you're comfortable with.
           </Text>
         </View>
 
@@ -157,7 +157,7 @@ export default function GoalsOfCareScreen() {
           value={whatMattersMost}
           onChange={setWhatMattersMost}
           placeholder="e.g. Being at home. Seeing grandchildren. No pain. Being heard."
-          why="Vera uses this to prioritize guidance. If being at home matters most, she'll always factor that into her advice."
+          why="Ragna uses this to prioritize guidance. If being at home matters most, she'll always factor that into her advice."
         />
 
         <QuestionField
@@ -167,7 +167,7 @@ export default function GoalsOfCareScreen() {
           value={goodDayLooksLike}
           onChange={setGoodDayLooksLike}
           placeholder="e.g. Waking up without pain. Watching the birds. Talking with family."
-          why="When Vera helps you make care decisions, she can ask: 'Would this lead to more days like the good ones?'"
+          why="When Ragna helps you make care decisions, she can ask: 'Would this lead to more days like the good ones?'"
         />
 
         <QuestionField
@@ -177,7 +177,7 @@ export default function GoalsOfCareScreen() {
           value={thingsToAvoid}
           onChange={setThingsToAvoid}
           placeholder="e.g. Being in the hospital. Being alone. Dying in pain. Tubes and machines."
-          why="This helps Vera flag when a plan of care is moving toward something that conflicts with what matters most."
+          why="This helps Ragna flag when a plan of care is moving toward something that conflicts with what matters most."
         />
 
         {/* DNR/POLST */}
@@ -226,19 +226,19 @@ export default function GoalsOfCareScreen() {
           <View style={styles.dnrNote}>
             <Feather name="info" size={12} color={Colors.textMuted} />
             <Text style={styles.dnrNoteText}>
-              Vera will use this to guide conversations about end-of-life decisions. This does not replace your legal POLST or advance directive.
+              Ragna will use this to guide conversations about end-of-life decisions. This does not replace your legal POLST or advance directive.
             </Text>
           </View>
         </View>
 
         <QuestionField
           label="Advance directives or other notes"
-          hint="Optional — anything else Vera should know"
+          hint="Optional — anything else Ragna should know"
           icon="edit"
           value={additionalDirectives}
           onChange={setAdditionalDirectives}
           placeholder="e.g. POLST on file with hospice. Patient has living will. Family agreed on comfort measures only."
-          why="Vera can reference this in conversations about what the patient has already decided."
+          why="Ragna can reference this in conversations about what the patient has already decided."
         />
 
         {/* Vera context preview */}
@@ -246,10 +246,10 @@ export default function GoalsOfCareScreen() {
           <View style={styles.previewCard}>
             <View style={styles.previewHeader}>
               <Feather name="compass" size={14} color={Colors.primary} />
-              <Text style={styles.previewTitle}>What Vera will know</Text>
+              <Text style={styles.previewTitle}>What Ragna will know</Text>
             </View>
             <Text style={styles.previewBody}>
-              Every conversation with Vera will be shaped by these goals. She'll reference what matters most, honor your loved one's wishes, and flag when a decision conflicts with their values.
+              Every conversation with Ragna will be shaped by these goals. She'll reference what matters most, honor your loved one's wishes, and flag when a decision conflicts with their values.
             </Text>
           </View>
         )}
@@ -280,7 +280,7 @@ export default function GoalsOfCareScreen() {
           style={({ pressed }) => [styles.veraLink, pressed && { opacity: 0.7 }]}
         >
           <Feather name="compass" size={14} color={Colors.primary} />
-          <Text style={styles.veraLinkText}>Need help with these questions? Ask Vera</Text>
+          <Text style={styles.veraLinkText}>Need help with these questions? Ask Ragna</Text>
         </Pressable>
       </ScrollView>
     </View>

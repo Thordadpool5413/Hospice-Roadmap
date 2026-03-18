@@ -132,9 +132,9 @@ export default function PainAdScreen() {
     ]);
   };
 
-  const handleAskVera = () => {
+  const handleAskRagna = () => {
     if (!allAnswered) {
-      Alert.alert("Complete Assessment", "Please answer all 5 categories before asking Vera.");
+      Alert.alert("Complete Assessment", "Please answer all 5 categories before asking Ragna.");
       return;
     }
     const prompt = `I just completed a PAINAD pain assessment on my non-verbal patient and got a total score of ${total} out of 10, which indicates ${scoreLabel(total).toLowerCase()}. The breakdown is: ${CATEGORIES.map((c) => {
@@ -255,7 +255,7 @@ export default function PainAdScreen() {
           </Pressable>
 
           <Pressable
-            onPress={handleAskVera}
+            onPress={handleAskRagna}
             style={({ pressed }) => [
               styles.veraBtn,
               !allAnswered && styles.btnDisabled,
@@ -263,7 +263,7 @@ export default function PainAdScreen() {
             ]}
           >
             <Feather name="compass" size={17} color="#fff" />
-            <Text style={styles.veraBtnText}>Ask Vera About This Score</Text>
+            <Text style={styles.veraBtnText}>Ask Ragna About This Score</Text>
           </Pressable>
         </View>
 
