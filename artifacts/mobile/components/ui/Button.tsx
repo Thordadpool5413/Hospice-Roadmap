@@ -46,8 +46,8 @@ export function Button({
   };
 
   const variantStyles: Record<ButtonVariant, { bg: string; textColor: string; borderColor?: string }> = {
-    primary: { bg: Colors.primary, textColor: "#FFFFFF" },
-    secondary: { bg: Colors.primaryPale, textColor: Colors.primaryDark },
+    primary: { bg: Colors.primary, textColor: Colors.navy },
+    secondary: { bg: Colors.surfaceMid, textColor: Colors.primary },
     outline: { bg: "transparent", textColor: Colors.primary, borderColor: Colors.primary },
     ghost: { bg: "transparent", textColor: Colors.textSecondary },
     danger: { bg: Colors.errorPale, textColor: Colors.error },

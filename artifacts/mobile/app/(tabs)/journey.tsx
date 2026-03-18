@@ -209,15 +209,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   overviewCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: Colors.cardBorder,
     gap: 14,
-    shadowColor: "#000",
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   changeBtn: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: Colors.surfaceLight,
     borderRadius: 8,
   },
   changeBtnText: {

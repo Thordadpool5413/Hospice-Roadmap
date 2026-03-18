@@ -1,114 +1,141 @@
 const palette = {
-  // ── Warm ember orange ── from the Hospice Roadmap sunset sky & landscape
-  ember: "#C8501A",
-  emberDark: "#8A3410",
-  emberLight: "#E87040",
-  emberPale: "#FEE8DA",
-
-  // ── Golden amber ── from the glowing road (Hospice Roadmap) & Ragna's light swirls
-  gold: "#D98818",
-  goldDark: "#9A5C10",
-  goldLight: "#F2AC38",
-  goldPale: "#FEF2D8",
-
-  // ── Deep midnight navy ── from Ragna's deep background & Hospice icon's dark corners
-  navy: "#1A2848",
-  navyMid: "#253558",
-  navyLight: "#3A4E72",
-  navyFaint: "#1E2F52",
-  navyText: "#C8D8F0",
+  // ── Deep navy ── primary background family from Ragna icon
+  navy900: "#0E1628",
+  navy800: "#141E38",
+  navy700: "#1A2848",
+  navy600: "#243258",
+  navy500: "#304070",
+  navy400: "#4A5E90",
+  navyText: "#D8E4F4",
   navySub: "#8AAAC8",
+  navyFaint: "#C0D0E8",
 
-  // ── Warm cream backgrounds ── warm sunset sky tone, not grey
-  cream: "#FAF0E4",
-  stone: "#F3E5CE",
-  sand: "#EAD6B8",
+  // ── Gold / amber ── the Ragna swirl highlight
+  gold: "#D9A020",
+  goldDark: "#A07010",
+  goldLight: "#F0C040",
+  goldPale: "#2E2510",  // dark gold tint for on-navy use
 
-  // ── Text ── warm, not cold grey
-  charcoal: "#1C1610",
-  slate: "#3A2E1A",
-  muted: "#6A5A3A",
-  subtle: "#9A8A6A",
+  // ── Ember ── secondary warm accent (kept muted, not dominant)
+  ember: "#C85020",
+  emberDark: "#8A3010",
+  emberLight: "#E87040",
+  emberPale: "#2C1808",  // dark tint for on-navy
 
-  // ── Dividers ── warm amber tone
-  divider: "#E2D0B8",
+  // ── Surfaces ──
+  surfaceDark: "#192040",    // elevated card on navy bg
+  surfaceMid: "#212C52",     // mid-level card
+  surfaceLight: "#2A3668",   // lighter card
+  cardBorder: "#304080",
+
+  // ── Light cream ── for bright white mode contexts only
+  white: "#FFFFFF",
+  offWhite: "#F5F8FF",
+  lightCard: "#FFFFFF",
+  lightBorder: "#DDE4F0",
+
+  // ── Text on dark backgrounds ──
+  textOnDark: "#EEF4FF",
+  textSecOnDark: "#B0C4E0",
+  textMutedOnDark: "#7090B8",
+  textSubtleOnDark: "#4A6888",
+
+  // ── Text on light backgrounds ──
+  textOnLight: "#0E1628",
+  textSecOnLight: "#243258",
+  textMutedOnLight: "#4A5E90",
+
+  // ── Dividers ──
+  dividerDark: "#253060",
+  dividerLight: "#DDE4F0",
 
   // ── Semantic ──
-  rose: "#C04030",
-  rosePale: "#FDF0EE",
-  sky: "#2A5C8A",
-  skyPale: "#EBF0FA",
-  success: "#3A7A4A",
-  successPale: "#EBF5EE",
+  rose: "#C03030",
+  rosePale: "#2C0E0E",
+  teal: "#1A6080",
+  tealPale: "#0E2030",
+  violet: "#6A4A9A",
+  violetPale: "#1E1230",
+  sage: "#4A7A5A",
+  sagePale: "#0E2018",
 
-  warmWhite: "#FFFFFF",
+  // ── Journey ──
+  journeyBefore: "#4A7EC8",
+  journeyBeforePale: "#152038",
+  journeyDuring: "#C85020",
+  journeyDuringPale: "#2C1808",
+  journeyAfter: "#7A5AAA",
+  journeyAfterPale: "#1E1230",
 };
 
 export const Colors = {
-  // Primary action (ember orange)
-  primary: palette.ember,
-  primaryDark: palette.emberDark,
-  primaryLight: palette.emberLight,
-  primaryPale: palette.emberPale,
+  // Core backgrounds — DARK navy
+  background: palette.navy800,
+  backgroundSecondary: palette.navy700,
+  backgroundTertiary: palette.navy600,
 
-  // Accent (golden amber)
-  accent: palette.gold,
-  accentDeep: palette.goldDark,
-  accentLight: palette.goldLight,
+  // Surfaces (cards on dark bg)
+  surface: palette.surfaceDark,
+  surfaceMid: palette.surfaceMid,
+  surfaceLight: palette.surfaceLight,
 
-  // Deep navy (for tab bar, Ragna header, dark surfaces)
-  navy: palette.navy,
-  navyMid: palette.navyMid,
-  navyLight: palette.navyLight,
+  // Primary action — gold
+  primary: palette.gold,
+  primaryDark: palette.goldDark,
+  primaryLight: palette.goldLight,
+  primaryPale: palette.goldPale,
+
+  // Secondary action — ember (use sparingly)
+  accent: palette.ember,
+  accentDark: palette.emberDark,
+  accentLight: palette.emberLight,
+  accentPale: palette.emberPale,
+
+  // Navy shorthands
+  navy: palette.navy700,
+  navyMid: palette.navy600,
+  navyLight: palette.navy500,
   navyFaint: palette.navyFaint,
   navyText: palette.navyText,
   navySub: palette.navySub,
 
-  // Backgrounds
-  background: palette.cream,
-  backgroundSecondary: palette.stone,
-  backgroundTertiary: palette.sand,
-
-  surface: palette.warmWhite,
-  surfaceElevated: palette.warmWhite,
-
-  // Text
-  text: palette.charcoal,
-  textSecondary: palette.slate,
-  textMuted: palette.muted,
-  textSubtle: palette.subtle,
-
-  divider: palette.divider,
-
-  // Aliases
+  // Gold shorthands
   amber: palette.gold,
   amberLight: palette.goldLight,
   amberPale: palette.goldPale,
 
+  // Text
+  text: palette.textOnDark,
+  textSecondary: palette.textSecOnDark,
+  textMuted: palette.textMutedOnDark,
+  textSubtle: palette.textSubtleOnDark,
+
+  // Borders
+  divider: palette.dividerDark,
+  cardBorder: palette.cardBorder,
+
+  // Semantic
+  error: palette.rose,
+  errorPale: palette.rosePale,
+  info: palette.teal,
+  infoPale: palette.tealPale,
+  success: palette.sage,
+  successPale: palette.sagePale,
   warning: palette.gold,
   warningPale: palette.goldPale,
 
-  error: palette.rose,
-  errorPale: palette.rosePale,
-
-  info: palette.sky,
-  infoPale: palette.skyPale,
-
-  success: palette.success,
-  successPale: palette.successPale,
+  // Journey stage
+  journeyBefore: palette.journeyBefore,
+  journeyBeforePale: palette.journeyBeforePale,
+  journeyDuring: palette.journeyDuring,
+  journeyDuringPale: palette.journeyDuringPale,
+  journeyAfter: palette.journeyAfter,
+  journeyAfterPale: palette.journeyAfterPale,
 
   // Tab bar
   tabIconDefault: palette.navySub,
   tabIconSelected: palette.gold,
-  tint: palette.ember,
-
-  // Journey stages
-  journeyBefore: palette.sky,
-  journeyBeforePale: palette.skyPale,
-  journeyDuring: palette.ember,
-  journeyDuringPale: palette.emberPale,
-  journeyAfter: "#7A5C8A",
-  journeyAfterPale: "#F2EEF8",
+  tint: palette.gold,
 };
 
 export default Colors;

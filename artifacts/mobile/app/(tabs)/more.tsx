@@ -368,11 +368,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: Colors.cardBorder,
   },
   avatarContainer: {
     width: 52,
@@ -424,13 +424,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surfaceMid,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: Colors.cardBorder,
   },
   stageBtnActive: {
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: Colors.surfaceLight,
     borderColor: Colors.primary,
   },
   stageBtnText: {
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   stageBtnTextActive: {
-    color: Colors.primaryDark,
+    color: Colors.primary,
   },
   section: {
     gap: 8,
@@ -460,10 +460,10 @@ const styles = StyleSheet.create({
     color: Colors.textSubtle,
   },
   sectionList: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: Colors.cardBorder,
     overflow: "hidden",
   },
   menuItem: {
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surfaceLight,
     alignItems: "center",
     justifyContent: "center",
   },

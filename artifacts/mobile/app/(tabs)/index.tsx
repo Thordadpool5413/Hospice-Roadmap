@@ -68,22 +68,22 @@ type QuickAction = {
 
 const STAGE_ACTIONS: Record<JourneyStage, QuickAction[]> = {
   before: [
-    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
-    { label: "Evaluate Eligibility", icon: "clipboard", route: "/evaluation", color: Colors.navy, bg: Colors.amberPale },
-    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.navy, bg: Colors.amberPale },
+    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.surfaceMid },
+    { label: "Evaluate Eligibility", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
+    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.primary, bg: Colors.surfaceMid },
     { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder", color: Colors.error, bg: Colors.errorPale },
   ],
   during: [
-    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
-    { label: "Symptom Log", icon: "bar-chart-2", route: "/symptom-tracker", color: Colors.navy, bg: Colors.amberPale },
-    { label: "Journal", icon: "edit-3", route: "/journal", color: Colors.accent, bg: Colors.amberPale },
-    { label: "Goals of Care", icon: "star", route: "/goals-of-care", color: "#7A5C8A", bg: "#F5EFF8" },
+    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.surfaceMid },
+    { label: "Symptom Log", icon: "bar-chart-2", route: "/symptom-tracker", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
+    { label: "Journal", icon: "edit-3", route: "/journal", color: Colors.primary, bg: Colors.surfaceMid },
+    { label: "Goals of Care", icon: "star", route: "/goals-of-care", color: Colors.journeyAfter, bg: Colors.journeyAfterPale },
   ],
   after: [
-    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.primaryPale },
-    { label: "Journal", icon: "edit-3", route: "/journal", color: Colors.accent, bg: Colors.amberPale },
-    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.navy, bg: Colors.amberPale },
-    { label: "Get Support", icon: "message-circle", route: "/support", color: "#7A5C8A", bg: "#F5EFF8" },
+    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.surfaceMid },
+    { label: "Journal", icon: "edit-3", route: "/journal", color: Colors.primary, bg: Colors.surfaceMid },
+    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
+    { label: "Get Support", icon: "message-circle", route: "/support", color: Colors.journeyAfter, bg: Colors.journeyAfterPale },
   ],
 };
 
@@ -297,8 +297,8 @@ export default function HomeScreen() {
                 onPress={() => tap("/reminders")}
                 style={({ pressed }) => [styles.snapshotCard, pressed && { opacity: 0.88 }]}
               >
-                <View style={[styles.snapshotIconWrap, { backgroundColor: Colors.amberPale }]}>
-                  <Feather name="bell" size={16} color={Colors.accent} />
+                <View style={[styles.snapshotIconWrap, { backgroundColor: Colors.primaryPale }]}>
+                  <Feather name="bell" size={16} color={Colors.primary} />
                 </View>
                 <View style={styles.snapshotText}>
                   <Text style={styles.snapshotMeta}>Next reminder</Text>
@@ -430,22 +430,22 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surfaceMid,
     alignItems: "center",
     justifyContent: "center",
   },
 
   // Situation Guide banner
   helpBanner: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: Colors.primary,
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 4,
   },
@@ -486,17 +486,17 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   chip: {
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 20,
     paddingHorizontal: 13,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: Colors.primary + "28",
+    borderColor: Colors.cardBorder,
   },
   chipText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: Colors.primaryDark,
+    color: Colors.navyText,
   },
 
   // Section title
@@ -583,17 +583,17 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 16,
     padding: 14,
-    backgroundColor: "#F5EFF8",
+    backgroundColor: Colors.journeyAfterPale,
     borderWidth: 1,
-    borderColor: "#C4A8D440",
+    borderColor: Colors.journeyAfter + "40",
     borderLeftWidth: 4,
-    borderLeftColor: "#7A5C8A",
+    borderLeftColor: Colors.journeyAfter,
   },
   activeDyingIconWrap: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#7A5C8A18",
+    backgroundColor: Colors.journeyAfter + "20",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   activeDyingTitle: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: "#7A5C8A",
+    color: Colors.journeyAfter,
     letterSpacing: -0.2,
   },
   activeDyingBody: {
