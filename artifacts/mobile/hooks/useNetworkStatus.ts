@@ -1,20 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, AppStateStatus, Platform } from "react-native";
 
-const CONNECTIVITY_URL = "https://clients3.google.com/generate_204";
-const CHECK_INTERVAL_MS = 12000;
+const CHECK_INTERVAL_MS = 15000;
+
+function getHealthUrl(): string {
+  if (typeof window !== "undefined" && window.location?.hostname) {
+    const host = window.location.hostname.replace(".expo.", ".");
+    return `https://${host}/api/healthz`;
+  }
+  const envUrl = process.env["EXPO_PUBLIC_API_URL"];
+  const base = envUrl ?? "http://localhost:8080/api";
+  return `${base}/healthz`;
+}
 
 async function checkReachable(): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(CONNECTIVITY_URL, {
-      method: "HEAD",
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(getHealthUrl(), {
+      method: "GET",
       signal: controller.signal,
       cache: "no-store",
     });
     clearTimeout(timeout);
-    return res.status === 204 || res.ok;
+    return res.ok;
   } catch {
     return false;
   }
