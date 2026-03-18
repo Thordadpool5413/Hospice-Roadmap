@@ -443,7 +443,7 @@ export default function HelpScreen() {
               <Text style={styles.headerSubtitle}>Your hospice care companion</Text>
               {memoryCount > 0 && (
                 <View style={styles.memoryPill}>
-                  <Feather name="zap" size={9} color={Colors.primary} />
+                  <Feather name="zap" size={9} color={Colors.accentLight} />
                   <Text style={styles.memoryPillText}>Knows your story</Text>
                 </View>
               )}
@@ -456,7 +456,7 @@ export default function HelpScreen() {
               onPress={handleClearConversation}
               style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
             >
-              <Feather name="edit" size={18} color={Colors.textMuted} />
+              <Feather name="edit" size={18} color={Colors.navySub} />
             </Pressable>
           )}
           <Pressable
@@ -825,8 +825,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-    backgroundColor: Colors.background,
+    borderBottomColor: Colors.navyMid,
+    backgroundColor: Colors.navy,
   },
   headerLeft: {
     flexDirection: "row",
@@ -847,13 +847,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    color: Colors.navyText,
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: Colors.navySub,
   },
   headerSubRow: {
     flexDirection: "row",
@@ -865,17 +865,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: Colors.navyMid,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: Colors.primary + "30",
+    borderColor: Colors.accent + "50",
   },
   memoryPillText: {
     fontSize: 9,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
+    color: Colors.accentLight,
     letterSpacing: 0.2,
   },
   headerRight: {
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.navyMid,
     alignItems: "center",
     justifyContent: "center",
   },

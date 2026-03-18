@@ -1,56 +1,70 @@
 const palette = {
-  // Warm sunset oranges — matched to the Hospice Roadmap app icon landscape
-  ember: "#C8541A",
-  emberDark: "#9A3E10",
-  emberLight: "#E07A3C",
-  emberPale: "#FEEDE6",
+  // ── Warm ember orange ── from the Hospice Roadmap sunset sky & landscape
+  ember: "#C8501A",
+  emberDark: "#8A3410",
+  emberLight: "#E87040",
+  emberPale: "#FEE8DA",
 
-  // Golden amber — matched to the glowing road in the icon
-  gold: "#D98C18",
+  // ── Golden amber ── from the glowing road (Hospice Roadmap) & Ragna's light swirls
+  gold: "#D98818",
   goldDark: "#9A5C10",
-  goldLight: "#F0AA3C",
-  goldPale: "#FEF4DC",
+  goldLight: "#F2AC38",
+  goldPale: "#FEF2D8",
 
-  // Deep navy — matched to the icon's deep bottom corners
-  navy: "#1E2848",
-  navyMid: "#2A3D5C",
-  navyLight: "#3D5478",
+  // ── Deep midnight navy ── from Ragna's deep background & Hospice icon's dark corners
+  navy: "#1A2848",
+  navyMid: "#253558",
+  navyLight: "#3A4E72",
+  navyFaint: "#1E2F52",
+  navyText: "#C8D8F0",
+  navySub: "#8AAAC8",
 
-  // Warm neutral backgrounds — warmer cream to complement the icon's amber tones
-  cream: "#FAF1E6",
-  stone: "#F3E6D2",
-  sand: "#EAD8C0",
+  // ── Warm cream backgrounds ── warm sunset sky tone, not grey
+  cream: "#FAF0E4",
+  stone: "#F3E5CE",
+  sand: "#EAD6B8",
 
-  // Text
-  charcoal: "#1C1810",
-  slate: "#3A3020",
-  muted: "#6B5D4A",
-  subtle: "#9B8E7C",
+  // ── Text ── warm, not cold grey
+  charcoal: "#1C1610",
+  slate: "#3A2E1A",
+  muted: "#6A5A3A",
+  subtle: "#9A8A6A",
 
-  divider: "#E6D8C8",
+  // ── Dividers ── warm amber tone
+  divider: "#E2D0B8",
 
-  // Semantic
-  rose: "#C04A3A",
+  // ── Semantic ──
+  rose: "#C04030",
   rosePale: "#FDF0EE",
   sky: "#2A5C8A",
   skyPale: "#EBF0FA",
   success: "#3A7A4A",
   successPale: "#EBF5EE",
 
-  // Warm white
   warmWhite: "#FFFFFF",
 };
 
 export const Colors = {
+  // Primary action (ember orange)
   primary: palette.ember,
   primaryDark: palette.emberDark,
   primaryLight: palette.emberLight,
   primaryPale: palette.emberPale,
 
+  // Accent (golden amber)
   accent: palette.gold,
   accentDeep: palette.goldDark,
   accentLight: palette.goldLight,
 
+  // Deep navy (for tab bar, Ragna header, dark surfaces)
+  navy: palette.navy,
+  navyMid: palette.navyMid,
+  navyLight: palette.navyLight,
+  navyFaint: palette.navyFaint,
+  navyText: palette.navyText,
+  navySub: palette.navySub,
+
+  // Backgrounds
   background: palette.cream,
   backgroundSecondary: palette.stone,
   backgroundTertiary: palette.sand,
@@ -58,6 +72,7 @@ export const Colors = {
   surface: palette.warmWhite,
   surfaceElevated: palette.warmWhite,
 
+  // Text
   text: palette.charcoal,
   textSecondary: palette.slate,
   textMuted: palette.muted,
@@ -65,6 +80,7 @@ export const Colors = {
 
   divider: palette.divider,
 
+  // Aliases
   amber: palette.gold,
   amberLight: palette.goldLight,
   amberPale: palette.goldPale,
@@ -81,10 +97,12 @@ export const Colors = {
   success: palette.success,
   successPale: palette.successPale,
 
-  tabIconDefault: palette.subtle,
-  tabIconSelected: palette.ember,
+  // Tab bar
+  tabIconDefault: palette.navySub,
+  tabIconSelected: palette.gold,
   tint: palette.ember,
 
+  // Journey stages
   journeyBefore: palette.sky,
   journeyBeforePale: palette.skyPale,
   journeyDuring: palette.ember,
