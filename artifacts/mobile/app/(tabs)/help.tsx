@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -95,6 +95,12 @@ const URGENT_TILES = [
     prompt: "I'm feeling overwhelmed and exhausted as a caregiver. I need support.",
     patientPrompt: "I'm feeling overwhelmed, scared, and exhausted. I'm the patient and I need emotional support.",
   },
+  {
+    label: "Prepare to call hospice",
+    icon: "phone-call", color: "#1A5276", bg: "#EBF5FB",
+    prompt: "I need to call my hospice nurse and want to be organized. Based on everything you know about our situation — the patient's diagnosis, recent symptoms, medications, and what's been happening — give me a ready-to-read SBAR script: (1) Situation — what's happening right now in 1–2 sentences, (2) Background — the patient's relevant history in 2–3 sentences, (3) Assessment — how serious this appears, (4) Request — exactly what I need from the hospice team. Make it brief and something I can read directly to the nurse on the phone.",
+    caregiverOnly: true,
+  },
 ];
 
 interface LocalMessage {
@@ -119,9 +125,9 @@ function parseSuggestions(raw: string): { text: string; suggestions: string[] } 
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext } = useApp();
-  const { getRecentSummary } = useSymptoms();
+  const { entries: symptomEntries, getTodayEntry, getRecentSummary } = useSymptoms();
   const { entries: journalEntries } = useJournal();
-  const { addMemory, getMemorySummary, memoryCount, livingProfile, updateLivingProfile, recentTiles, recordTile } = useVeraMemory();
+  const { memories, addMemory, getMemorySummary, memoryCount, livingProfile, updateLivingProfile, recentTiles, recordTile } = useVeraMemory();
   const { isOnline } = useNetworkStatus();
   const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
   const lastInitialRef = useRef("");
@@ -142,6 +148,52 @@ export default function HelpScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [knowsExpanded, setKnowsExpanded] = useState(false);
+
+  const todayEntry = useMemo(() => getTodayEntry(), [symptomEntries, getTodayEntry]);
+
+  const symptomAlert = useMemo<{ text: string; prompt: string } | null>(() => {
+    if (!todayEntry) return null;
+    const alerts: string[] = [];
+    if (todayEntry.pain >= 7) alerts.push(`pain at ${todayEntry.pain}/10`);
+    if (todayEntry.breathlessness >= 7) alerts.push(`breathlessness at ${todayEntry.breathlessness}/10`);
+    if (todayEntry.nausea >= 7) alerts.push(`nausea at ${todayEntry.nausea}/10`);
+    const agitationLabels = ["", "mild", "moderate", "severe"];
+    if (todayEntry.agitation >= 2) alerts.push(`${agitationLabels[todayEntry.agitation]} agitation`);
+    if (alerts.length === 0) return null;
+    const alertText = alerts.join(" and ");
+    return {
+      text: `Today's symptom check-in shows ${alertText}.`,
+      prompt: `My symptom tracker shows ${alertText} today. What can I do right now to help and should I call the hospice team?`,
+    };
+  }, [todayEntry]);
+
+  const proactiveOpener = useMemo<{ display: string; sendPrompt: string } | null>(() => {
+    if (!livingProfile || memoryCount === 0) return null;
+    const hour = new Date().getHours();
+    const greeting =
+      hour < 6 ? "You're up late" :
+      hour < 12 ? "Good morning" :
+      hour < 17 ? "Good afternoon" :
+      "Good evening";
+    const lastMemory = memories[0];
+    const topTopic = lastMemory?.mainTopics?.[0];
+    const topTile = recentTiles[0];
+    let display: string;
+    let sendPrompt: string;
+    if (topTopic) {
+      display = `${greeting}. Last time we spoke, ${topTopic} was on your mind — how have things been since then?`;
+      sendPrompt = `I'm back. Last time we spoke about ${topTopic}. How do you think things are going with that, and is there anything I should be watching for?`;
+    } else if (topTile) {
+      const tileLabel = topTile.toLowerCase();
+      display = `${greeting}. I've been thinking about you — how has ${tileLabel} been going?`;
+      sendPrompt = `I'm checking back in. I've been dealing with ${tileLabel} — what should I be thinking about now?`;
+    } else {
+      display = `${greeting}. Good to see you again — how are you and your loved one doing today?`;
+      sendPrompt = `I'm back checking in. How are things going overall and is there anything I should be watching for right now?`;
+    }
+    return { display, sendPrompt };
+  }, [livingProfile, memoryCount, memories, recentTiles]);
 
   const scrollToBottom = useCallback((delay = 100) => {
     setTimeout(() => {
@@ -440,6 +492,41 @@ export default function HelpScreen() {
               </Text>
             </View>
 
+            {proactiveOpener && (
+              <Pressable
+                onPress={() => sendMessage(proactiveOpener.sendPrompt)}
+                style={({ pressed }) => [
+                  styles.veraOpenerCard,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <View style={styles.veraOpenerAvatar}>
+                  <Feather name="compass" size={14} color="#FFFFFF" />
+                </View>
+                <View style={styles.veraOpenerContent}>
+                  <Text style={styles.veraOpenerName}>Vera</Text>
+                  <Text style={styles.veraOpenerText}>{proactiveOpener.display}</Text>
+                </View>
+                <Feather name="arrow-right" size={16} color={Colors.primary} />
+              </Pressable>
+            )}
+
+            {symptomAlert && (
+              <Pressable
+                onPress={() => sendMessage(symptomAlert.prompt)}
+                style={({ pressed }) => [
+                  styles.symptomAlertCard,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                <View style={styles.symptomAlertIcon}>
+                  <Feather name="bar-chart-2" size={15} color="#C85A1C" />
+                </View>
+                <Text style={styles.symptomAlertText}>{symptomAlert.text}</Text>
+                <Feather name="chevron-right" size={14} color="#C85A1C" />
+              </Pressable>
+            )}
+
             <Text style={styles.tilesLabel}>What's happening right now?</Text>
             <View style={styles.tilesGrid}>
               {visibleTiles.map((tile) => (
@@ -459,6 +546,29 @@ export default function HelpScreen() {
                 </Pressable>
               ))}
             </View>
+
+            {livingProfile ? (
+              <Pressable
+                onPress={() => setKnowsExpanded((e) => !e)}
+                style={({ pressed }) => [
+                  styles.knowsCard,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                <View style={styles.knowsHeader}>
+                  <Feather name="zap" size={13} color={Colors.accent} />
+                  <Text style={styles.knowsTitle}>What Vera knows about you</Text>
+                  <Feather
+                    name={knowsExpanded ? "chevron-up" : "chevron-down"}
+                    size={14}
+                    color={Colors.textMuted}
+                  />
+                </View>
+                {knowsExpanded && (
+                  <Text style={styles.knowsBody}>{livingProfile}</Text>
+                )}
+              </Pressable>
+            ) : null}
 
             <View style={styles.profileNudge}>
               <Feather name="user" size={14} color={Colors.primary} />
@@ -1128,5 +1238,98 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.amber,
     lineHeight: 18,
+  },
+  veraOpenerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.primary + "30",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  veraOpenerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  veraOpenerContent: {
+    flex: 1,
+    gap: 2,
+  },
+  veraOpenerName: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  veraOpenerText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  symptomAlertCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FEF1E8",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#C85A1C40",
+  },
+  symptomAlertIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: "#C85A1C18",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  symptomAlertText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "#8B3A0F",
+    lineHeight: 19,
+  },
+  knowsCard: {
+    backgroundColor: "#FAFAF7",
+    borderRadius: 14,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: Colors.accent + "35",
+  },
+  knowsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  knowsTitle: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSecondary,
+    letterSpacing: 0.1,
+  },
+  knowsBody: {
+    marginTop: 10,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 20,
   },
 });
