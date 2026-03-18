@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -34,26 +35,26 @@ const FIELDS: FieldConfig[] = [
     key: "patientName",
     label: "Patient's first name",
     placeholder: "e.g. Margaret",
-    hint: "Helps Compass address your patient by name.",
+    hint: "Helps Ragna address your patient by name.",
   },
   {
     key: "diagnosis",
     label: "Primary diagnosis",
     placeholder: "e.g. end-stage COPD, CHF, dementia",
-    hint: "Compass tailors symptom guidance to the specific disease.",
+    hint: "Ragna tailors symptom guidance to the specific disease.",
   },
   {
     key: "equipmentInHome",
     label: "Medical equipment in the home",
     placeholder: "e.g. hospital bed, oxygen concentrator, suction machine",
-    hint: "Helps Compass troubleshoot equipment issues and caregiving tasks.",
+    hint: "Helps Ragna troubleshoot equipment issues and caregiving tasks.",
     multiline: true,
   },
   {
     key: "hospicePhone",
     label: "Hospice main phone number",
     placeholder: "e.g. (555) 123-4567",
-    hint: "Appears on the Call Hospice button in Compass.",
+    hint: "Appears on the Call Hospice button.",
     keyboardType: "phone-pad",
   },
   {
@@ -79,9 +80,9 @@ const FIELDS: FieldConfig[] = [
   },
   {
     key: "additionalNotes",
-    label: "Additional notes for Compass",
+    label: "Additional notes for Ragna",
     placeholder: "e.g. patient is non-verbal, allergic to morphine, family prefers no discussion of prognosis",
-    hint: "Any other context that helps Compass give better guidance.",
+    hint: "Any other context that helps Ragna give better guidance.",
     multiline: true,
   },
 ];
@@ -109,7 +110,7 @@ export default function PatientProfileScreen() {
     updatePatientProfile({ ...profile, medications, comfortKitMedications });
     Alert.alert(
       "Profile Saved",
-      "Compass will now use this information to give you personalized guidance.",
+      "Ragna will now use this information to give you personalized guidance.",
       [{ text: "Done", onPress: () => router.back() }]
     );
   };
@@ -162,12 +163,16 @@ export default function PatientProfileScreen() {
       >
         <View style={styles.banner}>
           <View style={styles.bannerIcon}>
-            <Feather name="compass" size={20} color={Colors.primary} />
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 32, height: 32, borderRadius: 8 }}
+              resizeMode="cover"
+            />
           </View>
           <View style={styles.bannerText}>
-            <Text style={styles.bannerTitle}>Personalize Compass</Text>
+            <Text style={styles.bannerTitle}>Personalize Ragna</Text>
             <Text style={styles.bannerBody}>
-              This information stays on your device and helps Compass give guidance specific to your patient's situation. Every field is optional.
+              This information stays on your device and helps Ragna give guidance specific to your patient's situation. Every field is optional.
             </Text>
           </View>
         </View>

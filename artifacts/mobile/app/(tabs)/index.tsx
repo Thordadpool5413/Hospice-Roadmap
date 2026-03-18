@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
 import {
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -243,9 +244,17 @@ export default function HomeScreen() {
                 pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
               ]}
             >
-              <View style={[styles.toolIcon, { backgroundColor: a.color }]}>
-                <Feather name={a.icon as any} size={18} color="#fff" />
-              </View>
+              {a.label === "Ask Ragna" ? (
+                <Image
+                  source={require("@/assets/images/ragna-icon.png")}
+                  style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden" } as any}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.toolIcon, { backgroundColor: a.color }]}>
+                  <Feather name={a.icon as any} size={18} color="#fff" />
+                </View>
+              )}
               <Text style={[styles.toolLabel, { color: a.color }]}>{a.label}</Text>
             </Pressable>
           ))}

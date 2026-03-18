@@ -5,7 +5,7 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Image, Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
@@ -106,11 +106,11 @@ function ClassicTabLayout() {
         name="help"
         options={{
           title: "Ragna",
-          tabBarIcon: ({ color }) =>
+          tabBarIcon: () =>
             isIOS ? (
-              <SymbolView name="safari" tintColor={color} size={24} />
+              <Image source={require("@/assets/images/ragna-icon.png")} style={{ width: 26, height: 26, borderRadius: 7 }} />
             ) : (
-              <Feather name="compass" size={22} color={color} />
+              <Image source={require("@/assets/images/ragna-icon.png")} style={{ width: 24, height: 24, borderRadius: 6 }} />
             ),
         }}
       />

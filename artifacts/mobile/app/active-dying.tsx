@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -286,9 +287,11 @@ export default function ActiveDyingScreen() {
           }}
           style={({ pressed }) => [styles.veraBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
         >
-          <View style={styles.veraBtnIcon}>
-            <Feather name="compass" size={18} color="#fff" />
-          </View>
+          <Image
+            source={require("@/assets/images/ragna-icon.png")}
+            style={{ width: 36, height: 36, borderRadius: 9 }}
+            resizeMode="cover"
+          />
           <View style={styles.veraBtnText}>
             <Text style={styles.veraBtnTitle}>Ask Ragna right now</Text>
             <Text style={styles.veraBtnSub}>Describe what you're seeing for personalized guidance</Text>
