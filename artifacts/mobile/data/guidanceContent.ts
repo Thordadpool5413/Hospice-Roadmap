@@ -2508,8 +2508,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "Symptoms & Comfort",
     subtitle: "Managing pain, breathing, and other physical changes",
     icon: "activity",
-    color: "#C45A5A",
-    bgColor: "#FDF0F0",
+    color: "#E07878",
+    bgColor: "#2C0E0E",
     scenarios: symptoms,
   },
   {
@@ -2517,8 +2517,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "Caregiving Tasks",
     subtitle: "Step-by-step hands-on care guidance",
     icon: "heart",
-    color: "#C85A1C",
-    bgColor: "#FEF1E8",
+    color: "#E07840",
+    bgColor: "#2C1808",
     scenarios: caregiving,
   },
   {
@@ -2526,8 +2526,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "Medications",
     subtitle: "Comfort kit, doses, side effects, and alternatives",
     icon: "package",
-    color: "#4A90B8",
-    bgColor: "#EBF4FA",
+    color: "#6AB4D8",
+    bgColor: "#0E2030",
     scenarios: medications,
   },
   {
@@ -2535,8 +2535,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "Equipment",
     subtitle: "Using and troubleshooting hospice equipment",
     icon: "tool",
-    color: "#C8842A",
-    bgColor: "#FDF3E0",
+    color: "#E0A848",
+    bgColor: "#2E2510",
     scenarios: equipment,
   },
   {
@@ -2544,8 +2544,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "Emotional Support",
     subtitle: "Caregiver stress, difficult conversations, and family",
     icon: "message-circle",
-    color: "#8A6A9A",
-    bgColor: "#F0EBF6",
+    color: "#B090C8",
+    bgColor: "#1E1230",
     scenarios: emotional,
   },
   {
@@ -2553,8 +2553,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "Hospice Services",
     subtitle: "Team roles, respite care, and available support",
     icon: "users",
-    color: "#D4881A",
-    bgColor: "#E0F2F1",
+    color: "#E8A830",
+    bgColor: "#0E2018",
     scenarios: hospiceServices,
   },
   {
@@ -2562,8 +2562,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "End of Life & After",
     subtitle: "What to expect and what to do",
     icon: "sunset",
-    color: "#3A4550",
-    bgColor: "#F0F2F4",
+    color: "#7090B8",
+    bgColor: "#1A2848",
     scenarios: endOfLife,
   },
   {
@@ -2571,8 +2571,8 @@ export const guidanceCategories: GuidanceCategory[] = [
     title: "Not Sure What's Happening",
     subtitle: "When something seems wrong but you're not sure what",
     icon: "help-circle",
-    color: "#5A7FA8",
-    bgColor: "#EBF2FA",
+    color: "#7AAAD0",
+    bgColor: "#152038",
     scenarios: [
       {
         id: "not-sure-whats-happening",

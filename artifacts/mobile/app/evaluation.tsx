@@ -229,7 +229,7 @@ export default function EvaluationScreen() {
 
         <View style={styles.cmsBenefitCard}>
           <View style={styles.cmsBenefitHeader}>
-            <Feather name="shield" size={16} color="#1A6DAA" />
+            <Feather name="shield" size={16} color={Colors.journeyBefore} />
             <Text style={styles.cmsBenefitTitle}>Medicare Hospice Benefit</Text>
           </View>
           <Text style={styles.cmsBenefitText}>
@@ -307,13 +307,13 @@ export default function EvaluationScreen() {
       >
         <View style={styles.criteriaHeader}>
           <View style={styles.criteriaHeaderLeft}>
-            <Feather name="shield" size={16} color="#1A6DAA" />
+            <Feather name="shield" size={16} color={Colors.journeyBefore} />
             <Text style={styles.criteriaTitle}>Official Medicare Hospice Criteria</Text>
           </View>
           <Feather
             name={criteriaExpanded ? "chevron-up" : "chevron-down"}
             size={16}
-            color="#1A6DAA"
+            color={Colors.journeyBefore}
           />
         </View>
         {criteriaExpanded && (
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#C5D8EF",
+    borderColor: Colors.divider,
   },
   bannerText: {
     flex: 1,
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E8C97A",
+    borderColor: Colors.divider,
   },
   disclaimerBoxText: {
     flex: 1,
@@ -812,11 +812,11 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   criteriaCard: {
-    backgroundColor: "#E8F4FD",
+    backgroundColor: Colors.journeyBeforePale,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#B8DAEF",
+    borderColor: Colors.divider,
   },
   criteriaHeader: {
     flexDirection: "row",
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   criteriaTitle: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: "#1A6DAA",
+    color: Colors.journeyBefore,
     letterSpacing: -0.2,
   },
   criteriaBody: {
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -875,12 +875,12 @@ const styles = StyleSheet.create({
     color: Colors.info,
   },
   cmsBenefitCard: {
-    backgroundColor: "#E8F4FD",
+    backgroundColor: Colors.journeyBeforePale,
     borderRadius: 14,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: "#B8DAEF",
+    borderColor: Colors.divider,
   },
   cmsBenefitHeader: {
     flexDirection: "row",
@@ -890,7 +890,7 @@ const styles = StyleSheet.create({
   cmsBenefitTitle: {
     fontSize: 15,
     fontFamily: "Inter_700Bold",
-    color: "#1A6DAA",
+    color: Colors.journeyBefore,
     letterSpacing: -0.2,
   },
   cmsBenefitText: {
@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     alignItems: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 8,
     padding: 10,
   },
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,

@@ -40,7 +40,7 @@ function RootLayoutNav() {
           headerTitle: "",
           headerBackTitle: "Back",
           headerTransparent: true,
-          headerTintColor: "#1C2228",
+          headerTintColor: "#EEF4FF",
         }}
       />
       <Stack.Screen
@@ -50,7 +50,7 @@ function RootLayoutNav() {
           headerTitle: "",
           headerBackTitle: "Back",
           headerTransparent: true,
-          headerTintColor: "#1C2228",
+          headerTintColor: "#EEF4FF",
         }}
       />
       <Stack.Screen
@@ -60,7 +60,7 @@ function RootLayoutNav() {
           headerTitle: "",
           headerBackTitle: "Back",
           headerTransparent: true,
-          headerTintColor: "#1C2228",
+          headerTintColor: "#EEF4FF",
         }}
       />
       <Stack.Screen
@@ -69,7 +69,9 @@ function RootLayoutNav() {
           headerShown: true,
           headerTitle: "Eligibility Assessment",
           headerBackTitle: "Back",
-          headerTintColor: "#1C2228",
+          headerTintColor: "#EEF4FF",
+          headerStyle: { backgroundColor: "#141E38" },
+          headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />
       <Stack.Screen
@@ -78,7 +80,9 @@ function RootLayoutNav() {
           headerShown: true,
           headerTitle: "Contact Support",
           headerBackTitle: "Back",
-          headerTintColor: "#1C2228",
+          headerTintColor: "#EEF4FF",
+          headerStyle: { backgroundColor: "#141E38" },
+          headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />
       <Stack.Screen
@@ -87,7 +91,9 @@ function RootLayoutNav() {
           headerShown: true,
           headerTitle: "Privacy Policy",
           headerBackTitle: "Back",
-          headerTintColor: "#1C2228",
+          headerTintColor: "#EEF4FF",
+          headerStyle: { backgroundColor: "#141E38" },
+          headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />
       <Stack.Screen
@@ -96,7 +102,9 @@ function RootLayoutNav() {
           headerShown: true,
           headerTitle: "Terms of Use",
           headerBackTitle: "Back",
-          headerTintColor: "#1C2228",
+          headerTintColor: "#EEF4FF",
+          headerStyle: { backgroundColor: "#141E38" },
+          headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />
       <Stack.Screen
