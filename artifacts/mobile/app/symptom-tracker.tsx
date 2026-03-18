@@ -338,7 +338,7 @@ export default function SymptomTrackerScreen() {
           </Pressable>
         </View>
 
-        {/* Ask Vera */}
+        {/* Ask Ragna */}
         {(pain > 0 || breathlessness > 0 || nausea > 0 || agitation > 0) && (
           <Pressable
             onPress={() => {
@@ -359,7 +359,7 @@ export default function SymptomTrackerScreen() {
               <Feather name="compass" size={18} color="#fff" />
             </View>
             <View style={styles.veraBtnText}>
-              <Text style={styles.veraBtnTitle}>Ask Vera about today's symptoms</Text>
+              <Text style={styles.veraBtnTitle}>Ask Ragna about today's symptoms</Text>
               <Text style={styles.veraBtnSub}>Get personalized guidance on what you're seeing</Text>
             </View>
             <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />

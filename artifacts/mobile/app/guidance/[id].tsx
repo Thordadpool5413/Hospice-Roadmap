@@ -236,7 +236,7 @@ export default function GuidanceDetailScreen() {
         {/* Call Hospice CTA */}
         <CallHospiceCTA urgent={scenario.urgencyLevel === "immediate"} />
 
-        {/* Ask Vera */}
+        {/* Ask Ragna */}
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -254,7 +254,7 @@ export default function GuidanceDetailScreen() {
             <Feather name="compass" size={18} color="#fff" />
           </View>
           <View style={styles.askVeraBtnText}>
-            <Text style={styles.askVeraBtnTitle}>Ask Vera about this</Text>
+            <Text style={styles.askVeraBtnTitle}>Ask Ragna about this</Text>
             <Text style={styles.askVeraBtnSub}>Get personalized guidance on "{scenario.title}"</Text>
           </View>
           <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />

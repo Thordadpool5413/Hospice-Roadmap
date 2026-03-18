@@ -55,7 +55,7 @@ export default function MoreScreen() {
   const menuSections: { title: string; subtitle?: string; items: MenuItem[] }[] = [
     {
       title: "Your Profile",
-      subtitle: "Personalizes Vera's guidance for your situation",
+      subtitle: "Personalizes Ragna's guidance for your situation",
       items: [
         { label: isPatient ? "My Profile" : "Patient Profile", icon: "user", route: "/patient-profile" },
         { label: "Goals of Care", icon: "star", route: "/goals-of-care" },

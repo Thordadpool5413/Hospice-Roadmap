@@ -194,7 +194,7 @@ export default function PatientProfileScreen() {
           <Text style={styles.fieldLabel}>Comfort kit medications in the home</Text>
           <MedicationPicker medications={medications} onChange={setMedications} />
           <Text style={styles.fieldHint}>
-            Search for medications by name — Vera can give precise guidance on when and how to use each one. Tap any added medication to record its dose and route.
+            Search for medications by name — Ragna can give precise guidance on when and how to use each one. Tap any added medication to record its dose and route.
           </Text>
         </View>
 

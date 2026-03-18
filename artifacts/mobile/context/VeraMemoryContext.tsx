@@ -119,7 +119,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
 
     if (memories.length === 0) return "";
 
-    const lines: string[] = ["--- Vera's Memory of Previous Conversations ---"];
+    const lines: string[] = ["--- Ragna's Memory of Previous Conversations ---"];
     for (const m of memories) {
       const date = new Date(m.date).toLocaleDateString("en-US", {
         month: "short",
