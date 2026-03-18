@@ -433,7 +433,8 @@ export default function HelpScreen() {
           <View style={styles.compassBadge}>
             <Image
               source={require("@/assets/images/ragna-icon.png")}
-              style={{ width: 26, height: 26, borderRadius: 6 }}
+              style={{ width: 38, height: 38 }}
+              resizeMode="cover"
             />
           </View>
           <View>
@@ -484,7 +485,8 @@ export default function HelpScreen() {
               <View style={styles.compassLarge}>
                 <Image
                   source={require("@/assets/images/ragna-icon.png")}
-                  style={{ width: 52, height: 52, borderRadius: 14 }}
+                  style={{ width: 80, height: 80 }}
+                  resizeMode="cover"
                 />
               </View>
               <Text style={styles.welcomeTitle}>
@@ -837,12 +839,10 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 11,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 4,
   },
@@ -926,16 +926,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   compassLarge: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 80,
+    height: 80,
+    borderRadius: 22,
+    overflow: "hidden",
     marginBottom: 4,
-    shadowColor: Colors.primary,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.25,
     shadowRadius: 14,
     elevation: 8,
   },

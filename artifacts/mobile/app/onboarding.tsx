@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Animated,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -225,9 +226,19 @@ function WelcomeStep() {
       <View style={styles.featureGrid}>
         {APP_FEATURES.map((f) => (
           <View key={f.label} style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: f.color + "20" }]}>
-              <Feather name={f.icon as any} size={20} color={f.color} />
-            </View>
+            {f.label === "Ragna AI" ? (
+              <View style={[styles.featureIcon, { overflow: "hidden", backgroundColor: "transparent" }]}>
+                <Image
+                  source={require("@/assets/images/ragna-icon.png")}
+                  style={{ width: 40, height: 40 }}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : (
+              <View style={[styles.featureIcon, { backgroundColor: f.color + "20" }]}>
+                <Feather name={f.icon as any} size={20} color={f.color} />
+              </View>
+            )}
             <Text style={styles.featureLabel}>{f.label}</Text>
             <Text style={styles.featureDesc}>{f.desc}</Text>
           </View>
@@ -374,9 +385,19 @@ function TourStep() {
       <View style={styles.tourList}>
         {TAB_TOUR.map((tab) => (
           <View key={tab.label} style={[styles.tourCard, { borderLeftColor: tab.color }]}>
-            <View style={[styles.tourIcon, { backgroundColor: tab.bg }]}>
-              <Feather name={tab.icon as any} size={20} color={tab.color} />
-            </View>
+            {tab.label === "Ragna" ? (
+              <View style={[styles.tourIcon, { overflow: "hidden", backgroundColor: "transparent" }]}>
+                <Image
+                  source={require("@/assets/images/ragna-icon.png")}
+                  style={{ width: 40, height: 40 }}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : (
+              <View style={[styles.tourIcon, { backgroundColor: tab.bg }]}>
+                <Feather name={tab.icon as any} size={20} color={tab.color} />
+              </View>
+            )}
             <View style={styles.tourText}>
               <Text style={[styles.tourLabel, { color: tab.color }]}>{tab.label}</Text>
               <Text style={styles.tourDesc}>{tab.desc}</Text>
