@@ -1,25 +1,25 @@
 const palette = {
-  // Warm sunset oranges (from icon road/glow)
-  ember: "#C85A1C",
-  emberDark: "#9E4414",
-  emberLight: "#E47A3C",
-  emberPale: "#FEF1E8",
+  // Warm sunset oranges — matched to the Hospice Roadmap app icon landscape
+  ember: "#C8541A",
+  emberDark: "#9A3E10",
+  emberLight: "#E07A3C",
+  emberPale: "#FEEDE6",
 
-  // Golden amber (from icon path highlight)
-  gold: "#D4881A",
+  // Golden amber — matched to the glowing road in the icon
+  gold: "#D98C18",
   goldDark: "#9A5C10",
   goldLight: "#F0AA3C",
-  goldPale: "#FEF6E0",
+  goldPale: "#FEF4DC",
 
-  // Deep navy (from icon bottom dark band)
-  navy: "#1A2840",
+  // Deep navy — matched to the icon's deep bottom corners
+  navy: "#1E2848",
   navyMid: "#2A3D5C",
   navyLight: "#3D5478",
 
-  // Warm neutral backgrounds
-  cream: "#FBF6F0",
-  stone: "#F5EDE0",
-  sand: "#EEE0CC",
+  // Warm neutral backgrounds — warmer cream to complement the icon's amber tones
+  cream: "#FAF1E6",
+  stone: "#F3E6D2",
+  sand: "#EAD8C0",
 
   // Text
   charcoal: "#1C1810",
@@ -27,7 +27,7 @@ const palette = {
   muted: "#6B5D4A",
   subtle: "#9B8E7C",
 
-  divider: "#E8DDD0",
+  divider: "#E6D8C8",
 
   // Semantic
   rose: "#C04A3A",

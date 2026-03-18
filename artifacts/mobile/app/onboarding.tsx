@@ -215,8 +215,12 @@ export default function OnboardingScreen() {
 function WelcomeStep() {
   return (
     <View style={styles.welcomeContainer}>
-      <View style={styles.logoMark}>
-        <Feather name="map" size={32} color="#FFFFFF" />
+      <View style={[styles.logoMark, { overflow: "hidden", backgroundColor: "transparent", shadowColor: "#C8541A" }]}>
+        <Image
+          source={require("@/assets/images/app-icon.png")}
+          style={{ width: 76, height: 76, borderRadius: 22 }}
+          resizeMode="cover"
+        />
       </View>
       <Text style={styles.appName}>Hospice Roadmap</Text>
       <Text style={styles.tagline}>
@@ -231,6 +235,14 @@ function WelcomeStep() {
                 <Image
                   source={require("@/assets/images/ragna-icon.png")}
                   style={{ width: 40, height: 40 }}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : f.label === "Journey Guide" ? (
+              <View style={[styles.featureIcon, { overflow: "hidden", backgroundColor: "transparent" }]}>
+                <Image
+                  source={require("@/assets/images/app-icon.png")}
+                  style={{ width: 40, height: 40, borderRadius: 11 }}
                   resizeMode="cover"
                 />
               </View>
@@ -468,10 +480,8 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 22,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
+    overflow: "hidden",
+    shadowColor: "#C8541A",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.32,
     shadowRadius: 14,

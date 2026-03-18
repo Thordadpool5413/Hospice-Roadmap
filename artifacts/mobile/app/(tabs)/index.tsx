@@ -162,8 +162,12 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={styles.logoMark}>
-            <Feather name="map" size={16} color="#fff" />
+          <View style={[styles.logoMark, { overflow: "hidden", backgroundColor: "transparent" }]}>
+            <Image
+              source={require("@/assets/images/app-icon.png")}
+              style={{ width: 36, height: 36, borderRadius: 10 }}
+              resizeMode="cover"
+            />
           </View>
           <View>
             <Text style={styles.greeting}>{greeting()}</Text>
@@ -387,9 +391,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    overflow: "hidden",
   },
   greeting: {
     fontSize: 12,
