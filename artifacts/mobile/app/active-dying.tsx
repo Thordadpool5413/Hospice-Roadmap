@@ -16,9 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 
 const VERA_COLOR = Colors.primary;
-const TWILIGHT = "#7A5C8A";
-const TWILIGHT_PALE = "#F5EFF8";
-const TWILIGHT_MID = "#C4A8D4";
+const TWILIGHT = "#C0A0E8";
+const TWILIGHT_PALE = "#1E1230";
+const TWILIGHT_MID = "#9070B8";
 
 interface SignItem {
   icon: string;
