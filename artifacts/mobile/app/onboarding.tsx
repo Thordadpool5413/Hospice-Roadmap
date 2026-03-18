@@ -46,7 +46,7 @@ const stages: { id: JourneyStage; label: string; description: string; color: str
 const APP_FEATURES = [
   { icon: "map", color: Colors.journeyBefore, label: "Journey Guide", desc: "Step-by-step roadmap for every stage" },
   { icon: "compass", color: Colors.primary, label: "Ragna AI", desc: "24/7 answers to your questions" },
-  { icon: "book-open", color: "#7A8A6A", label: "60+ Scenarios", desc: "Practical guidance for real situations" },
+  { icon: "book-open", color: Colors.primary, label: "60+ Scenarios", desc: "Practical guidance for real situations" },
   { icon: "map-pin", color: Colors.journeyAfter, label: "Provider Search", desc: "Find hospice providers near you" },
 ];
 
@@ -82,8 +82,8 @@ const TAB_TOUR = [
   {
     icon: "more-horizontal",
     label: "More",
-    color: "#7A8A6A",
-    bg: "#F0F4EB",
+    color: Colors.primary,
+    bg: Colors.surfaceMid,
     desc: "Emergency card, journal, reminders, situation finder, accessibility settings, and your profile.",
   },
 ];
@@ -155,7 +155,7 @@ export default function OnboardingScreen() {
       <View style={styles.header}>
         {step > 0 ? (
           <Pressable onPress={() => goTo(step - 1)} style={styles.backBtn}>
-            <Feather name="arrow-left" size={20} color={Colors.text} />
+            <Feather name="arrow-left" size={20} color={Colors.navyText} />
           </Pressable>
         ) : (
           <View style={{ width: 40 }} />
@@ -215,7 +215,7 @@ export default function OnboardingScreen() {
 function WelcomeStep() {
   return (
     <View style={styles.welcomeContainer}>
-      <View style={[styles.logoMark, { overflow: "hidden", backgroundColor: "transparent", shadowColor: "#C8541A" }]}>
+      <View style={[styles.logoMark, { overflow: "hidden", backgroundColor: "transparent", shadowColor: Colors.primary }]}>
         <Image
           source={require("@/assets/images/app-icon.png")}
           style={{ width: 76, height: 76, borderRadius: 22 }}
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surfaceMid,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   dotDone: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.navyLight,
   },
   animBody: {
     flex: 1,
@@ -509,12 +509,12 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     width: "47%",
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 16,
     padding: 14,
     gap: 7,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: Colors.cardBorder,
   },
   featureIcon: {
     width: 40,
@@ -569,16 +569,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryRoleCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: Colors.divider,
+    borderColor: Colors.cardBorder,
     gap: 6,
   },
   primaryRoleCardSelected: {
     borderColor: Colors.primary,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: Colors.surfaceLight,
   },
   primaryRoleTop: {
     flexDirection: "row",
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 13,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: Colors.surfaceLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   primaryRoleLabelSelected: {
-    color: Colors.primaryDark,
+    color: Colors.primary,
   },
   primaryRoleDesc: {
     fontSize: 13,
@@ -631,12 +631,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.divider,
-    backgroundColor: Colors.surface,
+    borderColor: Colors.cardBorder,
+    backgroundColor: Colors.surfaceMid,
   },
   otherBtnSelected: {
     borderColor: Colors.primary,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: Colors.surfaceLight,
   },
   otherBtnText: {
     fontSize: 13,
@@ -704,11 +704,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 14,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: Colors.cardBorder,
     borderLeftWidth: 4,
   },
   tourIcon: {
@@ -743,6 +743,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     gap: 10,
   },
+  /* override logoMark shadow color via inline style */
   footerNote: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
