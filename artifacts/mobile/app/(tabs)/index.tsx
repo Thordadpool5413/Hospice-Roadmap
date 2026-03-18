@@ -437,17 +437,16 @@ const styles = StyleSheet.create({
 
   // Situation Guide banner
   helpBanner: {
-    backgroundColor: Colors.accent,
+    backgroundColor: "#8A3210",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: Colors.navy,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "rgba(200,80,32,0.4)",
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.accent,
   },
   helpBannerLeft: {
     flexDirection: "row",
@@ -516,20 +515,22 @@ const styles = StyleSheet.create({
   },
   toolCard: {
     width: "47.5%",
-    borderRadius: 14,
-    padding: 13,
-    gap: 9,
+    borderRadius: 16,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.09)",
   },
   toolIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
   },
   toolLabel: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_700Bold",
     letterSpacing: -0.2,
   },
 
