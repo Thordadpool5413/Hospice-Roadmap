@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -245,7 +246,11 @@ export default function GoalsOfCareScreen() {
         {hasAnyContent && (
           <View style={styles.previewCard}>
             <View style={styles.previewHeader}>
-              <Feather name="compass" size={14} color={Colors.primary} />
+              <Image
+                source={require("@/assets/images/ragna-icon.png")}
+                style={{ width: 20, height: 20, borderRadius: 5 }}
+                resizeMode="cover"
+              />
               <Text style={styles.previewTitle}>What Ragna will know</Text>
             </View>
             <Text style={styles.previewBody}>
@@ -279,7 +284,11 @@ export default function GoalsOfCareScreen() {
           }}
           style={({ pressed }) => [styles.veraLink, pressed && { opacity: 0.7 }]}
         >
-          <Feather name="compass" size={14} color={Colors.primary} />
+          <Image
+            source={require("@/assets/images/ragna-icon.png")}
+            style={{ width: 18, height: 18, borderRadius: 4 }}
+            resizeMode="cover"
+          />
           <Text style={styles.veraLinkText}>Need help with these questions? Ask Ragna</Text>
         </Pressable>
       </ScrollView>

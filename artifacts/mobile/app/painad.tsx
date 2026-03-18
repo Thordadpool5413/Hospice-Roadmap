@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -262,7 +263,11 @@ export default function PainAdScreen() {
               pressed && { opacity: 0.85 },
             ]}
           >
-            <Feather name="compass" size={17} color="#fff" />
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 28, height: 28, borderRadius: 7 }}
+              resizeMode="cover"
+            />
             <Text style={styles.veraBtnText}>Ask Ragna About This Score</Text>
           </Pressable>
         </View>

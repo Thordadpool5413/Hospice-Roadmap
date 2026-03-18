@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -355,9 +356,11 @@ export default function SymptomTrackerScreen() {
             }}
             style={({ pressed }) => [styles.veraBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
           >
-            <View style={styles.veraBtnIcon}>
-              <Feather name="compass" size={18} color="#fff" />
-            </View>
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 36, height: 36, borderRadius: 9 }}
+              resizeMode="cover"
+            />
             <View style={styles.veraBtnText}>
               <Text style={styles.veraBtnTitle}>Ask Ragna about today's symptoms</Text>
               <Text style={styles.veraBtnSub}>Get personalized guidance on what you're seeing</Text>

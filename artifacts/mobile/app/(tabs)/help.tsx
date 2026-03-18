@@ -243,7 +243,7 @@ export default function HelpScreen() {
           activeConv = await createConversation(shortTitle);
           setConversation(activeConv);
         } catch {
-          Alert.alert("Connection Error", "Could not connect to Compass. Please check your connection.");
+          Alert.alert("Connection Error", "Could not connect to Ragna. Please check your connection.");
           setIsLoading(false);
           return;
         } finally {
@@ -647,7 +647,7 @@ export default function HelpScreen() {
           <View style={styles.offlineInputNotice}>
             <Feather name="wifi-off" size={15} color={Colors.amber} />
             <Text style={styles.offlineInputText}>
-              Internet required for Compass AI — all guidance content works offline.
+              Internet required for Ragna — all guidance content works offline.
             </Text>
           </View>
         ) : (

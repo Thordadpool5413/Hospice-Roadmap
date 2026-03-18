@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
+  Image,
   Linking,
   Platform,
   Pressable,
@@ -250,9 +251,11 @@ export default function GuidanceDetailScreen() {
             pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
           ]}
         >
-          <View style={styles.askVeraBtnIcon}>
-            <Feather name="compass" size={18} color="#fff" />
-          </View>
+          <Image
+            source={require("@/assets/images/ragna-icon.png")}
+            style={{ width: 36, height: 36, borderRadius: 9 }}
+            resizeMode="cover"
+          />
           <View style={styles.askVeraBtnText}>
             <Text style={styles.askVeraBtnTitle}>Ask Ragna about this</Text>
             <Text style={styles.askVeraBtnSub}>Get personalized guidance on "{scenario.title}"</Text>
