@@ -7,7 +7,6 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -403,15 +402,6 @@ export default function HelpScreen() {
     Share.share({ message: content }).catch(() => {});
   }, []);
 
-  const handleCallHospice = useCallback(() => {
-    const phone = user?.patientProfile?.hospicePhone;
-    if (!phone) {
-      router.push("/support" as any);
-      return;
-    }
-    Linking.openURL(`tel:${phone}`);
-  }, [user]);
-
   useEffect(() => {
     if (initialMessage && initialMessage !== lastInitialRef.current) {
       lastInitialRef.current = initialMessage;
@@ -459,13 +449,6 @@ export default function HelpScreen() {
               <Feather name="edit" size={18} color={Colors.navySub} />
             </Pressable>
           )}
-          <Pressable
-            onPress={handleCallHospice}
-            style={({ pressed }) => [styles.callBtn, pressed && { opacity: 0.85 }]}
-          >
-            <Feather name="phone" size={16} color="#FFFFFF" />
-            <Text style={styles.callBtnText}>Call Hospice</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -890,20 +873,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.navyMid,
     alignItems: "center",
     justifyContent: "center",
-  },
-  callBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "#C0392B",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  callBtnText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: "#FFFFFF",
   },
   scroll: {
     flex: 1,
