@@ -625,7 +625,7 @@ export default function HelpScreen() {
         )}
       </ScrollView>
 
-      <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) + (Platform.OS === "web" ? 84 : 0) }]}>
+      <View style={[styles.inputBar, { paddingBottom: Platform.OS === "web" ? 84 : 49 + insets.bottom }]}>
         {!isOnline && (
           <View style={styles.offlineInputNotice}>
             <Feather name="wifi-off" size={15} color={Colors.amber} />
