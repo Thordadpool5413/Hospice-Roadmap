@@ -45,13 +45,13 @@ const URGENT_TILES = [
   },
   {
     label: "Pain or discomfort",
-    icon: "alert-circle", color: Colors.amberLight, bg: "#1E1500",
+    icon: "alert-circle", color: Colors.primaryLight, bg: Colors.primaryPale,
     prompt: "My patient seems to be in pain or discomfort. How can I help them?",
     patientPrompt: "I'm experiencing pain or discomfort. How can I get relief?",
   },
   {
     label: "Confusion or agitation",
-    icon: "alert-triangle", color: Colors.accentLight, bg: "#1E0E00",
+    icon: "alert-triangle", color: Colors.accentLight, bg: Colors.accentPale,
     prompt: "My patient is confused or agitated. What is happening and what should I do?",
     patientPrompt: "I'm feeling confused and very agitated. What might be causing this and what can I do?",
   },
