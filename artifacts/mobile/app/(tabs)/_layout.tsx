@@ -1,4 +1,3 @@
-import { BlurView } from "expo-blur";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
@@ -10,6 +9,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 
+const ragnaIcon = require("@/assets/images/ragna-icon.png");
+
 function NativeTabLayout() {
   return (
     <NativeTabs>
@@ -17,19 +18,9 @@ function NativeTabLayout() {
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="journey">
-        <Icon sf={{ default: "map", selected: "map.fill" }} />
-        <Label>Guide</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="help">
-        {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-        {/* @ts-ignore safari is a valid SF Symbol (compass icon) */}
-        <Icon sf={{ default: "safari" as any, selected: "safari.fill" as any }} />
+        <Image source={ragnaIcon} style={{ width: 26, height: 26, borderRadius: 7 }} />
         <Label>Ragna</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="providers">
-        <Icon sf={{ default: "mappin.and.ellipse", selected: "mappin.and.ellipse" }} />
-        <Label>Providers</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="more">
         <Icon sf={{ default: "ellipsis", selected: "ellipsis.circle.fill" }} />
@@ -87,39 +78,20 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="journey"
-        options={{
-          title: "Guide",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="map" tintColor={color} size={24} />
-            ) : (
-              <Feather name="map" size={22} color={color} />
-            ),
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="help"
         options={{
           title: "Ragna",
-          tabBarIcon: () =>
-            isIOS ? (
-              <Image source={require("@/assets/images/ragna-icon.png")} style={{ width: 26, height: 26, borderRadius: 7 }} />
-            ) : (
-              <Image source={require("@/assets/images/ragna-icon.png")} style={{ width: 24, height: 24, borderRadius: 6 }} />
-            ),
+          tabBarIcon: () => (
+            <Image source={ragnaIcon} style={{ width: 26, height: 26, borderRadius: 7 }} />
+          ),
         }}
       />
       <Tabs.Screen
         name="providers"
-        options={{
-          title: "Providers",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="mappin.and.ellipse" tintColor={color} size={24} />
-            ) : (
-              <Feather name="map-pin" size={22} color={color} />
-            ),
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="more"
