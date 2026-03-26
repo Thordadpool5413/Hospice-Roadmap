@@ -47,7 +47,7 @@ const FONT_SCALE_OPTIONS: { label: string; value: FontScale; display: string }[]
 
 export default function MoreScreen() {
   const insets = useSafeAreaInsets();
-  const { user, updateJourneyStage } = useApp();
+  const { user, updateJourneyStage, updateRole } = useApp();
   const { fontScale, highContrast, setFontScale, setHighContrast } = useA11y();
 
   const isPatient = user?.role === "patient";
@@ -216,6 +216,36 @@ export default function MoreScreen() {
                   : stage === "during"
                   ? "During"
                   : "After"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* Role Switcher */}
+      <View style={styles.stageSection}>
+        <Text style={styles.stageSectionTitle}>I am a</Text>
+        <View style={styles.stageRow}>
+          {(["patient", "caregiver", "other"] as UserRole[]).map((role) => (
+            <Pressable
+              key={role}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                updateRole(role);
+              }}
+              style={({ pressed }) => [
+                styles.stageBtn,
+                user?.role === role && styles.stageBtnActive,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.stageBtnText,
+                  user?.role === role && styles.stageBtnTextActive,
+                ]}
+              >
+                {roleLabels[role]}
               </Text>
             </Pressable>
           ))}
