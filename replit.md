@@ -81,8 +81,9 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 
 Expo React Native app — "Hospice Roadmap" — healthcare navigation platform for the hospice journey.
 
-- Color palette: sage green (#5A8A7A) primary, teal (#2C6E6A) accent, cream (#FAF8F5) background
-- Journey stages: before (blue #5A7FA8), during (sage), after (purple #8A6A9A)
+- Color palette: deep navy background (#111B33), ice blue primary (#5AADDC), ember accent (#B84818) for urgency only
+- Journey stages: before (ice blue #4E8AD8 / pale #142A50), during (ember #CC6030 / pale #361A08), after (violet #9068C8 / pale #201240)
+- All *Pale colors are distinctly lighter than the background — minimum ~#0E2C44 range — for readable tinted surfaces
 - Uses NativeTabs with liquid glass + ClassicTabLayout fallback
 - Web top padding offset: `Platform.OS === "web" ? 67 : 0`
 - No UUID package — uses `Date.now() + Math.random()` for IDs
@@ -92,7 +93,9 @@ Expo React Native app — "Hospice Roadmap" — healthcare navigation platform f
 - **Structured Guidance** (`guidance/[id].tsx`): 6-section layout (what you may notice → what it means → what to do now → what to avoid → when to call → what happens next) with inline tip/caution cards; emergency card shortcut in header
 - **Guidance content** (`data/guidanceContent.ts`): 60 scenarios across 8 categories with tip/caution support per step
   - Symptoms & Comfort: 18 | Caregiving Tasks: 10 | Medications: 8 | Equipment: 7 | Emotional Support: 5 | Hospice Services: 5 | End of Life & After: 6 | Not Sure: 1
-- **Compass AI companion**: Center tab "Compass" (`(tabs)/help.tsx`) — streaming Claude AI chat with urgent situation tiles, markdown rendering, and call-hospice emergency button
+- **Symptom Tracker** (`app/symptom-tracker.tsx`, `context/SymptomContext.tsx`): daily pain/breathlessness/nausea/agitation/appetite check-in; 7-day trend bars; AsyncStorage persistence under `@hospice_roadmap_symptoms`; `getRecentSummary(days)` feeds 7-day trend data directly into Ragna's patient context for personalized guidance
+- **Goals of Care** (`app/goals-of-care.tsx`): 4-field form (what matters most, good day, things to avoid, DNR status) saved to `patientProfile.goalsOfCare`; serialized into Ragna's context via `buildPatientContext`; accessible from More → Tools
+- **Ragna AI companion**: Center tab "Ragna" (`(tabs)/help.tsx`) — streaming Claude AI chat with urgent situation tiles, markdown rendering, symptom data injection, goals of care injection, and cross-session memory
   - AI service: `services/aiService.ts` — `createConversation`, `streamMessage` (SSE streaming), `deleteConversation`
   - Patient profile: `app/patient-profile.tsx` — form to set patient context used by Compass
   - Context: `AppContext.updatePatientProfile`, `AppContext.buildPatientContext` — persists patient data and serializes it for AI injection
