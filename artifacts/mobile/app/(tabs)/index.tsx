@@ -62,47 +62,29 @@ type QuickAction = {
   label: string;
   icon: string;
   route: string;
-  color: string;
-  bg: string;
+  iconColor: string;
 };
 
 const STAGE_ACTIONS: Record<JourneyStage, QuickAction[]> = {
   before: [
-    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.surfaceMid },
-    { label: "Evaluate Eligibility", icon: "clipboard", route: "/evaluation", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
-    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.primary, bg: Colors.surfaceMid },
-    { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder", color: Colors.error, bg: Colors.errorPale },
+    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", iconColor: Colors.primary },
+    { label: "Eligibility", icon: "clipboard", route: "/evaluation", iconColor: Colors.journeyBefore },
+    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", iconColor: Colors.primary },
+    { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder", iconColor: Colors.error },
   ],
   during: [
-    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.surfaceMid },
-    { label: "Symptom Log", icon: "bar-chart-2", route: "/symptom-tracker", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
-    { label: "Journal", icon: "edit-3", route: "/journal", color: Colors.primary, bg: Colors.surfaceMid },
-    { label: "Goals of Care", icon: "star", route: "/goals-of-care", color: Colors.journeyAfter, bg: Colors.journeyAfterPale },
+    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", iconColor: Colors.primary },
+    { label: "Symptom Log", icon: "bar-chart-2", route: "/symptom-tracker", iconColor: Colors.journeyBefore },
+    { label: "Journal", icon: "edit-3", route: "/journal", iconColor: Colors.primary },
+    { label: "Goals of Care", icon: "star", route: "/goals-of-care", iconColor: Colors.journeyAfter },
   ],
   after: [
-    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", color: Colors.primary, bg: Colors.surfaceMid },
-    { label: "Journal", icon: "edit-3", route: "/journal", color: Colors.primary, bg: Colors.surfaceMid },
-    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.journeyBefore, bg: Colors.journeyBeforePale },
-    { label: "Get Support", icon: "message-circle", route: "/support", color: Colors.journeyAfter, bg: Colors.journeyAfterPale },
+    { label: "Ask Ragna", icon: "compass", route: "/(tabs)/help", iconColor: Colors.primary },
+    { label: "Journal", icon: "edit-3", route: "/journal", iconColor: Colors.primary },
+    { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", iconColor: Colors.journeyBefore },
+    { label: "Get Support", icon: "message-circle", route: "/support", iconColor: Colors.journeyAfter },
   ],
 };
-
-const URGENT_CAREGIVER = [
-  { label: "Breathing difficulty", id: "breathing-changes" },
-  { label: "Worsening pain", id: "pain-worsening" },
-  { label: "Agitation", id: "agitation-restlessness" },
-  { label: "Patient has fallen", id: "fall-recovery" },
-  { label: "Signs of dying", id: "approaching-death" },
-  { label: "Not sure what's happening", id: "not-sure-whats-happening" },
-];
-
-const URGENT_PATIENT = [
-  { label: "Breathing difficulty", id: "breathing-changes" },
-  { label: "Worsening pain", id: "pain-worsening" },
-  { label: "Feeling agitated", id: "agitation-restlessness" },
-  { label: "I've fallen", id: "fall-recovery" },
-  { label: "Not sure what's happening", id: "not-sure-whats-happening" },
-];
 
 function formatReminderTime(dt: string): string {
   try {
@@ -126,7 +108,6 @@ export default function HomeScreen() {
   const stageMeta = STAGE_META[stage];
   const quickActions = STAGE_ACTIONS[stage];
   const isPatient = user?.role === "patient";
-  const urgentItems = isPatient ? URGENT_PATIENT : URGENT_CAREGIVER;
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -162,7 +143,7 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={[styles.logoMark, { overflow: "hidden", backgroundColor: "transparent" }]}>
+          <View style={styles.logoMark}>
             <Image
               source={require("@/assets/images/app-icon.png")}
               style={{ width: 36, height: 36, borderRadius: 10 }}
@@ -195,44 +176,25 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Situation Guide ── */}
-      <View>
-        <Pressable
-          onPress={() => tap("/situation-finder")}
-          style={({ pressed }) => [
-            styles.helpBanner,
-            pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] },
-          ]}
-        >
-          <View style={styles.helpBannerLeft}>
-            <View style={styles.helpBannerIcon}>
-              <Feather name="book-open" size={22} color="#fff" />
-            </View>
-            <View>
-              <Text style={styles.helpBannerTitle}>What's happening right now?</Text>
-              <Text style={styles.helpBannerSub}>Step-by-step guidance for any situation</Text>
-            </View>
+      {/* ── Situation Guide Banner ── */}
+      <Pressable
+        onPress={() => tap("/situation-finder")}
+        style={({ pressed }) => [
+          styles.helpBanner,
+          pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] },
+        ]}
+      >
+        <View style={styles.helpBannerLeft}>
+          <View style={styles.helpBannerIcon}>
+            <Feather name="book-open" size={20} color={Colors.primary} />
           </View>
-          <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.75)" />
-        </Pressable>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-          style={styles.chipsScroll}
-        >
-          {urgentItems.map((s) => (
-            <Pressable
-              key={s.id}
-              onPress={() => tap(`/guidance/${s.id}`)}
-              style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={styles.chipText}>{s.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.helpBannerTitle}>Step-by-step guidance</Text>
+            <Text style={styles.helpBannerSub}>Browse 60+ scenarios for any situation</Text>
+          </View>
+        </View>
+        <Feather name="chevron-right" size={18} color={Colors.textSubtle} />
+      </Pressable>
 
       {/* ── Quick Access ── */}
       <View>
@@ -244,28 +206,27 @@ export default function HomeScreen() {
               onPress={() => tap(a.route)}
               style={({ pressed }) => [
                 styles.toolCard,
-                { backgroundColor: a.bg },
                 pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
               ]}
             >
               {a.label === "Ask Ragna" ? (
                 <Image
                   source={require("@/assets/images/ragna-icon.png")}
-                  style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden" } as any}
+                  style={{ width: 38, height: 38, borderRadius: 10, overflow: "hidden" } as any}
                   resizeMode="cover"
                 />
               ) : (
-                <View style={[styles.toolIcon, { backgroundColor: a.color }]}>
-                  <Feather name={a.icon as any} size={18} color="#fff" />
+                <View style={[styles.toolIcon, { backgroundColor: a.iconColor + "22" }]}>
+                  <Feather name={a.icon as any} size={18} color={a.iconColor} />
                 </View>
               )}
-              <Text style={[styles.toolLabel, { color: a.color }]}>{a.label}</Text>
+              <Text style={[styles.toolLabel, { color: a.iconColor }]}>{a.label}</Text>
             </Pressable>
           ))}
         </View>
       </View>
 
-      {/* ── Active Dying Protocol Card (during stage, caregivers only) ── */}
+      {/* ── Active Dying Protocol (during + caregiver only) ── */}
       {stage === "during" && !isPatient && (
         <Pressable
           onPress={() => tap("/active-dying")}
@@ -275,7 +236,7 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.activeDyingIconWrap}>
-            <Feather name="heart" size={20} color={Colors.journeyAfter} />
+            <Feather name="heart" size={18} color={Colors.journeyAfter} />
           </View>
           <View style={styles.activeDyingText}>
             <Text style={styles.activeDyingTitle}>Active Dying Protocol</Text>
@@ -283,7 +244,7 @@ export default function HomeScreen() {
               Signs to expect in the final hours, what they mean, and what to do.
             </Text>
           </View>
-          <Feather name="chevron-right" size={16} color={Colors.journeyAfterPale} />
+          <Feather name="chevron-right" size={15} color={Colors.textSubtle} />
         </Pressable>
       )}
 
@@ -328,8 +289,6 @@ export default function HomeScreen() {
                 </Pressable>
               );
             })()}
-
-            {!nextReminder && !lastEntry && null}
           </View>
         </View>
       )}
@@ -341,11 +300,11 @@ export default function HomeScreen() {
           onPress={() => tap("/(tabs)/journey")}
           style={({ pressed }) => [
             styles.journeyCard,
-            { borderLeftColor: stageMeta.color, backgroundColor: stageMeta.bg },
+            { borderLeftColor: stageMeta.color },
             pressed && { opacity: 0.88 },
           ]}
         >
-          <View style={[styles.journeyIconWrap, { backgroundColor: stageMeta.color + "22" }]}>
+          <View style={[styles.journeyIconWrap, { backgroundColor: stageMeta.color + "20" }]}>
             <Feather name={stageMeta.icon as any} size={22} color={stageMeta.color} />
           </View>
           <View style={styles.journeyCardText}>
@@ -353,12 +312,12 @@ export default function HomeScreen() {
               {stageMeta.label}
             </Text>
             <Text style={styles.journeyCardDesc}>{stageMeta.desc}</Text>
-            <Text style={[styles.journeyCardLink, { color: stageMeta.color }]}>
+            <Text style={[styles.journeyCardLink, { color: Colors.primary }]}>
               Open Journey Navigator →
             </Text>
           </View>
+          <Feather name="chevron-right" size={16} color={Colors.textSubtle} />
         </Pressable>
-
       </View>
     </ScrollView>
   );
@@ -371,7 +330,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    gap: 20,
+    gap: 22,
   },
 
   // Header
@@ -435,18 +394,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // Situation Guide banner
+  // Situation Guide banner — calm, not ember
   helpBanner: {
-    backgroundColor: Colors.accentDark,
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 14,
+    padding: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: Colors.accent + "40",
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.accent,
+    borderColor: Colors.cardBorder,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
   },
   helpBannerLeft: {
     flexDirection: "row",
@@ -455,47 +414,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   helpBannerIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: Colors.accent + "30",
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryPale,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   helpBannerTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
     letterSpacing: -0.3,
-    flexShrink: 1,
   },
   helpBannerSub: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     marginTop: 2,
-  },
-  chipsScroll: {
-    marginTop: 10,
-  },
-  chips: {
-    flexDirection: "row",
-    gap: 7,
-    paddingRight: 20,
-  },
-  chip: {
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  chipText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.navyText,
   },
 
   // Section title
@@ -507,7 +444,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Tool grid
+  // Tool grid — uniform surfaceMid background, only icon holds color
   toolGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -518,6 +455,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     gap: 10,
+    backgroundColor: Colors.surfaceMid,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
   },
@@ -578,22 +516,23 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
 
+  // Active Dying card — calm, neutral surface with violet left border
   activeDyingCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 14,
-    backgroundColor: Colors.journeyAfterPale,
+    backgroundColor: Colors.surfaceMid,
     borderWidth: 1,
-    borderColor: Colors.journeyAfter + "40",
-    borderLeftWidth: 4,
+    borderColor: Colors.cardBorder,
+    borderLeftWidth: 3,
     borderLeftColor: Colors.journeyAfter,
   },
   activeDyingIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     backgroundColor: Colors.journeyAfter + "20",
     alignItems: "center",
     justifyContent: "center",
@@ -602,7 +541,7 @@ const styles = StyleSheet.create({
   activeDyingTitle: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: Colors.journeyAfter,
+    color: Colors.text,
     letterSpacing: -0.2,
   },
   activeDyingBody: {
@@ -612,20 +551,21 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  // Journey card
+  // Journey card — neutral body, left border in stage color only
   journeyCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
+    backgroundColor: Colors.surfaceMid,
     borderWidth: 1,
-    borderColor: "transparent",
-    borderLeftWidth: 4,
+    borderColor: Colors.cardBorder,
+    borderLeftWidth: 3,
   },
   journeyIconWrap: {
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
