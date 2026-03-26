@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E8C97A",
+    borderColor: Colors.primaryLight + "60",
   },
   warningText: {
     fontSize: 13,

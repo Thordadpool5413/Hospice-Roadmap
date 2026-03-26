@@ -275,7 +275,7 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.activeDyingIconWrap}>
-            <Feather name="heart" size={20} color="#7A5C8A" />
+            <Feather name="heart" size={20} color={Colors.journeyAfter} />
           </View>
           <View style={styles.activeDyingText}>
             <Text style={styles.activeDyingTitle}>Active Dying Protocol</Text>
@@ -283,7 +283,7 @@ export default function HomeScreen() {
               Signs to expect in the final hours, what they mean, and what to do.
             </Text>
           </View>
-          <Feather name="chevron-right" size={16} color="rgba(122,92,138,0.5)" />
+          <Feather name="chevron-right" size={16} color={Colors.journeyAfterPale} />
         </Pressable>
       )}
 
@@ -437,14 +437,14 @@ const styles = StyleSheet.create({
 
   // Situation Guide banner
   helpBanner: {
-    backgroundColor: "#8A3210",
+    backgroundColor: Colors.accentDark,
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: "rgba(200,80,32,0.4)",
+    borderColor: Colors.accent + "40",
     borderLeftWidth: 4,
     borderLeftColor: Colors.accent,
   },
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: Colors.accent + "30",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -466,14 +466,14 @@ const styles = StyleSheet.create({
   helpBannerTitle: {
     fontSize: 16,
     fontFamily: "Inter_700Bold",
-    color: "#fff",
+    color: Colors.text,
     letterSpacing: -0.3,
     flexShrink: 1,
   },
   helpBannerSub: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.82)",
+    color: Colors.textMuted,
     marginTop: 2,
   },
   chipsScroll: {
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.09)",
+    borderColor: Colors.cardBorder,
   },
   toolIcon: {
     width: 38,

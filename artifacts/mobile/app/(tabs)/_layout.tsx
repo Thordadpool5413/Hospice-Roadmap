@@ -58,17 +58,18 @@ function ClassicTabLayout() {
         },
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: Colors.navy,
-          borderTopWidth: 0,
+          backgroundColor: Colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: Colors.divider,
           elevation: 0,
           paddingBottom: safeAreaInsets.bottom,
           ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
           isIOS ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.navy }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface, borderTopWidth: 1, borderTopColor: Colors.divider }]} />
           ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.navy }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface }]} />
           ) : null,
       }}
     >

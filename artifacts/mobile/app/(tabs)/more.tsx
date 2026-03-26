@@ -153,14 +153,14 @@ export default function MoreScreen() {
             Hospice contacts, medications & equipment — tap to call
           </Text>
         </View>
-        <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.8)" />
+        <Feather name="chevron-right" size={18} color={Colors.textMuted} />
       </Pressable>
 
       {/* Profile Card */}
       {user && (
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <Feather name="user" size={24} color="#FFFFFF" />
+            <Feather name="user" size={24} color={Colors.text} />
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileRole}>
@@ -573,14 +573,14 @@ const styles = StyleSheet.create({
     color: Colors.primaryDark,
   },
   emergencyCard: {
-    backgroundColor: "#4A1010",
+    backgroundColor: Colors.errorPale,
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
     borderWidth: 1,
-    borderColor: "rgba(192,48,48,0.35)",
+    borderColor: Colors.error + "40",
     borderLeftWidth: 4,
     borderLeftColor: Colors.error,
   },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: Colors.error + "28",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -598,13 +598,13 @@ const styles = StyleSheet.create({
   emergencyCardTitle: {
     fontSize: 15,
     fontFamily: "Inter_700Bold",
-    color: "#fff",
+    color: Colors.text,
     letterSpacing: -0.2,
   },
   emergencyCardSubtitle: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.85)",
+    color: Colors.textMuted,
     marginTop: 2,
     lineHeight: 17,
   },
