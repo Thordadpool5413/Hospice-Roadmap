@@ -168,7 +168,7 @@ export default function JournalEntryScreen() {
               {([1, 2, 3, 4, 5] as const).map((level) => {
                 const emoji = ["😞", "😟", "😐", "🙂", "😊"][level - 1];
                 const label = ["Very Low", "Low", "Neutral", "Good", "Great"][level - 1];
-                const colors = ["#D9534F", "#E8843A", "#D4881A", "#5A9A6A", "#C85A1C"];
+                const colors = [Colors.error, Colors.accent, Colors.warning, Colors.success, Colors.journeyBefore];
                 const selected = moodLevel === level;
                 return (
                   <Pressable

@@ -39,7 +39,7 @@ import { VeraEmotionalTone } from "@/types";
 const URGENT_TILES = [
   {
     label: "Breathing difficulty",
-    icon: "wind", color: "#F08080", bg: "#1E0A0A",
+    icon: "wind", color: Colors.error, bg: Colors.errorPale,
     prompt: "My patient is having breathing difficulty. What should I do right now?",
     patientPrompt: "I'm having difficulty breathing. What can be done to help me right now?",
   },
@@ -57,7 +57,7 @@ const URGENT_TILES = [
   },
   {
     label: "Not responding",
-    icon: "moon", color: "#C0A0E8", bg: "#180E28",
+    icon: "moon", color: Colors.journeyAfter, bg: Colors.journeyAfterPale,
     prompt: "My patient is not responding or very hard to wake. What should I do?",
     caregiverOnly: true,
   },
@@ -75,7 +75,7 @@ const URGENT_TILES = [
   },
   {
     label: "Medication question",
-    icon: "package", color: "#70C898", bg: "#0A1E14",
+    icon: "package", color: Colors.success, bg: Colors.successPale,
     prompt: "I have a question about a hospice medication.",
   },
   {
@@ -91,7 +91,7 @@ const URGENT_TILES = [
   },
   {
     label: "I'm overwhelmed",
-    icon: "cloud", color: "#C0A0E8", bg: "#180E28",
+    icon: "cloud", color: Colors.journeyAfter, bg: Colors.journeyAfterPale,
     prompt: "I'm feeling overwhelmed and exhausted as a caregiver. I need support.",
     patientPrompt: "I'm feeling overwhelmed, scared, and exhausted. I'm the patient and I need emotional support.",
   },
@@ -515,10 +515,10 @@ export default function HelpScreen() {
                 ]}
               >
                 <View style={styles.symptomAlertIcon}>
-                  <Feather name="bar-chart-2" size={15} color="#C85A1C" />
+                  <Feather name="bar-chart-2" size={15} color={Colors.accentLight} />
                 </View>
                 <Text style={styles.symptomAlertText}>{symptomAlert.text}</Text>
-                <Feather name="chevron-right" size={14} color="#C85A1C" />
+                <Feather name="chevron-right" size={14} color={Colors.accentLight} />
               </Pressable>
             )}
 
@@ -1263,17 +1263,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#FEF1E8",
+    backgroundColor: Colors.accentPale,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#C85A1C40",
+    borderColor: Colors.accent + "40",
   },
   symptomAlertIcon: {
     width: 30,
     height: 30,
     borderRadius: 9,
-    backgroundColor: "#C85A1C18",
+    backgroundColor: Colors.accent + "25",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -1282,15 +1282,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: "#8B3A0F",
+    color: Colors.accentLight,
     lineHeight: 19,
   },
   knowsCard: {
-    backgroundColor: "#FAFAF7",
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 14,
     padding: 13,
     borderWidth: 1,
-    borderColor: Colors.accent + "35",
+    borderColor: Colors.cardBorder,
   },
   knowsHeader: {
     flexDirection: "row",

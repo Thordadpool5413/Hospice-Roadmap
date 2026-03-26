@@ -23,8 +23,8 @@ import { useReminders } from "@/context/RemindersContext";
 import { Reminder, ReminderRecurrence, ReminderType } from "@/types";
 
 const TYPE_META: Record<ReminderType, { label: string; icon: string; color: string; bg: string }> = {
-  medication: { label: "Medication", icon: "package", color: "#5A7FA8", bg: "#EBF2FA" },
-  appointment: { label: "Appointment", icon: "calendar", color: "#C85A1C", bg: "#FEF1E8" },
+  medication: { label: "Medication", icon: "package", color: Colors.info, bg: Colors.infoPale },
+  appointment: { label: "Appointment", icon: "calendar", color: Colors.accent, bg: Colors.accentPale },
 };
 
 const RECURRENCE_OPTIONS: { value: ReminderRecurrence; label: string }[] = [
