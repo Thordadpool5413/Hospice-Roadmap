@@ -294,7 +294,7 @@ function GuidanceSection({
     <View
       style={[
         styles.section,
-        { backgroundColor: bgColor },
+        { backgroundColor: Colors.surfaceMid, borderLeftColor: color },
         accent && styles.sectionAccent,
       ]}
     >
@@ -533,6 +533,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderLeftWidth: 3,
   },
   sectionAccent: {
     borderWidth: 1,

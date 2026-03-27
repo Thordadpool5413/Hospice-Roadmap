@@ -39,65 +39,65 @@ import { VeraEmotionalTone } from "@/types";
 const URGENT_TILES = [
   {
     label: "Breathing difficulty",
-    icon: "wind", color: Colors.error, bg: Colors.errorPale,
+    icon: "wind", color: Colors.error,
     prompt: "My patient is having breathing difficulty. What should I do right now?",
     patientPrompt: "I'm having difficulty breathing. What can be done to help me right now?",
   },
   {
     label: "Pain or discomfort",
-    icon: "alert-circle", color: Colors.primaryLight, bg: Colors.primaryPale,
+    icon: "alert-circle", color: Colors.primaryLight,
     prompt: "My patient seems to be in pain or discomfort. How can I help them?",
     patientPrompt: "I'm experiencing pain or discomfort. How can I get relief?",
   },
   {
     label: "Confusion or agitation",
-    icon: "alert-triangle", color: Colors.accentLight, bg: Colors.accentPale,
+    icon: "alert-triangle", color: Colors.accentLight,
     prompt: "My patient is confused or agitated. What is happening and what should I do?",
     patientPrompt: "I'm feeling confused and very agitated. What might be causing this and what can I do?",
   },
   {
     label: "Not responding",
-    icon: "moon", color: Colors.journeyAfter, bg: Colors.journeyAfterPale,
+    icon: "moon", color: Colors.journeyAfter,
     prompt: "My patient is not responding or very hard to wake. What should I do?",
     caregiverOnly: true,
   },
   {
     label: "I think they died",
-    icon: "heart", color: Colors.navySub, bg: Colors.surfaceMid,
+    icon: "heart", color: Colors.navySub,
     prompt: "I think my patient may have died. What do I do right now?",
     caregiverOnly: true,
   },
   {
     label: "Swallowing problems",
-    icon: "droplet", color: Colors.journeyBefore, bg: Colors.journeyBeforePale,
+    icon: "droplet", color: Colors.journeyBefore,
     prompt: "My patient is having trouble swallowing medications or food. What should I do?",
     patientPrompt: "I'm having trouble swallowing my medications or food. What should I do?",
   },
   {
     label: "Medication question",
-    icon: "package", color: Colors.success, bg: Colors.successPale,
+    icon: "package", color: Colors.success,
     prompt: "I have a question about a hospice medication.",
   },
   {
     label: "Equipment issue",
-    icon: "tool", color: Colors.journeyBefore, bg: Colors.journeyBeforePale,
+    icon: "tool", color: Colors.journeyBefore,
     prompt: "I'm having a problem with medical equipment in the home.",
   },
   {
     label: "Caregiver task",
-    icon: "user-check", color: Colors.accentLight, bg: Colors.accentPale,
+    icon: "user-check", color: Colors.accentLight,
     prompt: "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer.",
     caregiverOnly: true,
   },
   {
     label: "I'm overwhelmed",
-    icon: "cloud", color: Colors.journeyAfter, bg: Colors.journeyAfterPale,
+    icon: "cloud", color: Colors.journeyAfter,
     prompt: "I'm feeling overwhelmed and exhausted as a caregiver. I need support.",
     patientPrompt: "I'm feeling overwhelmed, scared, and exhausted. I'm the patient and I need emotional support.",
   },
   {
     label: "Prepare to call hospice",
-    icon: "phone-call", color: Colors.primary, bg: Colors.primaryPale,
+    icon: "phone-call", color: Colors.primary,
     prompt: "I need to call my hospice nurse and want to be organized. Based on everything you know about our situation — the patient's diagnosis, recent symptoms, medications, and what's been happening — give me a ready-to-read SBAR script: (1) Situation — what's happening right now in 1–2 sentences, (2) Background — the patient's relevant history in 2–3 sentences, (3) Assessment — how serious this appears, (4) Request — exactly what I need from the hospice team. Make it brief and something I can read directly to the nurse on the phone.",
     caregiverOnly: true,
   },
@@ -530,7 +530,7 @@ export default function HelpScreen() {
                   onPress={() => handleTilePress(tile)}
                   style={({ pressed }) => [
                     styles.tile,
-                    { backgroundColor: tile.bg, borderColor: tile.color + "30" },
+                    { backgroundColor: Colors.surfaceMid, borderColor: tile.color + "28" },
                     pressed && { opacity: 0.82, transform: [{ scale: 0.97 }] },
                   ]}
                 >
