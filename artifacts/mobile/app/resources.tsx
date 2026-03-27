@@ -29,22 +29,19 @@ const JOURNEY_TABS = [
   { id: "after",  label: "After Hospice" },
 ];
 
-// ─── Category card for the browse grid ────────────────────────────────────
+// ─── Category tile for the 2-column browse grid ───────────────────────────
 function CategoryCard({ category, count, onPress }: { category: ResourceCategory; count: number; onPress: () => void }) {
   const meta = CATEGORY_META[category];
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.catCard, { borderLeftColor: meta.color }, pressed && { opacity: 0.85 }]}
+      style={({ pressed }) => [styles.catTile, { borderTopColor: meta.color }, pressed && { opacity: 0.82, transform: [{ scale: 0.97 }] }]}
     >
-      <View style={[styles.catIconWrap, { backgroundColor: meta.color + "22" }]}>
+      <View style={[styles.catTileIconWrap, { backgroundColor: meta.color + "22" }]}>
         <Feather name={meta.icon as any} size={18} color={meta.color} />
       </View>
-      <View style={styles.catTextWrap}>
-        <Text style={[styles.catLabel, { color: meta.color }]}>{meta.label}</Text>
-        <Text style={styles.catCount}>{count} article{count !== 1 ? "s" : ""}</Text>
-      </View>
-      <Feather name="chevron-right" size={16} color={Colors.textSubtle} />
+      <Text style={[styles.catTileLabel, { color: meta.color }]} numberOfLines={2}>{meta.label}</Text>
+      <Text style={styles.catTileCount}>{count} article{count !== 1 ? "s" : ""}</Text>
     </Pressable>
   );
 }
@@ -396,18 +393,35 @@ const styles = StyleSheet.create({
   featFooter: { flexDirection: "row", alignItems: "center", gap: 4 },
   featReadTime: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
 
-  // Category list
-  catList: { gap: 8 },
-  catCard: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.surfaceMid, borderRadius: 14,
-    padding: 14, borderWidth: 1, borderColor: Colors.cardBorder,
-    borderLeftWidth: 3,
+  // Category 2-column tile grid
+  catList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
   },
-  catIconWrap: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  catTextWrap: { flex: 1 },
-  catLabel: { fontSize: 14, fontFamily: "Inter_700Bold", letterSpacing: -0.2 },
-  catCount: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 1 },
+  catTile: {
+    width: "48%",
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderTopWidth: 3,
+    alignItems: "flex-start",
+  },
+  catTileIconWrap: {
+    width: 36, height: 36, borderRadius: 9,
+    alignItems: "center", justifyContent: "center",
+  },
+  catTileLabel: {
+    fontSize: 12, fontFamily: "Inter_700Bold",
+    letterSpacing: -0.1, lineHeight: 16,
+  },
+  catTileCount: {
+    fontSize: 10, fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
 
   // Category hero (when inside category view)
   categoryHero: {
