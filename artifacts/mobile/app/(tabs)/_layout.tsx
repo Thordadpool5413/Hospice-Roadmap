@@ -1,6 +1,4 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
@@ -11,24 +9,6 @@ import { Colors } from "@/constants/colors";
 
 const ragnaIcon = require("@/assets/images/ragna-icon.png");
 
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="help">
-        <Image source={ragnaIcon} style={{ width: 26, height: 26, borderRadius: 7 }} />
-        <Label>Ragna</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="more">
-        <Icon sf={{ default: "ellipsis", selected: "ellipsis.circle.fill" }} />
-        <Label>More</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
 
 function ClassicTabLayout() {
   const colorScheme = useColorScheme();
