@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { CATEGORY_META } from "@/constants/resourceCategories";
 import { Card } from "@/components/ui/Card";
 import { JourneyBadge } from "@/components/ui/JourneyBadge";
 import { Colors } from "@/constants/colors";
@@ -28,44 +29,63 @@ export function ResourceCard({
     onSave?.();
   };
 
+  const catMeta = CATEGORY_META[resource.category];
+
   return (
     <Card
       onPress={onPress}
       elevated
-      style={compact ? styles.compact : styles.card}
+      style={[compact ? styles.compact : styles.card, { borderLeftColor: catMeta.color, borderLeftWidth: 3 }]}
     >
-      <View style={styles.header}>
-        <View style={styles.badgeRow}>
+      {/* Top row: category + save */}
+      <View style={styles.topRow}>
+        <View style={styles.catBadge}>
+          <View style={[styles.catIconWrap, { backgroundColor: catMeta.color + "20" }]}>
+            <Feather name={catMeta.icon as any} size={11} color={catMeta.color} />
+          </View>
+          <Text style={[styles.catLabel, { color: catMeta.color }]}>{catMeta.shortLabel}</Text>
+        </View>
+        <View style={styles.topRowRight}>
           {resource.journeyStage.slice(0, 1).map((stage) => (
             <JourneyBadge key={stage} stage={stage} size="sm" />
           ))}
+          {onSave && (
+            <Pressable onPress={handleSave} style={styles.saveBtn} hitSlop={10}>
+              <Feather
+                name="bookmark"
+                size={17}
+                color={isSaved ? Colors.primary : Colors.textSubtle}
+              />
+              {isSaved && <View style={styles.savedDot} />}
+            </Pressable>
+          )}
         </View>
-        {onSave && (
-          <Pressable onPress={handleSave} style={styles.saveBtn} hitSlop={8}>
-            <Feather
-              name={isSaved ? "bookmark" : "bookmark"}
-              size={18}
-              color={isSaved ? Colors.primary : Colors.textSubtle}
-            />
-          </Pressable>
-        )}
       </View>
 
+      {/* Title */}
       <Text style={compact ? styles.titleCompact : styles.title} numberOfLines={2}>
         {resource.title}
       </Text>
 
+      {/* Summary */}
       {!compact && (
-        <Text style={styles.summary} numberOfLines={3}>
+        <Text style={styles.summary} numberOfLines={2}>
           {resource.summary}
         </Text>
       )}
 
+      {/* Footer */}
       <View style={styles.footer}>
         <View style={styles.readTime}>
-          <Feather name="clock" size={12} color={Colors.textMuted} />
+          <Feather name="clock" size={11} color={Colors.textMuted} />
           <Text style={styles.readTimeText}>{resource.readTime} min read</Text>
         </View>
+        {resource.isFeatured && (
+          <View style={styles.featuredBadge}>
+            <Feather name="star" size={10} color={Colors.primary} />
+            <Text style={styles.featuredText}>Featured</Text>
+          </View>
+        )}
         <Feather name="chevron-right" size={14} color={Colors.textSubtle} />
       </View>
     </Card>
@@ -73,25 +93,54 @@ export function ResourceCard({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    gap: 10,
-  },
-  compact: {
-    gap: 8,
-    padding: 14,
-  },
-  header: {
+  card: { gap: 10 },
+  compact: { gap: 8, padding: 14 },
+
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
-  badgeRow: {
+  catBadge: {
     flexDirection: "row",
-    gap: 6,
+    alignItems: "center",
+    gap: 5,
+    flex: 1,
+  },
+  catIconWrap: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  catLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.2,
+  },
+  topRowRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   saveBtn: {
     padding: 2,
+    position: "relative",
   },
+  savedDot: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+    borderWidth: 1.5,
+    borderColor: Colors.surfaceMid,
+  },
+
   title: {
     fontSize: 16,
     fontFamily: "Inter_700Bold",
@@ -107,25 +156,41 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   summary: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 19,
   },
+
   footer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 8,
     marginTop: 2,
   },
   readTime: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flex: 1,
   },
   readTimeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
+  },
+  featuredBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: Colors.primary + "18",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  featuredText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
 });
