@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { CATEGORY_META } from "@/constants/resourceCategories";
 import { Card } from "@/components/ui/Card";
@@ -13,6 +13,7 @@ interface ResourceCardProps {
   resource: Resource;
   onPress: () => void;
   onSave?: () => void;
+  onTagPress?: (tag: string) => void;
   isSaved?: boolean;
   compact?: boolean;
 }
@@ -21,6 +22,7 @@ export function ResourceCard({
   resource,
   onPress,
   onSave,
+  onTagPress,
   isSaved = false,
   compact = false,
 }: ResourceCardProps) {
@@ -29,7 +31,13 @@ export function ResourceCard({
     onSave?.();
   };
 
+  const handleTag = (tag: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onTagPress?.(tag);
+  };
+
   const catMeta = CATEGORY_META[resource.category];
+  const visibleTags = resource.tags.slice(0, 4);
 
   return (
     <Card
@@ -72,6 +80,27 @@ export function ResourceCard({
         <Text style={styles.summary} numberOfLines={2}>
           {resource.summary}
         </Text>
+      )}
+
+      {/* Tag pills — tappable, visible in list view */}
+      {!compact && visibleTags.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tagRow}
+        >
+          {visibleTags.map((tag) => (
+            <Pressable
+              key={tag}
+              onPress={() => handleTag(tag)}
+              style={({ pressed }) => [styles.tagPill, pressed && { opacity: 0.7 }]}
+              hitSlop={4}
+            >
+              <Feather name="hash" size={9} color={Colors.textSubtle} />
+              <Text style={styles.tagPillText}>{tag}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
       )}
 
       {/* Footer */}
@@ -160,6 +189,29 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
     lineHeight: 19,
+  },
+
+  // Tag pills row
+  tagRow: {
+    flexDirection: "row",
+    gap: 6,
+    paddingVertical: 2,
+  },
+  tagPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  tagPillText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
   },
 
   footer: {
