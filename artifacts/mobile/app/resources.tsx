@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import React, { useState, useMemo } from "react";
 import {
@@ -82,12 +82,18 @@ function FeaturedCard({ resource, onPress, onSave, isSaved }: {
 export default function ResourcesScreen() {
   const insets = useSafeAreaInsets();
   const { toggleSavedResource, isSavedResource } = useApp();
+  const params = useLocalSearchParams<{ tag?: string; category?: string }>();
+
   const [search, setSearch] = useState("");
   const [activeStage, setActiveStage] = useState("all");
-  const [selectedCategory, setSelectedCategory] = useState<ResourceCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<ResourceCategory | null>(
+    (params.category as ResourceCategory) ?? null
+  );
+  const [selectedTag, setSelectedTag] = useState<string | null>(params.tag ?? null);
 
   const isSearching = search.trim().length > 0;
-  const isBrowseMode = !isSearching && selectedCategory === null;
+  const isTagMode = !isSearching && selectedTag !== null;
+  const isBrowseMode = !isSearching && selectedCategory === null && selectedTag === null;
 
   // Filtered by stage (used across modes)
   const stageFiltered = useMemo(() =>
@@ -116,7 +122,7 @@ export default function ResourcesScreen() {
     [stageFiltered]
   );
 
-  // Results for category view or search
+  // Results for category view, tag view, or search
   const results = useMemo(() => {
     if (isSearching) {
       const q = search.toLowerCase();
@@ -127,11 +133,17 @@ export default function ResourcesScreen() {
           r.tags.some((t) => t.toLowerCase().includes(q)))
       );
     }
+    if (selectedTag) {
+      return mockResources.filter((r) =>
+        (activeStage === "all" || r.journeyStage.includes(activeStage as any)) &&
+        r.tags.includes(selectedTag)
+      );
+    }
     if (selectedCategory) {
       return stageFiltered.filter((r) => r.category === selectedCategory);
     }
     return [];
-  }, [search, activeStage, selectedCategory, stageFiltered, isSearching]);
+  }, [search, activeStage, selectedCategory, selectedTag, stageFiltered, isSearching]);
 
   const navigateToResource = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -145,7 +157,20 @@ export default function ResourcesScreen() {
 
   const handleCategoryPress = (cat: ResourceCategory) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedTag(null);
     setSelectedCategory(cat);
+  };
+
+  const handleTagPress = (tag: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedCategory(null);
+    setSearch("");
+    setSelectedTag(tag);
+  };
+
+  const clearTag = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedTag(null);
   };
 
   const selectedMeta = selectedCategory ? CATEGORY_META[selectedCategory] : null;
@@ -156,7 +181,8 @@ export default function ResourcesScreen() {
       <View style={styles.header}>
         <Pressable
           onPress={() => {
-            if (selectedCategory) { setSelectedCategory(null); }
+            if (selectedTag) { clearTag(); }
+            else if (selectedCategory) { setSelectedCategory(null); }
             else { router.back(); }
           }}
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
@@ -164,7 +190,12 @@ export default function ResourcesScreen() {
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </Pressable>
         <View style={styles.headerCenter}>
-          {selectedCategory && selectedMeta ? (
+          {selectedTag ? (
+            <>
+              <Text style={styles.headerTitle}>#{selectedTag}</Text>
+              <Text style={styles.headerSub}>{results.length} article{results.length !== 1 ? "s" : ""} tagged</Text>
+            </>
+          ) : selectedCategory && selectedMeta ? (
             <>
               <Text style={styles.headerTitle}>{selectedMeta.label}</Text>
               <Text style={styles.headerSub}>{categoryCounts[selectedCategory] ?? 0} articles</Text>
@@ -188,7 +219,7 @@ export default function ResourcesScreen() {
             placeholder="Search resources…"
             placeholderTextColor={Colors.textSubtle}
             value={search}
-            onChangeText={(v) => { setSearch(v); if (v) setSelectedCategory(null); }}
+            onChangeText={(v) => { setSearch(v); if (v) { setSelectedCategory(null); setSelectedTag(null); } }}
             returnKeyType="search"
           />
           {!!search && (
@@ -263,8 +294,53 @@ export default function ResourcesScreen() {
           </>
         )}
 
+        {/* ── TAG MODE ── */}
+        {isTagMode && (
+          <>
+            {/* Active tag chip with dismiss */}
+            <View style={styles.activeTagRow}>
+              <View style={styles.activeTagChip}>
+                <Feather name="hash" size={13} color={Colors.primary} />
+                <Text style={styles.activeTagChipText}>{selectedTag}</Text>
+                <Pressable onPress={clearTag} hitSlop={8} style={styles.activeTagDismiss}>
+                  <Feather name="x" size={13} color={Colors.primary} />
+                </Pressable>
+              </View>
+              <Text style={styles.activeTagCount}>
+                {results.length} article{results.length !== 1 ? "s" : ""}
+              </Text>
+            </View>
+
+            {results.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Feather name="hash" size={28} color={Colors.textSubtle} />
+                </View>
+                <Text style={styles.emptyTitle}>No articles tagged "{selectedTag}"</Text>
+                <Text style={styles.emptyText}>Try a different topic or browse all articles.</Text>
+                <Pressable onPress={clearTag} style={styles.emptyAction}>
+                  <Text style={styles.emptyActionText}>Browse all topics</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.articleList}>
+                {results.map((r) => (
+                  <ResourceCard
+                    key={r.id}
+                    resource={r}
+                    onPress={() => navigateToResource(r.id)}
+                    onSave={() => handleSave(r.id)}
+                    onTagPress={handleTagPress}
+                    isSaved={isSavedResource(r.id)}
+                  />
+                ))}
+              </View>
+            )}
+          </>
+        )}
+
         {/* ── CATEGORY VIEW ── */}
-        {selectedCategory !== null && !isSearching && (
+        {selectedCategory !== null && !isSearching && !isTagMode && (
           <>
             {selectedMeta && (
               <View style={[styles.categoryHero, { borderLeftColor: selectedMeta.color }]}>
@@ -284,6 +360,7 @@ export default function ResourcesScreen() {
                   resource={r}
                   onPress={() => navigateToResource(r.id)}
                   onSave={() => handleSave(r.id)}
+                  onTagPress={handleTagPress}
                   isSaved={isSavedResource(r.id)}
                 />
               ))}
@@ -319,6 +396,7 @@ export default function ResourcesScreen() {
                     resource={r}
                     onPress={() => navigateToResource(r.id)}
                     onSave={() => handleSave(r.id)}
+                    onTagPress={handleTagPress}
                     isSaved={isSavedResource(r.id)}
                   />
                 ))}
@@ -434,6 +512,27 @@ const styles = StyleSheet.create({
   catHeroText: { flex: 1 },
   catHeroLabel: { fontSize: 16, fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
   catHeroCount: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
+
+  // Active tag filter chip
+  activeTagRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+  },
+  activeTagChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.primary + "18",
+    borderWidth: 1, borderColor: Colors.primary + "40",
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    alignSelf: "flex-start",
+  },
+  activeTagChipText: {
+    fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primary,
+  },
+  activeTagDismiss: {
+    marginLeft: 2,
+  },
+  activeTagCount: {
+    fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted,
+  },
 
   // Article list
   articleList: { gap: 10 },
