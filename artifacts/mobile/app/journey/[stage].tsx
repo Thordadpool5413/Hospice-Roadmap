@@ -143,7 +143,7 @@ export default function JourneyStageScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Hero */}
-      <View style={[styles.hero, { backgroundColor: info.bg }]}>
+      <View style={[styles.hero, { borderLeftColor: info.color }]}>
         <Text style={[styles.stageLabel, { color: info.color }]}>
           {info.title}
         </Text>
@@ -154,7 +154,7 @@ export default function JourneyStageScreen() {
       <View style={styles.infoSections}>
         {info.sections.map((section, idx) => (
           <View key={idx} style={styles.infoCard}>
-            <View style={[styles.infoIcon, { backgroundColor: info.bg }]}>
+            <View style={[styles.infoIcon, { backgroundColor: info.color + "20" }]}>
               <Feather name={section.icon as any} size={18} color={info.color} />
             </View>
             <View style={styles.infoText}>
@@ -195,7 +195,7 @@ export default function JourneyStageScreen() {
                   <View
                     style={[
                       styles.bereavementTypeTag,
-                      { backgroundColor: info.bg },
+                      { backgroundColor: info.color + "20" },
                     ]}
                   >
                     <Text style={[styles.bereavementType, { color: info.color }]}>
@@ -273,9 +273,13 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   hero: {
-    borderRadius: 20,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 16,
     padding: 20,
     gap: 6,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderLeftWidth: 4,
   },
   stageLabel: {
     fontSize: 22,

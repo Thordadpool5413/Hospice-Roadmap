@@ -27,7 +27,7 @@ const palette = {
   ember:     "#B84818",
   emberDark: "#7A2E0A",
   emberLight:"#D96838",
-  emberPale: "#38180A",   // visible warm-brown surface (was #220D04 — too dark)
+  emberPale: "#1E1A30",   // neutral purple-warm tint — less muddy than warm brown
 
   // ── Surfaces — well-separated for depth ──
   surfaceDark: "#162040",   // lowest surface (sits on bg)
@@ -43,21 +43,21 @@ const palette = {
   // ── Semantic ──
   rose:       "#B02828",
   roseMid:    "#7A1A1A",
-  rosePale:   "#301010",   // visible red-tinted surface (was #1C0808 — too dark)
+  rosePale:   "#1E1830",   // neutral cool tint — avoids muddy dark red
   teal:       "#1A8090",
-  tealPale:   "#0E2C3A",   // visible teal-tinted surface (was #091E28 — too dark)
+  tealPale:   "#162438",   // neutral cool tint — avoids muddy dark teal
   violet:     "#6040A0",
-  violetPale: "#201440",   // visible violet-tinted surface (was #160E2C — too dark)
+  violetPale: "#1C1840",   // neutral violet tint
   sage:       "#3A7050",
-  sagePale:   "#122A1A",   // visible sage-tinted surface (was #0C1E14 — too dark)
+  sagePale:   "#162438",   // neutral cool tint
 
   // ── Journey ── dignified, distinct, readable
-  journeyBefore:     "#4E8AD8",   // brighter cool blue (was #3A78C0)
-  journeyBeforePale: "#142A50",   // readable blue surface (was #0E1E3C — too dark)
-  journeyDuring:     "#CC6030",   // brighter warm ember (was #B04820)
-  journeyDuringPale: "#361A08",   // readable warm surface (was #1E0C04 — too dark)
-  journeyAfter:      "#9068C8",   // brighter muted violet (was #7050A8)
-  journeyAfterPale:  "#201240",   // readable violet surface (was #140C28 — too dark)
+  journeyBefore:     "#4E8AD8",   // brighter cool blue
+  journeyBeforePale: "#162444",   // subtle blue-navy tint
+  journeyDuring:     "#CC6030",   // warm amber-orange
+  journeyDuringPale: "#1E1C38",   // neutral tint — no muddy brown
+  journeyAfter:      "#9068C8",   // muted violet
+  journeyAfterPale:  "#1C1840",   // neutral violet tint
 
   white: "#FFFFFF",
 };

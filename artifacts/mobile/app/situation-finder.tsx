@@ -190,12 +190,12 @@ function CategoryCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.categoryCard,
-        { backgroundColor: category.bgColor },
+        { borderLeftColor: category.color },
         pressed && { opacity: 0.82, transform: [{ scale: 0.97 }] },
       ]}
     >
-      <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-        <Feather name={category.icon as any} size={20} color="#fff" />
+      <View style={[styles.categoryIcon, { backgroundColor: category.color + "22" }]}>
+        <Feather name={category.icon as any} size={20} color={category.color} />
       </View>
       <Text style={[styles.categoryTitle, { color: category.color }]}>
         {category.title}
@@ -348,9 +348,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   categoryCard: {
+    backgroundColor: Colors.surfaceMid,
     borderRadius: 16,
     padding: 16,
     gap: 6,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    borderLeftWidth: 3,
   },
   categoryIcon: {
     width: 40,
