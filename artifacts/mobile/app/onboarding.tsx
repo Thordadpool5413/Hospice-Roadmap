@@ -204,7 +204,7 @@ export default function OnboardingScreen() {
         />
         {step === 0 && (
           <Text style={styles.footerNote}>
-            Your information is private and never shared.
+            You control what you enter. Some saved information is stored on your device. If you use Ragna, relevant context may be sent securely to generate personalized responses.
           </Text>
         )}
       </View>

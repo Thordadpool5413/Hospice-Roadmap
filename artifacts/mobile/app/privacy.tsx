@@ -12,23 +12,23 @@ import { Colors } from "@/constants/colors";
 const sections = [
   {
     title: "Information We Collect",
-    body: "Hospice Roadmap collects only the information you choose to provide, such as your role, journey stage, and any information submitted through our forms. We do not collect or store personal health information beyond what you directly submit.\n\nWe may collect anonymized usage data to improve the app experience, such as feature usage frequency. This data cannot be used to identify individual users.",
+    body: "Hospice Roadmap collects the information you choose to enter, such as your role, journey stage, patient profile details, goals of care, symptom tracking, reminders, journal entries, support messages, and conversations with Ragna. Some of this information is stored locally on your device to support app features. When you use server-backed features such as Ragna or provider search, information needed for those features may be transmitted to our server.",
   },
   {
     title: "How We Use Your Information",
-    body: "Information you provide is used solely to:\n\n• Process referral and information requests\n• Personalize your app experience based on your selected role and journey stage\n• Respond to support inquiries\n\nWe do not sell, rent, or share your personal information with third parties for marketing purposes.",
+    body: "Information you provide is used to:\n\n• Personalize your app experience\n• Generate guidance when you use Ragna\n• Power provider search and related app features\n• Help you contact support when you choose to do so\n\nWe do not sell or rent your personal information for marketing purposes.",
   },
   {
     title: "Data Storage and Security",
-    body: "Your preferences and saved items are stored locally on your device using secure storage. Form submissions are transmitted over encrypted connections (TLS/SSL).\n\nWe implement industry-standard security measures to protect your information. However, no method of transmission over the internet is 100% secure.",
+    body: "Many saved items in Hospice Roadmap are stored locally on your device using standard app storage. When you use server-backed features, information needed for those features is transmitted over encrypted connections when available. No method of electronic storage or transmission is completely secure.",
   },
   {
     title: "Medical Information Disclaimer",
-    body: "Hospice Roadmap is an educational and navigation platform. Any health-related information you provide through forms is used only for processing your request and is not stored as part of a medical record.\n\nThis app is not a covered entity under HIPAA and is not a substitute for professional medical care.",
+    body: "Hospice Roadmap is an educational and navigation platform. Information entered into the app is used to support app features and personalization. It is not part of a medical record created by a healthcare provider.\n\nThis app is not a substitute for professional medical care.",
   },
   {
     title: "Third-Party Services",
-    body: "This app may use third-party analytics and infrastructure services. These services are bound by their own privacy policies and are used solely to support app functionality and improvement.\n\nWe do not integrate with advertising networks or sell data to data brokers.",
+    body: "We use third-party infrastructure to support app functionality, which may include AI-generated responses and public provider data services. We do not use advertising networks or sell data to data brokers.",
   },
   {
     title: "Children's Privacy",
@@ -36,7 +36,7 @@ const sections = [
   },
   {
     title: "Your Rights",
-    body: "You may request deletion of any personal information you have submitted to us by contacting our support team. You may also opt out of anonymized data collection at any time through app settings.",
+    body: "You can edit or remove much of your locally stored information directly in the app. If you have questions about deleting information associated with support or other server-backed features, contact our support team. This version of the app does not currently include an in-app analytics opt-out control.",
   },
   {
     title: "Changes to This Policy",

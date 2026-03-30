@@ -102,7 +102,7 @@ export default function GoalsOfCareScreen() {
     setIsSaving(false);
     Alert.alert(
       "Goals Saved",
-      "Ragna will use this to personalize every conversation with you.",
+      "This information is stored on your device and may be used to personalize Ragna when you chat with her.",
       [{ text: "Great", onPress: () => router.back() }]
     );
   };
@@ -146,7 +146,7 @@ export default function GoalsOfCareScreen() {
           </View>
           <Text style={styles.introTitle}>Help Ragna know your loved one</Text>
           <Text style={styles.introBody}>
-            These answers are private and will be shared only with Ragna to make her guidance personal and meaningful — not generic. Answer as much or as little as you're comfortable with.
+            These answers are stored on your device and can be used to personalize Ragna. If you chat with Ragna, relevant goals of care details may be included with your request. Answer as much or as little as you want.
           </Text>
         </View>
 
@@ -251,10 +251,10 @@ export default function GoalsOfCareScreen() {
                 style={{ width: 20, height: 20, borderRadius: 5 }}
                 resizeMode="cover"
               />
-              <Text style={styles.previewTitle}>What Ragna will know</Text>
+              <Text style={styles.previewTitle}>How Ragna may use this</Text>
             </View>
             <Text style={styles.previewBody}>
-              Every conversation with Ragna will be shaped by these goals. She'll reference what matters most, honor your loved one's wishes, and flag when a decision conflicts with their values.
+              Ragna may use these goals to personalize guidance, reference what matters most, and highlight when a decision may conflict with the values you recorded.
             </Text>
           </View>
         )}
