@@ -1,0 +1,282 @@
+Build a real in app support request flow for the React Native Expo iOS app and Express API.
+
+Goal
+
+Replace the current mailto only support form behavior with a real API backed support submission that saves requests in the database and returns a request id.
+Keep the current screen layout and styling largely intact.
+Do not redesign the app.
+Do not add admin screens in this task.
+Keep an optional email fallback only if API submission fails.
+
+Files to edit
+
+lib/db/src/schema/index.ts
+artifacts/api-server/src/routes/index.ts
+artifacts/api-server/src/app.ts
+artifacts/mobile/app/support.tsx
+artifacts/mobile/types/index.ts
+
+Create these new files
+
+lib/db/src/schema/supportRequests.ts
+artifacts/api-server/src/routes/support.ts
+artifacts/mobile/services/supportService.ts
+
+Reuse if already present
+
+artifacts/mobile/services/clientIdentity.ts
+
+Rules
+
+1. This task should create a real app submission path.
+2. Do not remove the existing support form fields.
+3. Do not promise a response time.
+4. Do not say the request is sent by email unless the user actually chooses the email fallback.
+5. Keep the API simple and production minded.
+6. Use the existing workspace patterns and TypeScript style.
+7. Do not add authentication screens.
+8. Use the device client id if the helper already exists.
+9. If the client id helper does not exist yet, create it using the same storage key and behavior already used for Ragna client identity.
+
+Implementation details
+
+A. Add a support requests table
+
+Create lib/db/src/schema/supportRequests.ts
+
+Requirements
+
+Use drizzle pgTable.
+Create a table named support_requests.
+
+Columns
+
+id as serial primary key
+clientId as text column named client_id, not null, default "anonymous_support"
+name as text, not null
+email as text, not null
+phone as text, nullable
+topic as text, not null
+preferredContact as text column named preferred_contact, not null
+message as text, not null
+status as text, not null, default "received"
+source as text, not null, default "ios_app"
+createdAt as timestamp with timezone, default now, not null
+updatedAt as timestamp with timezone, default now, not null
+
+Add indexes for
+
+client_id
+topic
+status
+created_at
+
+Export the table and the inferred types.
+Add export from lib/db/src/schema/index.ts
+
+B. Create the support route
+
+Create artifacts/api-server/src/routes/support.ts
+
+Requirements
+
+Use Express Router.
+Import db from @workspace/db
+Import supportRequests from @workspace/db/schema
+
+Create POST /support-requests
+
+Request body shape
+
+{
+  name: string,
+  email: string,
+  phone?: string,
+  topic: string,
+  preferredContact: "email" | "phone",
+  message: string
+}
+
+Validation requirements
+
+name required after trim
+email required after trim
+email must contain "@"
+topic required after trim
+preferredContact must be "email" or "phone"
+message required after trim and be at least 10 characters
+if preferredContact is "phone", allow phone to be empty for now but keep the field if provided
+normalize blank phone to null
+
+Client identity
+
+Read x_client_id header if present.
+Trim it.
+If it matches ^client_[a-z0-9_]+$, store it as clientId.
+If missing or invalid, store "anonymous_support".
+Do not reject the request just because client id is missing.
+
+Insert the record and return 201 with JSON:
+{
+  id,
+  status,
+  createdAt
+}
+
+Error handling
+
+Return 400 for validation problems with a clear error message.
+Return 500 with { error: "Failed to submit support request" } on unexpected failure.
+
+C. Register the route
+
+Update artifacts/api-server/src/routes/index.ts
+
+Import the new support router and mount it under /support
+
+Result should be:
+POST /api/support/support-requests
+
+D. Make sure CORS allows the client id header
+
+Update artifacts/api-server/src/app.ts if needed so x_client_id is explicitly allowed in request headers.
+Do not lock origin down in this task.
+Keep the app working in Replit and Expo.
+
+E. Create a mobile support service
+
+Create artifacts/mobile/services/supportService.ts
+
+Requirements
+
+Reuse the same api base strategy used in aiService.ts
+Reuse getClientId from artifacts/mobile/services/clientIdentity.ts
+
+Export types
+
+SupportSubmissionInput
+SupportSubmissionResponse
+
+SupportSubmissionInput should include:
+name
+email
+phone optional
+topic
+preferredContact
+message
+
+Export one async function:
+submitSupportRequest(input: SupportSubmissionInput): Promise<SupportSubmissionResponse>
+
+Behavior
+
+POST to /support/support-requests
+Send JSON body
+Include headers:
+Content-Type: application/json
+x_client_id: <client id>
+
+If response is not ok:
+Try to read JSON error message
+Throw Error with the server message if available
+Otherwise throw Error("Failed to submit support request")
+
+On success return parsed JSON.
+
+F. Update support screen to use the real API
+
+Update artifacts/mobile/app/support.tsx
+
+Requirements
+
+1. Keep the current topic selection, form fields, and visual structure.
+2. Import Alert from react native.
+3. Remove the current default behavior that builds a mailto link first.
+4. Import submitSupportRequest from the new service.
+5. In handleSubmit:
+   a. validate as before
+   b. set loading true
+   c. call submitSupportRequest with the current form values
+   d. on success set submitted true and store the returned request id in state
+   e. trigger success haptics
+   f. on failure show an Alert with two actions
+
+Alert title:
+"Unable to Submit Request"
+
+Alert message:
+"We could not submit your request from the app right now. You can try again or open your email app with your message prefilled."
+
+Buttons:
+Cancel
+Try Email Instead
+
+If the user taps Try Email Instead:
+Build the same mailto URL as before and attempt Linking.openURL
+If mail app cannot open, show:
+Alert.alert(
+  "No Email App Available",
+  "We could not open an email composer on this device. Please email support@hospiceroadmap.app directly."
+);
+
+6. Update the intro text from the current wording to:
+"Send a request to our support team from inside the app. If submission is unavailable, you can choose to open your email app instead."
+
+7. Change the primary button title from:
+"Open Email App"
+or
+"Send Message"
+to:
+"Submit Request"
+
+8. Add a helper line below the button:
+"Please do not use this form for emergencies. Call 911 or your hospice team for urgent medical needs."
+
+9. Update the success state title to:
+"Request Submitted"
+
+10. Update the success state body to:
+"Your support request was submitted from the app successfully. A member of the team can review it using the details you provided."
+
+11. If a request id was returned, show a small line below the success body:
+"Request ID: <id>"
+
+12. Do not promise response times.
+13. Do not say the request was emailed unless the email fallback was actually used.
+
+G. Small type cleanup
+
+Update artifacts/mobile/types/index.ts only if needed for consistency.
+
+If you update SupportRequest, keep it aligned with the new real flow.
+It is okay to leave it mostly as is if it is not used elsewhere.
+
+H. Keep the fallback email logic honest
+
+If the user chooses the email fallback after an API failure:
+do not mark the request as submitted until the email composer actually opens.
+If the composer opens, show a success state with:
+
+Title:
+"Email Draft Opened"
+
+Body:
+"We opened your email app with a prefilled message to support@hospiceroadmap.app. Your request is not sent until you tap send in your email app."
+
+Track this with a separate local state such as submissionMode if needed.
+
+I. Run checks
+
+After edits:
+1. Run pnpm run typecheck from the workspace root
+2. Run pnpm --filter @workspace/db run push if safe in this environment
+3. Report whether the schema push succeeded
+
+J. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what changed
+3. Whether the database schema push succeeded
+4. Any remaining limitation in the support workflow
+5. Any next step recommendation for support triage or notification delivery

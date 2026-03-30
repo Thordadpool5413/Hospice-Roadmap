@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { KeyboardAwareScrollViewCompat as KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollViewCompat";
 import React, { useState } from "react";
 import {
+  Alert,
   Linking,
   Pressable,
   StyleSheet,
@@ -15,7 +16,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { TextInput } from "@/components/ui/TextInput";
 import { Colors } from "@/constants/colors";
+import { submitSupportRequest } from "@/services/supportService";
 import { SupportTopic } from "@/types";
+
+const SUPPORT_EMAIL = "support@hospiceroadmap.app";
 
 const topics: { id: SupportTopic; label: string; icon: string }[] = [
   { id: "general_question", label: "General Question", icon: "help-circle" },
@@ -26,9 +30,13 @@ const topics: { id: SupportTopic; label: string; icon: string }[] = [
   { id: "other", label: "Other", icon: "more-horizontal" },
 ];
 
+type SubmissionMode = "app" | "email" | null;
+
 export default function SupportScreen() {
   const insets = useSafeAreaInsets();
   const [submitted, setSubmitted] = useState(false);
+  const [submissionMode, setSubmissionMode] = useState<SubmissionMode>(null);
+  const [requestId, setRequestId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [topic, setTopic] = useState<SupportTopic | null>(null);
   const [preferredContact, setPreferredContact] = useState<"email" | "phone">("email");
@@ -43,13 +51,49 @@ export default function SupportScreen() {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.name) e.name = "Required";
-    if (!form.email && preferredContact === "email") e.email = "Required";
-    if (!form.phone && preferredContact === "phone") e.phone = "Required";
-    if (!form.message) e.message = "Please describe how we can help";
+    if (!form.name.trim()) e.name = "Required";
+    if (!form.email.trim() && preferredContact === "email") e.email = "Required";
+    if (!form.phone.trim() && preferredContact === "phone") e.phone = "Required";
+    if (!form.message.trim()) e.message = "Please describe how we can help";
+    if (form.message.trim().length > 0 && form.message.trim().length < 10)
+      e.message = "Please provide a bit more detail (at least 10 characters)";
     if (!topic) e.topic = "Please select a topic";
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  const buildMailtoUrl = () => {
+    const topicLabel = topics.find((t) => t.id === topic)?.label ?? "Support Request";
+    const subject = encodeURIComponent(`Hospice Roadmap: ${topicLabel}`);
+    const contactInfo =
+      preferredContact === "email" ? `Email: ${form.email}` : `Phone: ${form.phone}`;
+    const body = encodeURIComponent(
+      `Name: ${form.name}\n${contactInfo}\n\nMessage:\n${form.message}`
+    );
+    return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+  };
+
+  const openEmailFallback = async () => {
+    const mailUrl = buildMailtoUrl();
+    try {
+      const canOpen = await Linking.canOpenURL(mailUrl);
+      if (canOpen) {
+        await Linking.openURL(mailUrl);
+        setSubmissionMode("email");
+        setSubmitted(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert(
+          "No Email App Available",
+          `We could not open an email composer on this device. Please email ${SUPPORT_EMAIL} directly.`
+        );
+      }
+    } catch {
+      Alert.alert(
+        "No Email App Available",
+        `We could not open an email composer on this device. Please email ${SUPPORT_EMAIL} directly.`
+      );
+    }
   };
 
   const handleSubmit = async () => {
@@ -57,39 +101,60 @@ export default function SupportScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    const topicLabel = topics.find((t) => t.id === topic)?.label ?? "Support Request";
-    const subject = encodeURIComponent(`Hospice Roadmap: ${topicLabel}`);
-    const contactInfo = preferredContact === "email" ? `Email: ${form.email}` : `Phone: ${form.phone}`;
-    const body = encodeURIComponent(
-      `Name: ${form.name}\n${contactInfo}\n\nMessage:\n${form.message}`
-    );
-    const mailUrl = `mailto:support@hospiceroadmap.app?subject=${subject}&body=${body}`;
 
     setLoading(true);
     try {
-      const canOpen = await Linking.canOpenURL(mailUrl);
-      if (canOpen) {
-        await Linking.openURL(mailUrl);
-      }
-    } catch {
-      // Silently fail — form still shows confirmation
+      const result = await submitSupportRequest({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || undefined,
+        topic: topic!,
+        preferredContact,
+        message: form.message.trim(),
+      });
+      setRequestId(result.id);
+      setSubmissionMode("app");
+      setSubmitted(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      Alert.alert(
+        "Unable to Submit Request",
+        "We could not submit your request from the app right now. You can try again or open your email app with your message prefilled.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Try Email Instead",
+            onPress: openEmailFallback,
+          },
+        ]
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    setSubmitted(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   if (submitted) {
+    const isEmailFallback = submissionMode === "email";
     return (
       <View style={[styles.successContainer, { paddingBottom: insets.bottom + 40 }]}>
-        <View style={styles.successIcon}>
-          <Feather name="message-circle" size={36} color="#FFFFFF" />
+        <View style={[styles.successIcon, isEmailFallback && styles.successIconEmail]}>
+          <Feather
+            name={isEmailFallback ? "mail" : "check-circle"}
+            size={36}
+            color="#FFFFFF"
+          />
         </View>
-        <Text style={styles.successTitle}>Message Received</Text>
-        <Text style={styles.successBody}>
-          Thank you for reaching out. Our team will respond within 1 business
-          day via your preferred contact method.
+        <Text style={styles.successTitle}>
+          {isEmailFallback ? "Email Draft Opened" : "Request Submitted"}
         </Text>
+        <Text style={styles.successBody}>
+          {isEmailFallback
+            ? `We opened your email app with a prefilled message to ${SUPPORT_EMAIL}. Your request is not sent until you tap send in your email app.`
+            : "Your support request was submitted from the app successfully. A member of the team can review it using the details you provided."}
+        </Text>
+        {!isEmailFallback && requestId !== null && (
+          <Text style={styles.requestIdText}>Request ID: {requestId}</Text>
+        )}
         <Button
           title="Return Home"
           onPress={() => router.replace("/(tabs)")}
@@ -116,7 +181,7 @@ export default function SupportScreen() {
       <View style={styles.introBox}>
         <Feather name="message-circle" size={20} color={Colors.primary} />
         <Text style={styles.introText}>
-          Our support team is here to help with questions about hospice, providers, referrals, or any other aspect of the journey.
+          Send a request to our support team from inside the app. If submission is unavailable, you can choose to open your email app instead.
         </Text>
       </View>
 
@@ -239,12 +304,16 @@ export default function SupportScreen() {
       </View>
 
       <Button
-        title="Send Message"
+        title="Submit Request"
         onPress={handleSubmit}
         loading={loading}
         fullWidth
         size="lg"
       />
+
+      <Text style={styles.emergencyNote}>
+        Please do not use this form for emergencies. Call 911 or your hospice team for urgent medical needs.
+      </Text>
     </KeyboardAwareScrollView>
   );
 }
@@ -358,6 +427,14 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     paddingTop: 12,
   },
+  emergencyNote: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 18,
+    paddingBottom: 4,
+  },
   successContainer: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -379,6 +456,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
+  successIconEmail: {
+    backgroundColor: Colors.navySub,
+  },
   successTitle: {
     fontSize: 26,
     fontFamily: "Inter_700Bold",
@@ -392,5 +472,11 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 23,
+  },
+  requestIdText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+    textAlign: "center",
   },
 });
