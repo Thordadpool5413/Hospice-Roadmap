@@ -11,6 +11,7 @@ interface JournalContextValue {
   addEntry: (entry: Omit<JournalEntry, "id" | "timestamp">) => Promise<JournalEntry>;
   updateEntry: (id: string, updates: Partial<Omit<JournalEntry, "id" | "timestamp">>) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
+  clearEntries: () => Promise<void>;
 }
 
 const JournalContext = createContext<JournalContextValue | null>(null);
@@ -65,8 +66,13 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
     [entries, save]
   );
 
+  const clearEntries = useCallback(async () => {
+    setEntries([]);
+    await save([]);
+  }, [save]);
+
   return (
-    <JournalContext.Provider value={{ entries, isLoading, addEntry, updateEntry, deleteEntry }}>
+    <JournalContext.Provider value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, clearEntries }}>
       {children}
     </JournalContext.Provider>
   );

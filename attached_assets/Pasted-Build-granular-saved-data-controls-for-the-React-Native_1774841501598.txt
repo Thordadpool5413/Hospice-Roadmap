@@ -1,0 +1,344 @@
+Build granular saved data controls for the React Native Expo iOS app so users can clear specific categories of locally stored data from one place.
+
+Goal
+
+Give users a single screen where they can review and clear specific categories of locally stored data on this device.
+Do not redesign the app.
+Keep current behavior intact.
+Do not change backend behavior.
+Do not add login.
+Do not delete server backed support requests or server conversation history in this task.
+This task is only about local device data controls and safer category specific clearing.
+
+Files to edit
+
+artifacts/mobile/context/AppContext.tsx
+artifacts/mobile/context/JournalContext.tsx
+artifacts/mobile/context/SymptomContext.tsx
+artifacts/mobile/context/RemindersContext.tsx
+artifacts/mobile/context/VeraMemoryContext.tsx
+artifacts/mobile/app/(tabs)/more.tsx
+artifacts/mobile/app/patient-profile.tsx
+
+Create this new file
+
+artifacts/mobile/app/data-controls.tsx
+
+Rules
+
+1. Do not add new packages.
+2. Keep AsyncStorage as the current storage model.
+3. Do not change storage keys in this task.
+4. Do not remove any existing feature.
+5. Keep onboarding complete, role, and journey stage intact when clearing category data.
+6. Do not clear accessibility settings in this task.
+7. Do not clear support requests from the server in this task.
+8. Do not automatically delete open server conversations in this task.
+9. Make the controls easy to understand for a stressed caregiver.
+10. Keep TypeScript clean.
+
+Implementation details
+
+A. Extend AppContext with category specific clear helpers
+
+Update artifacts/mobile/context/AppContext.tsx
+
+Add these functions to AppContextValue
+
+clearPatientProfile: () => Promise<void>;
+clearGoalsOfCare: () => Promise<void>;
+clearSavedResources: () => Promise<void>;
+clearSavedProviders: () => Promise<void>;
+
+Implementation requirements
+
+1. Keep existing updatePatientProfile behavior.
+2. Add a small internal helper like saveUserAndSetState if useful, but do not redesign the context.
+3. clearPatientProfile should remove patient profile fields except goalsOfCare.
+
+Specifically after clearPatientProfile, preserve:
+user id
+role
+journeyStage
+onboardingComplete
+savedResources
+savedProviders
+createdAt
+patientProfile.goalsOfCare if present
+
+It should clear these profile fields:
+patientName
+diagnosis
+comfortKitMedications
+medications
+equipmentInHome
+hospicePhone
+hospiceAfterHoursPhone
+equipmentProviderPhone
+pharmacyPhone
+additionalNotes
+
+4. clearGoalsOfCare should preserve the rest of patientProfile and only remove goalsOfCare.
+5. clearSavedResources should set savedResources to [].
+6. clearSavedProviders should set savedProviders to [].
+7. Expose these methods from the provider value.
+
+B. Extend JournalContext with clearEntries
+
+Update artifacts/mobile/context/JournalContext.tsx
+
+Add to JournalContextValue:
+clearEntries: () => Promise<void>;
+
+Implementation:
+set entries to []
+persist []
+Expose clearEntries in the provider value.
+
+C. Extend SymptomContext with clearEntries
+
+Update artifacts/mobile/context/SymptomContext.tsx
+
+Add to SymptomContextValue:
+clearEntries: () => Promise<void>;
+
+Implementation:
+set entries to []
+persist []
+Expose clearEntries in the provider value.
+
+D. Extend RemindersContext with clearReminders
+
+Update artifacts/mobile/context/RemindersContext.tsx
+
+Add to RemindersContextValue:
+clearReminders: () => Promise<void>;
+
+Implementation requirements
+
+1. Cancel all scheduled notifications for all reminders that have notificationId.
+2. Set reminders to [].
+3. Persist [].
+4. Expose clearReminders in the provider value.
+
+E. Keep Vera memory clear as the existing local memory clear path
+
+Update artifacts/mobile/context/VeraMemoryContext.tsx only if needed for clarity.
+
+Requirements
+
+1. Keep clearMemories as the public function.
+2. Add a short comment if helpful clarifying that this clears local memory, local living profile, and recent tile history on this device.
+3. Do not rename storage keys in this task.
+
+F. Add a central saved data controls screen
+
+Create artifacts/mobile/app/data-controls.tsx
+
+Use:
+useApp
+useJournal
+useSymptoms
+useReminders
+useVeraMemory
+useSafeAreaInsets
+router
+Alert
+ScrollView
+Pressable
+StyleSheet
+Text
+View
+Feather
+Colors
+
+Screen requirements
+
+1. Title:
+“Manage Saved Data”
+
+2. Intro text:
+“Review what is stored on this device and clear categories individually. These actions do not remove server backed records such as submitted support requests, and they do not automatically delete an active Ragna conversation on the server.”
+
+3. Add a simple section list with one card row per category.
+
+Required categories
+
+Patient profile
+Goals of care
+Saved providers
+Saved resources
+Journal entries
+Symptom check ins
+Reminders
+Ragna memory
+
+4. Each row should show:
+title
+one short description
+current status
+
+Examples of status formatting
+Patient profile:
+“Saved” or “Empty”
+Goals of care:
+“Saved” or “Empty”
+Saved providers:
+“3 saved”
+Saved resources:
+“5 saved”
+Journal entries:
+“12 entries”
+Symptom check ins:
+“4 entries”
+Reminders:
+“2 reminders”
+Ragna memory:
+“3 memories” or “Empty”
+
+5. Each row should have a destructive action button labeled:
+“Clear”
+
+6. If a category is already empty, the clear button should be disabled or visibly subdued.
+
+7. Each clear action must use Alert.alert confirmation with category specific wording.
+
+Required confirmation titles and body patterns
+
+Patient profile
+Title: “Clear Patient Profile”
+Body: “Remove saved patient profile details from this device? Goals of care will be kept unless you clear them separately.”
+
+Goals of care
+Title: “Clear Goals of Care”
+Body: “Remove saved goals of care from this device? Other patient profile details will stay in place.”
+
+Saved providers
+Title: “Clear Saved Providers”
+Body: “Remove all saved provider bookmarks from this device?”
+
+Saved resources
+Title: “Clear Saved Resources”
+Body: “Remove all saved resource bookmarks from this device?”
+
+Journal entries
+Title: “Clear Journal Entries”
+Body: “Delete all journal entries stored on this device? This cannot be undone.”
+
+Symptom check ins
+Title: “Clear Symptom Check Ins”
+Body: “Delete all symptom tracking entries stored on this device? This cannot be undone.”
+
+Reminders
+Title: “Clear Reminders”
+Body: “Delete all reminders stored on this device? Scheduled reminder notifications will also be cancelled.”
+
+Ragna memory
+Title: “Clear Ragna Memory”
+Body: “Clear Ragna’s saved local memory, living profile, and recent topic history on this device? This does not automatically delete a conversation currently open on the server.”
+
+8. After a successful clear action, trigger success haptics and show a small confirmation Alert or lightweight success message.
+Use concise confirmation text such as:
+“Patient profile cleared.”
+“Journal entries cleared.”
+Do not overdesign this.
+
+9. Add a final note card near the bottom:
+“Need a full reset?”
+Body:
+“Category controls above only clear saved data for that category. Your app setup, accessibility settings, and journey stage are kept in place.”
+
+10. Add a secondary text link style button at the bottom:
+“Back to More”
+This should call router.back()
+
+G. Add access from the More screen
+
+Update artifacts/mobile/app/(tabs)/more.tsx
+
+Add a new menu item under “Your Profile” or “Help & Support” with this label:
+“Manage Saved Data”
+
+Use icon:
+database
+or
+trash-2
+
+Route:
+"/data-controls"
+
+Keep the rest of the More screen unchanged.
+
+H. Make the patient profile screen use the new clear helper
+
+Update artifacts/mobile/app/patient-profile.tsx
+
+1. Pull clearPatientProfile from useApp.
+2. Update the existing clear action to use clearPatientProfile instead of updatePatientProfile({}).
+3. Update the confirmation body from:
+“Remove all patient information from this device?”
+to:
+“Remove saved patient profile details from this device? Goals of care will be kept unless you clear them separately.”
+
+4. Keep the rest of the patient profile screen unchanged.
+
+I. Helper logic for empty states on the new screen
+
+In data-controls.tsx, derive category emptiness carefully.
+
+Patient profile should count as saved if any of these fields are present:
+patientName
+diagnosis
+comfortKitMedications
+medications length
+equipmentInHome
+hospicePhone
+hospiceAfterHoursPhone
+equipmentProviderPhone
+pharmacyPhone
+additionalNotes
+
+Goals of care should count as saved if any goalsOfCare field has content.
+
+Saved providers:
+user?.savedProviders.length
+
+Saved resources:
+user?.savedResources.length
+
+Journal entries:
+entries.length
+
+Symptom check ins:
+entries.length from symptoms context
+
+Reminders:
+reminders.length
+
+Ragna memory:
+memories.length or livingProfile non empty or recentTiles length greater than 0
+
+J. Keep copy honest
+
+Important wording requirements
+
+1. Do not claim these controls clear server data.
+2. Do not claim support requests are cleared here.
+3. Do not claim active backend conversations are cleared here.
+4. Make it clear this is device level saved data management.
+
+K. Run checks
+
+After edits:
+1. Run the available mobile TypeScript check
+2. Fix any type errors
+3. Verify no existing screen breaks because of the new context methods
+
+L. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what was added
+3. Which categories can now be cleared individually
+4. Any local data categories that still do not have a clear control
+5. Any follow up recommendation if we later want a full app reset flow

@@ -89,6 +89,7 @@ export default function MoreScreen() {
     {
       title: "Help & Support",
       items: [
+        { label: "Manage Saved Data", icon: "database", route: "/data-controls" },
         { label: "Contact Support", icon: "message-circle", route: "/support" },
         { label: "Privacy Policy", icon: "shield", route: "/privacy" },
         { label: "Terms of Use", icon: "file-text", route: "/terms" },

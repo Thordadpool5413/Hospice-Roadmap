@@ -80,6 +80,9 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
     [memories, persistMemories]
   );
 
+  // Clears all local Ragna memory: saved conversation memories, the living
+  // profile summary, and the recent tile/topic history — all on this device only.
+  // Does not affect any server-backed conversation history or support requests.
   const clearMemories = useCallback(async () => {
     await persistMemories([]);
     setLivingProfile("");

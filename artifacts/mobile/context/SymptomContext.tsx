@@ -20,6 +20,7 @@ interface SymptomContextValue {
   deleteEntry: (id: string) => Promise<void>;
   getTodayEntry: () => SymptomEntry | null;
   getRecentSummary: (days?: number) => string;
+  clearEntries: () => Promise<void>;
 }
 
 const SymptomContext = createContext<SymptomContextValue | null>(null);
@@ -74,6 +75,15 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     await saveEntries(entries.filter((e) => e.id !== id));
   }, [entries]);
 
+  const clearEntries = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      setEntries([]);
+    } catch (e) {
+      console.error("Error clearing symptom entries:", e);
+    }
+  }, []);
+
   const getTodayEntry = useCallback((): SymptomEntry | null => {
     const today = new Date().toISOString().slice(0, 10);
     return entries.find((e) => e.date === today) ?? null;
@@ -123,7 +133,7 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SymptomContext.Provider
-      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentSummary }}
+      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentSummary, clearEntries }}
     >
       {children}
     </SymptomContext.Provider>
