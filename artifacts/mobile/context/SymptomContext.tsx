@@ -19,6 +19,7 @@ interface SymptomContextValue {
   updateEntry: (id: string, updates: Partial<Omit<SymptomEntry, "id">>) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
   getTodayEntry: () => SymptomEntry | null;
+  getRecentEntries: (days: number) => SymptomEntry[];
   getRecentSummary: (days?: number) => string;
   clearEntries: () => Promise<void>;
 }
@@ -89,6 +90,13 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     return entries.find((e) => e.date === today) ?? null;
   }, [entries]);
 
+  const getRecentEntries = useCallback((days: number): SymptomEntry[] => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days + 1);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    return entries.filter((e) => e.date >= cutoffStr);
+  }, [entries]);
+
   const getRecentSummary = useCallback((days: number = 7): string => {
     if (entries.length === 0) return "";
     const cutoff = new Date();
@@ -133,7 +141,7 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SymptomContext.Provider
-      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentSummary, clearEntries }}
+      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries, getRecentSummary, clearEntries }}
     >
       {children}
     </SymptomContext.Provider>
