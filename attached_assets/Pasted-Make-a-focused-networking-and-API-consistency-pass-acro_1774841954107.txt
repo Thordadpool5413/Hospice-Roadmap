@@ -1,0 +1,262 @@
+Make a focused networking and API consistency pass across the React Native Expo iOS app.
+
+Goal
+
+Create one shared source of truth for:
+1. API base URL resolution
+2. request timeouts and abort signals
+3. default headers
+4. JSON response parsing and error handling
+5. online and offline network state
+
+Then update the existing mobile services and major screens to use these shared utilities.
+Do not redesign the UI.
+Do not change backend routes.
+Do not change request payload shapes.
+Do not add login.
+Do not add new packages unless the project already depends on them.
+Keep current app behavior the same from the user perspective, while making connection handling consistent and easier to maintain.
+
+Files to inspect and update
+
+artifacts/mobile/services/aiService.ts
+artifacts/mobile/services/cmsProviderService.ts
+artifacts/mobile/services/supportService.ts
+artifacts/mobile/app/(tabs)/help.tsx
+artifacts/mobile/app/(tabs)/providers.tsx
+artifacts/mobile/app/provider/[id].tsx
+
+Also inspect for any current network or base URL helpers that already exist, such as:
+artifacts/mobile/lib/*
+artifacts/mobile/utils/*
+artifacts/mobile/services/*
+artifacts/mobile/hooks/*
+
+Create these new files if they do not already exist
+
+artifacts/mobile/services/apiClient.ts
+artifacts/mobile/hooks/useAppNetwork.ts
+
+Rules
+
+1. Do not change backend route paths.
+2. Do not change response payload shapes.
+3. Do not change screen layout or styling except where tiny helper text or disabled states already exist.
+4. Do not add a heavy networking library.
+5. Use the existing fetch based approach.
+6. Keep TypeScript clean.
+7. If shared logic already exists in part, consolidate rather than duplicating.
+8. Do not break Replit and Expo local development behavior.
+9. Preserve any current custom headers such as x_client_id.
+10. Keep patientContext as a string and existing request bodies unchanged.
+
+Implementation details
+
+A. Create a shared API client utility
+
+Create artifacts/mobile/services/apiClient.ts
+
+This file should become the single source of truth for mobile API requests.
+
+Required exports
+
+1. apiBase(): string
+
+Behavior:
+Use the same environment aware resolution that currently allows Expo and Replit local development to work.
+If similar logic already exists in aiService.ts or cmsProviderService.ts, move that logic here and reuse it.
+Keep behavior compatible with the current dev environment.
+Do not hardcode a production only host.
+
+2. makeRequestTimeoutSignal(timeoutMs?: number): AbortSignal
+
+Behavior:
+Create a timeout based AbortController signal similar to the current makeSignal patterns.
+Default timeout should be one consistent value, such as 12000 ms, unless specific calls need longer.
+If cleanup helper logic is useful, include it.
+Keep it simple.
+
+3. mergeJsonHeaders(extraHeaders?: Record<string, string>): Record<string, string>
+
+Behavior:
+Return a clean headers object with:
+Accept: application/json
+Content Type: application/json
+plus any extra headers merged in.
+If a request needs non JSON behavior later, that can bypass this helper.
+
+4. parseJsonResponse<T>(res: Response): Promise<T>
+
+Behavior:
+If res.ok is true:
+attempt to parse JSON and return it
+if parsing fails, throw Error("Invalid server response")
+
+If res.ok is false:
+attempt to parse JSON and read:
+error
+message
+or a similar field
+throw Error with the most useful message available
+fallback to:
+"Request failed"
+
+5. fetchJson<T>(url: string, options?: RequestInit & { timeoutMs?: number }): Promise<T>
+
+Behavior:
+Use makeRequestTimeoutSignal
+merge JSON headers if the caller did not explicitly provide headers
+call fetch
+return parseJsonResponse<T>(res)
+
+Allow callers to pass their own headers and method.
+Preserve custom headers such as x_client_id.
+
+B. Standardize AI service networking
+
+Update artifacts/mobile/services/aiService.ts
+
+Requirements
+
+1. Remove duplicated API base resolution logic if present and use apiBase from apiClient.ts
+2. Remove duplicated timeout helper if present and use makeRequestTimeoutSignal or fetchJson where appropriate
+3. Keep all public function signatures unchanged
+4. Keep existing custom x_client_id header behavior
+5. Keep request payloads unchanged
+6. Standardize error handling so all thrown errors are clean and useful
+7. If streaming logic uses raw fetch and cannot use fetchJson directly, still use shared apiBase and header helpers
+8. For non streaming JSON endpoints, prefer fetchJson
+
+Important:
+Do not break streaming message behavior.
+It is okay for streaming endpoints to use raw fetch with shared helpers rather than fetchJson.
+
+C. Standardize CMS provider networking
+
+Update artifacts/mobile/services/cmsProviderService.ts
+
+Requirements
+
+1. Remove duplicated api base logic and use apiBase from apiClient.ts
+2. Remove duplicated timeout helper and use makeRequestTimeoutSignal or fetchJson
+3. Keep all existing exported function names unchanged
+4. Standardize errors so failed provider requests surface useful messages
+5. Keep current quality and provider search behavior unchanged
+
+D. Standardize support networking
+
+Update artifacts/mobile/services/supportService.ts
+
+Requirements
+
+1. Use apiBase from apiClient.ts
+2. Use fetchJson for the JSON request
+3. Keep x_client_id support intact
+4. Keep public function signatures unchanged
+5. Preserve current behavior and errors
+
+E. Create one shared app network hook
+
+Create artifacts/mobile/hooks/useAppNetwork.ts
+
+Requirements
+
+1. Use the same underlying network information source the app already uses.
+2. If the project already uses NetInfo, reuse it.
+3. Export:
+useAppNetwork()
+
+Return shape:
+{
+  isOnline: boolean;
+  isInternetReachable: boolean | null;
+  hasCheckedNetwork: boolean;
+}
+
+Behavior:
+Treat null unknown states carefully.
+Recommended logic:
+isOnline should only be false when network is clearly unavailable.
+If the state is unknown, default isOnline to true until proven offline, to avoid false negatives on launch.
+hasCheckedNetwork should become true after the first network state event.
+
+Keep the hook simple and reusable.
+Use cleanup correctly.
+
+F. Replace duplicated screen level network wiring
+
+Inspect and update these screens if they currently manage their own direct NetInfo subscriptions or duplicate online state logic:
+
+artifacts/mobile/app/(tabs)/help.tsx
+artifacts/mobile/app/(tabs)/providers.tsx
+artifacts/mobile/app/provider/[id].tsx
+
+Requirements
+
+1. Replace direct network subscription logic with useAppNetwork where appropriate
+2. Preserve current offline banners, disabled states, retry behavior, and helper copy
+3. Do not remove any existing offline warning UX
+4. Keep the app conservative about offline only for features that actually need the network
+
+Expected behavior by screen
+
+help.tsx
+Keep the current offline banner or helper state for Ragna features, but source isOnline from useAppNetwork instead of local duplicated logic.
+
+providers.tsx
+Keep provider search behavior the same, but use shared network state if it currently duplicates it.
+
+provider/[id].tsx
+If it currently checks connectivity directly, use the shared hook instead.
+
+If one of these screens does not currently have its own network logic, do not force a change.
+
+G. Normalize timeout strategy
+
+Current issue:
+Different services may use different timeout values or helper names.
+
+Requirements
+
+1. Define a default timeout in apiClient.ts
+2. Use that default across support and provider requests
+3. If AI streaming needs a longer timeout, allow it to pass an explicit timeoutMs
+4. Document the reason in a short comment if a specific endpoint needs a different timeout
+
+H. Keep CORS and backend untouched in this task
+
+Do not edit the backend in this task.
+This is a mobile networking cleanup only.
+
+I. Preserve request specific customizations
+
+Examples that must still work:
+x_client_id headers
+streaming fetch for AI messages
+GET requests without request bodies
+AbortController based timeouts
+provider fetches
+support submission
+
+J. Optional small cleanup if safe
+
+If there is currently a helper function like makeSignal, apiBase, or resolveBaseUrl duplicated in more than one file, delete the duplicates after moving to the shared utility, as long as imports are updated cleanly.
+
+K. Final checks
+
+After edits:
+1. Run the available mobile TypeScript check
+2. Fix any type errors
+3. Verify there are no stale imports from removed helper functions
+4. Report which files now depend on apiClient.ts
+5. Report whether any raw fetch calls intentionally remain and why
+
+L. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what was centralized
+3. Which screens now use the shared network hook
+4. Which services now use the shared API client
+5. Any remaining raw fetch calls kept intentionally
+6. Any follow up recommendation for request retry or telemetry later

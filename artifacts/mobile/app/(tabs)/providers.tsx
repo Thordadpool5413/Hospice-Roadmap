@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProviderCard } from "@/components/ProviderCard";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useAppNetwork } from "@/hooks/useAppNetwork";
 import { setCmsProviders as storeCmsProviders } from "@/context/cmsProviderStore";
 import {
   fetchQualitySummary,
@@ -31,7 +31,7 @@ import type { Provider } from "@/types";
 export default function ProvidersScreen() {
   const insets = useSafeAreaInsets();
   const { toggleSavedProvider, isSavedProvider } = useApp();
-  const { isOnline } = useNetworkStatus();
+  const { isOnline } = useAppNetwork();
 
   const [selectedState, setSelectedState] = useState("");
   const [zipInput, setZipInput] = useState("");

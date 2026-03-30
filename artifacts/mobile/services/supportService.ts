@@ -1,13 +1,5 @@
 import { getClientId } from "./clientIdentity";
-
-function apiBase(): string {
-  if (typeof window !== "undefined" && window.location?.hostname) {
-    const host = window.location.hostname.replace(".expo.", ".");
-    return `https://${host}/api`;
-  }
-  const envUrl = process.env["EXPO_PUBLIC_API_URL"];
-  return envUrl ?? "http://localhost:8080/api";
-}
+import { apiBase, fetchJson, mergeJsonHeaders } from "./apiClient";
 
 export interface SupportSubmissionInput {
   name: string;
@@ -29,25 +21,13 @@ export async function submitSupportRequest(
 ): Promise<SupportSubmissionResponse> {
   const clientId = await getClientId();
 
-  const res = await fetch(`${apiBase()}/support/support-requests`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      x_client_id: clientId,
-    },
-    body: JSON.stringify(input),
-  });
-
-  if (!res.ok) {
-    let message = "Failed to submit support request";
-    try {
-      const json = (await res.json()) as { error?: string };
-      if (json.error) message = json.error;
-    } catch {
-      // ignore parse failure
+  return fetchJson<SupportSubmissionResponse>(
+    `${apiBase()}/support/support-requests`,
+    {
+      method: "POST",
+      // Include x_client_id alongside standard JSON headers.
+      headers: mergeJsonHeaders({ x_client_id: clientId }),
+      body: JSON.stringify(input),
     }
-    throw new Error(message);
-  }
-
-  return res.json() as Promise<SupportSubmissionResponse>;
+  );
 }

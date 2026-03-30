@@ -17,7 +17,7 @@ import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useAppNetwork } from "@/hooks/useAppNetwork";
 import {
   AiConversation,
   AiMessage,
@@ -121,7 +121,7 @@ export default function HelpScreen() {
   const { entries: symptomEntries, getTodayEntry, getRecentSummary } = useSymptoms();
   const { entries: journalEntries } = useJournal();
   const { memories, addMemory, getMemorySummary, memoryCount, livingProfile, updateLivingProfile, recentTiles, recordTile } = useVeraMemory();
-  const { isOnline } = useNetworkStatus();
+  const { isOnline } = useAppNetwork();
   const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
   const lastInitialRef = useRef("");
   const scrollRef = useRef<ScrollView>(null);

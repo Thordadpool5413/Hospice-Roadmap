@@ -1,26 +1,21 @@
 import { getClientId } from "./clientIdentity";
+import { apiBase, fetchJson, mergeJsonHeaders } from "./apiClient";
 
-function apiBase(): string {
-  if (typeof window !== "undefined" && window.location?.hostname) {
-    const host = window.location.hostname.replace(".expo.", ".");
-    return `https://${host}/api`;
-  }
-  const envUrl = process.env["EXPO_PUBLIC_API_URL"];
-  return envUrl ?? "http://localhost:8080/api";
-}
+// ─── Internal header helpers ─────────────────────────────────────────────────
+// These are async because they must await the stable client ID.  They include
+// x_client_id which is required by the backend on all AI endpoints.
 
 async function jsonHeaders(): Promise<Record<string, string>> {
   const clientId = await getClientId();
-  return {
-    "Content-Type": "application/json",
-    "x_client_id": clientId,
-  };
+  return mergeJsonHeaders({ x_client_id: clientId });
 }
 
 async function baseHeaders(): Promise<Record<string, string>> {
   const clientId = await getClientId();
-  return { "x_client_id": clientId };
+  return { x_client_id: clientId };
 }
+
+// ─── Public types ────────────────────────────────────────────────────────────
 
 export interface AiMessage {
   id: number;
@@ -37,31 +32,34 @@ export interface AiConversation {
   messages?: AiMessage[];
 }
 
+// ─── Conversation CRUD ───────────────────────────────────────────────────────
+
 export async function createConversation(title: string): Promise<AiConversation> {
-  const res = await fetch(`${apiBase()}/anthropic/conversations`, {
+  return fetchJson<AiConversation>(`${apiBase()}/anthropic/conversations`, {
     method: "POST",
     headers: await jsonHeaders(),
     body: JSON.stringify({ title }),
   });
-  if (!res.ok) throw new Error("Failed to create conversation");
-  return res.json() as Promise<AiConversation>;
 }
 
 export async function getConversation(id: number): Promise<AiConversation> {
-  const res = await fetch(`${apiBase()}/anthropic/conversations/${id}`, {
-    headers: await baseHeaders(),
-  });
-  if (!res.ok) throw new Error("Failed to get conversation");
-  return res.json() as Promise<AiConversation>;
+  return fetchJson<AiConversation>(
+    `${apiBase()}/anthropic/conversations/${id}`,
+    { headers: await baseHeaders() }
+  );
 }
 
 export async function deleteConversation(id: number): Promise<void> {
+  // DELETE may return 204 with no body — use raw fetch so we don't try to
+  // parse an empty response as JSON.
   const res = await fetch(`${apiBase()}/anthropic/conversations/${id}`, {
     method: "DELETE",
     headers: await baseHeaders(),
   });
   if (!res.ok) throw new Error("Failed to delete conversation");
 }
+
+// ─── Memory / profile synthesis ─────────────────────────────────────────────
 
 export async function synthesizeProfile(
   currentProfile: string,
@@ -75,13 +73,14 @@ export async function synthesizeProfile(
   tileHistory: string[]
 ): Promise<string | null> {
   try {
-    const res = await fetch(`${apiBase()}/anthropic/profile-synthesize`, {
-      method: "POST",
-      headers: await jsonHeaders(),
-      body: JSON.stringify({ currentProfile, memory, tileHistory }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json() as { profile: string };
+    const data = await fetchJson<{ profile: string }>(
+      `${apiBase()}/anthropic/profile-synthesize`,
+      {
+        method: "POST",
+        headers: await jsonHeaders(),
+        body: JSON.stringify({ currentProfile, memory, tileHistory }),
+      }
+    );
     return data.profile ?? null;
   } catch {
     return null;
@@ -97,26 +96,34 @@ export async function generateConversationMemory(
   mainTopics: string[];
 } | null> {
   try {
-    const res = await fetch(
+    return await fetchJson<{
+      summary: string;
+      keyFacts: string[];
+      emotionalTone: string;
+      mainTopics: string[];
+    }>(
       `${apiBase()}/anthropic/conversations/${conversationId}/memory`,
       {
         method: "POST",
         headers: await baseHeaders(),
       }
     );
-    if (!res.ok) return null;
-    return res.json() as Promise<{
-      summary: string;
-      keyFacts: string[];
-      emotionalTone: string;
-      mainTopics: string[];
-    }>;
   } catch {
     return null;
   }
 }
 
-function parseSseText(raw: string, onChunk: (t: string) => void, onDone: () => void, onError: (e: string) => void) {
+// ─── SSE streaming ───────────────────────────────────────────────────────────
+// Streaming uses raw fetch because fetchJson cannot incrementally consume a
+// ReadableStream.  All other shared helpers (apiBase, mergeJsonHeaders) are
+// still used to stay consistent.
+
+function parseSseText(
+  raw: string,
+  onChunk: (t: string) => void,
+  onDone: () => void,
+  onError: (e: string) => void
+) {
   const lines = raw.split("\n");
   for (const line of lines) {
     if (!line.startsWith("data: ")) continue;
@@ -130,7 +137,7 @@ function parseSseText(raw: string, onChunk: (t: string) => void, onDone: () => v
       if (data.done) { onDone(); return; }
       if (data.content) onChunk(data.content);
     } catch {
-      // ignore malformed SSE lines
+      // Ignore malformed SSE lines.
     }
   }
 }
@@ -144,6 +151,7 @@ export async function streamMessage(
   onError: (err: string) => void
 ): Promise<void> {
   try {
+    // Streaming requires a long-lived connection — no timeout signal here.
     const res = await fetch(
       `${apiBase()}/anthropic/conversations/${conversationId}/messages`,
       {
@@ -158,11 +166,10 @@ export async function streamMessage(
       return;
     }
 
-    // React Native native may not support ReadableStream — fall back to full text
+    // React Native native may not support ReadableStream — fall back to full text.
     if (!res.body) {
       const raw = await res.text();
       parseSseText(raw, onChunk, onDone, onError);
-      // If parseSseText didn't call onDone, call it now
       onDone();
       return;
     }
@@ -191,7 +198,7 @@ export async function streamMessage(
           if (data.done) { onDone(); return; }
           if (data.content) onChunk(data.content);
         } catch {
-          // ignore malformed SSE lines
+          // Ignore malformed SSE lines.
         }
       }
     }
