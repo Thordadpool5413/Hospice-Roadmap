@@ -166,6 +166,10 @@ function RootLayoutNav() {
         name="ragna-privacy"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="hospice-interview"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
