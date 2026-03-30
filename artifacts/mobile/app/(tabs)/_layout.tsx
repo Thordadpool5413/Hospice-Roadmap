@@ -16,18 +16,16 @@ function ChatTabIcon({ focused }: { focused: boolean }) {
         source={ragnaIcon}
         style={{
           width: 26, height: 26, borderRadius: 7,
-          opacity: focused ? 1 : 0.72,
+          opacity: focused ? 1 : 0.7,
           borderWidth: focused ? 1.5 : 0,
           borderColor: Colors.tabIconSelected,
         }}
       />
-      {/* Green live dot */}
       <View style={{
-        position: "absolute",
-        bottom: 0, right: 0,
+        position: "absolute", bottom: 0, right: 0,
         width: 8, height: 8, borderRadius: 4,
         backgroundColor: Colors.chatLiveDot,
-        borderWidth: 1.5, borderColor: Colors.background,
+        borderWidth: 1.5, borderColor: "#05080F",
       }} />
     </View>
   );
@@ -52,7 +50,7 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: Colors.tabBarBg,
           borderTopWidth: 1,
-          borderTopColor: Colors.divider,
+          borderTopColor: "rgba(53, 94, 159, 0.5)",
           elevation: 0,
           paddingBottom: safeAreaInsets.bottom,
           ...(isWeb ? { height: 56 + safeAreaInsets.bottom } : {}),
@@ -72,19 +70,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="journey"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
         name="help"
         options={{
           title: "Chat",
           tabBarIcon: ({ focused }) => <ChatTabIcon focused={focused} />,
         }}
-      />
-      <Tabs.Screen
-        name="providers"
-        options={{ href: null }}
       />
       <Tabs.Screen
         name="more"
@@ -97,6 +87,22 @@ export default function TabLayout() {
               <Feather name="more-horizontal" size={22} color={color} />
             ),
         }}
+      />
+      <Tabs.Screen
+        name="journey"
+        options={{
+          title: "Resources",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="book.fill" tintColor={color} size={22} />
+            ) : (
+              <Feather name="book-open" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="providers"
+        options={{ href: null }}
       />
     </Tabs>
   );
