@@ -150,6 +150,10 @@ function RootLayoutNav() {
         name="resources"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="data-controls"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

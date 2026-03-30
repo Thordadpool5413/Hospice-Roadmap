@@ -42,6 +42,7 @@ interface RemindersContextValue {
   updateReminder: (id: string, updates: Partial<Pick<Reminder, "label" | "datetime" | "recurrence" | "type">>) => Promise<void>;
   toggleReminder: (id: string) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
+  clearReminders: () => Promise<void>;
 }
 
 const RemindersContext = createContext<RemindersContextValue | null>(null);
@@ -170,11 +171,22 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     await save(updated);
   }, [reminders, save]);
 
+  const clearReminders = useCallback(async () => {
+    // Cancel all scheduled notifications before clearing state.
+    await Promise.all(
+      reminders
+        .filter((r) => r.notificationId)
+        .map((r) => cancelNotification(r.notificationId))
+    );
+    setReminders([]);
+    await save([]);
+  }, [reminders, save]);
+
   return (
     <RemindersContext.Provider value={{
       reminders, isLoading, permissionStatus,
       requestPermissions, addReminder, updateReminder,
-      toggleReminder, deleteReminder,
+      toggleReminder, deleteReminder, clearReminders,
     }}>
       {children}
     </RemindersContext.Provider>

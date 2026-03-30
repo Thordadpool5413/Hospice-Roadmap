@@ -40,6 +40,10 @@ interface AppContextValue {
   updateRole: (role: UserRole) => void;
   completeOnboarding: (role: UserRole, stage: JourneyStage) => void;
   updatePatientProfile: (profile: PatientProfile) => void;
+  clearPatientProfile: () => Promise<void>;
+  clearGoalsOfCare: () => Promise<void>;
+  clearSavedResources: () => Promise<void>;
+  clearSavedProviders: () => Promise<void>;
   toggleSavedResource: (resourceId: string) => void;
   toggleSavedProvider: (providerId: string) => void;
   isSavedResource: (resourceId: string) => boolean;
@@ -141,6 +145,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const resetRagnaPrivacy = useCallback(() => {
     if (!user) return;
     saveUser({ ...user, ragnaPrivacy: { ...DEFAULT_RAGNA_PRIVACY } });
+  }, [user]);
+
+  // Clears editable patient profile fields while preserving identity, journey,
+  // saved lists, and goalsOfCare (which has its own separate clear below).
+  const clearPatientProfile = useCallback(async (): Promise<void> => {
+    if (!user) return;
+    const preserved = user.patientProfile?.goalsOfCare;
+    const cleared: PatientProfile = preserved ? { goalsOfCare: preserved } : {};
+    await saveUser({ ...user, patientProfile: cleared });
+  }, [user]);
+
+  // Removes only goalsOfCare from the patient profile; all other fields stay.
+  const clearGoalsOfCare = useCallback(async (): Promise<void> => {
+    if (!user) return;
+    const { goalsOfCare: _removed, ...rest } = user.patientProfile ?? {};
+    await saveUser({ ...user, patientProfile: rest });
+  }, [user]);
+
+  const clearSavedResources = useCallback(async (): Promise<void> => {
+    if (!user) return;
+    await saveUser({ ...user, savedResources: [] });
+  }, [user]);
+
+  const clearSavedProviders = useCallback(async (): Promise<void> => {
+    if (!user) return;
+    await saveUser({ ...user, savedProviders: [] });
   }, [user]);
 
   const buildPatientContext = useCallback((): string => {
@@ -256,6 +286,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateRole,
         completeOnboarding,
         updatePatientProfile,
+        clearPatientProfile,
+        clearGoalsOfCare,
+        clearSavedResources,
+        clearSavedProviders,
         toggleSavedResource,
         toggleSavedProvider,
         isSavedResource,

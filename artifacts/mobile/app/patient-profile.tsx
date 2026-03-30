@@ -89,7 +89,7 @@ const FIELDS: FieldConfig[] = [
 
 export default function PatientProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, updatePatientProfile } = useApp();
+  const { user, updatePatientProfile, clearPatientProfile } = useApp();
   const [profile, setProfile] = useState<PatientProfile>(
     user?.patientProfile ?? {}
   );
@@ -117,17 +117,17 @@ export default function PatientProfileScreen() {
 
   const handleClear = () => {
     Alert.alert(
-      "Clear Profile",
-      "Remove all patient information from this device?",
+      "Clear Patient Profile",
+      "Remove saved patient profile details from this device? Goals of care will be kept unless you clear them separately.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Clear",
           style: "destructive",
-          onPress: () => {
+          onPress: async () => {
             setProfile({});
             setMedications([]);
-            updatePatientProfile({});
+            await clearPatientProfile();
           },
         },
       ]
