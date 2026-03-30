@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -183,6 +183,26 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const id = "rn-web-scroll-fix";
+    if (document.getElementById(id)) return;
+    const el = document.createElement("style");
+    el.id = id;
+    // React Native Web: Pressable calls setPointerCapture() which locks the
+    // pointer stream to itself after a click, preventing the parent ScrollView
+    // from receiving subsequent drag events.  touch-action: pan-y instructs
+    // the browser to handle vertical scrolling natively even when JS holds
+    // pointer capture — this is the W3C-standard fix for this pattern.
+    el.textContent = [
+      "div[style*='overflow: scroll'] { touch-action: pan-y !important; }",
+      "div[style*='overflow:scroll']  { touch-action: pan-y !important; }",
+      "div[style*='overflow: auto']   { touch-action: pan-y !important; }",
+      "div[style*='overflow:auto']    { touch-action: pan-y !important; }",
+    ].join("\n");
+    document.head.appendChild(el);
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 
