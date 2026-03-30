@@ -59,6 +59,7 @@ export default function MoreScreen() {
       items: [
         { label: isPatient ? "My Profile" : "Patient Profile", icon: "user", route: "/patient-profile" },
         { label: "Goals of Care", icon: "star", route: "/goals-of-care" },
+        { label: "Ragna Privacy Controls", icon: "shield", route: "/ragna-privacy" },
       ],
     },
     {

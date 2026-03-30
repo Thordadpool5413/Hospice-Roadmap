@@ -67,6 +67,18 @@ export interface SymptomEntry {
   notes?: string;
 }
 
+export interface RagnaPrivacySettings {
+  personalizationEnabled: boolean;
+  includeProfileDetails: boolean;
+  includeMedicationAndEquipment: boolean;
+  includeCareContacts: boolean;
+  includeGoalsOfCare: boolean;
+  includeRecentSymptoms: boolean;
+  includeRecentJournal: boolean;
+  includeConversationMemory: boolean;
+  includeTimeContext: boolean;
+}
+
 export interface User {
   id: string;
   role: UserRole;
@@ -77,6 +89,7 @@ export interface User {
   savedProviders: string[];
   createdAt: string;
   patientProfile?: PatientProfile;
+  ragnaPrivacy?: RagnaPrivacySettings;
 }
 
 export interface Provider {

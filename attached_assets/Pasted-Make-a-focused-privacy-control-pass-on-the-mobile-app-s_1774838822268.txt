@@ -1,0 +1,295 @@
+Make a focused privacy control pass on the mobile app so users can control exactly what saved information is included when they chat with Ragna.
+
+Goal
+
+Reduce and control the patient context sent to Ragna without breaking the current flow.
+Keep the app fully usable.
+Do not add login.
+Do not change the backend in this task.
+Do not redesign the UI.
+Keep the styling and navigation consistent with the current app.
+
+Files to edit
+
+artifacts/mobile/types/index.ts
+artifacts/mobile/context/AppContext.tsx
+artifacts/mobile/context/VeraMemoryContext.tsx
+artifacts/mobile/app/(tabs)/help.tsx
+artifacts/mobile/app/(tabs)/more.tsx
+
+Create this new file
+
+artifacts/mobile/app/ragna-privacy.tsx
+
+Rules
+
+1. Do not add new packages.
+2. Use the existing AsyncStorage based app model.
+3. Preserve backward compatibility for users already stored in local storage.
+4. Keep current chat behavior working.
+5. Only change the mobile app in this task.
+6. Make the new settings understandable to a stressed caregiver.
+7. Make the defaults more conservative than the current behavior.
+
+Implementation details
+
+A. Add typed Ragna privacy settings
+
+In artifacts/mobile/types/index.ts add a new interface:
+
+export interface RagnaPrivacySettings {
+  personalizationEnabled: boolean;
+  includeProfileDetails: boolean;
+  includeMedicationAndEquipment: boolean;
+  includeCareContacts: boolean;
+  includeGoalsOfCare: boolean;
+  includeRecentSymptoms: boolean;
+  includeRecentJournal: boolean;
+  includeConversationMemory: boolean;
+  includeTimeContext: boolean;
+}
+
+Then update the User interface to include:
+
+ragnaPrivacy?: RagnaPrivacySettings;
+
+B. Add defaults and update helpers in AppContext
+
+In artifacts/mobile/context/AppContext.tsx do all of the following:
+
+1. Add a DEFAULT_RAGNA_PRIVACY constant with these defaults:
+
+const DEFAULT_RAGNA_PRIVACY: RagnaPrivacySettings = {
+  personalizationEnabled: true,
+  includeProfileDetails: true,
+  includeMedicationAndEquipment: true,
+  includeCareContacts: false,
+  includeGoalsOfCare: true,
+  includeRecentSymptoms: true,
+  includeRecentJournal: false,
+  includeConversationMemory: true,
+  includeTimeContext: true,
+};
+
+2. Add a helper that merges stored users with defaults so older stored users still work:
+
+function normalizeUser(user: User): User {
+  return {
+    ...user,
+    ragnaPrivacy: {
+      ...DEFAULT_RAGNA_PRIVACY,
+      ...(user.ragnaPrivacy ?? {}),
+    },
+  };
+}
+
+3. When loading from AsyncStorage, normalize the stored user before setting state.
+
+4. When creating a new default user during onboarding, include ragnaPrivacy: DEFAULT_RAGNA_PRIVACY.
+
+5. Extend the AppContextValue interface with:
+
+ragnaPrivacy: RagnaPrivacySettings;
+updateRagnaPrivacy: (updates: Partial<RagnaPrivacySettings>) => void;
+resetRagnaPrivacy: () => void;
+
+6. Implement updateRagnaPrivacy so it updates the current user and persists the merged settings.
+
+7. Implement resetRagnaPrivacy so it resets to DEFAULT_RAGNA_PRIVACY and persists it.
+
+8. Expose ragnaPrivacy, updateRagnaPrivacy, and resetRagnaPrivacy from the provider value.
+
+9. Update buildPatientContext so it respects ragnaPrivacy.
+
+Required behavior for buildPatientContext:
+
+If no user, return an empty string.
+If personalizationEnabled is false, return an empty string.
+
+Always include:
+Who is using this app
+Journey stage
+
+Only include patient name, diagnosis, and additional notes if includeProfileDetails is true.
+
+Only include comfort kit medications, medication entries, and equipment in home if includeMedicationAndEquipment is true.
+
+Only include hospice phone, after hours phone, equipment provider phone, and pharmacy phone if includeCareContacts is true.
+
+Only include goals of care if includeGoalsOfCare is true.
+
+Do not include anything else in this helper.
+
+C. Respect the new privacy settings in the Ragna chat screen
+
+Update artifacts/mobile/app/(tabs)/help.tsx
+
+1. Pull ragnaPrivacy from useApp.
+
+Current code uses:
+const { user, buildPatientContext } = useApp();
+
+Change it to use:
+const { user, buildPatientContext, ragnaPrivacy } = useApp();
+
+2. When assembling the outbound patientContext in sendMessage:
+
+Current pieces are:
+baseContext
+symptomSummary
+journalContext
+memorySummary
+timeContext
+
+Change this behavior to:
+
+If ragnaPrivacy.personalizationEnabled is false:
+send an empty patientContext string.
+
+If ragnaPrivacy.personalizationEnabled is true:
+include baseContext from buildPatientContext()
+include recent symptom summary only if ragnaPrivacy.includeRecentSymptoms is true
+include recent journal entries only if ragnaPrivacy.includeRecentJournal is true
+include memory summary only if ragnaPrivacy.includeConversationMemory is true
+include time context only if ragnaPrivacy.includeTimeContext is true
+
+Then join only the enabled non empty sections.
+
+3. Keep the current symptom alert card logic and urgent tiles working exactly as they do now. This task only controls what gets sent with the message.
+
+4. Update the memory related clear conversation flow.
+
+In handleClearConversation, only call:
+generateConversationMemory
+addMemory
+synthesizeProfile
+updateLivingProfile
+
+if ragnaPrivacy.includeConversationMemory is true.
+
+If includeConversationMemory is false, skip memory generation and just delete the conversation and start fresh.
+
+5. Update the “What Ragna knows about you” card title to:
+“What Ragna may use”
+
+6. Add a small manage link or button near that card that routes to:
+"/ragna-privacy"
+
+7. Add a short helper line in the empty state below the welcome text:
+“You can review or change what Ragna uses anytime.”
+
+Make “change what Ragna uses” open /ragna-privacy when tapped.
+
+8. If ragnaPrivacy.personalizationEnabled is false, show a small subdued helper card near the top of the empty state that says:
+“Ragna is currently in chat only mode. Saved profile details are not being included with your messages.”
+
+Keep it visually simple and consistent with the existing screen.
+
+D. Add a dedicated privacy control screen for Ragna
+
+Create artifacts/mobile/app/ragna-privacy.tsx
+
+This screen should use:
+useApp
+useSymptoms
+useJournal
+useVeraMemory
+useSafeAreaInsets
+existing Colors
+existing style patterns from the app
+
+Screen requirements
+
+1. Title:
+“Ragna Privacy Controls”
+
+2. Intro text:
+“Choose what Ragna can use to personalize responses. Anything turned off stays on your device and is not included with your chat request.”
+
+3. Add a master switch row:
+Label: “Use saved context to personalize Ragna”
+
+4. Add child switch rows for:
+Patient profile details
+Medications and equipment
+Care contact numbers
+Goals of care
+Recent symptom summary
+Recent journal entries
+Conversation memory
+Time context
+
+5. When the master switch is off, keep the child switches visible but visually subdued and disabled.
+
+6. Add a “Reset to Recommended Defaults” button that calls resetRagnaPrivacy().
+
+7. Add a “Clear Ragna Memory” button that calls clearMemories() from VeraMemoryContext after confirming with Alert.alert.
+
+Confirmation title:
+“Clear Ragna Memory”
+
+Confirmation body:
+“This clears Ragna’s saved local memory and living profile on this device. It does not automatically delete a conversation that is currently open.”
+
+8. Add a preview section titled:
+“What would be included right now”
+
+Build a readable preview string on this screen using the same privacy rules that help.tsx uses.
+
+The preview should include:
+base context from buildPatientContext()
+recent symptom summary only if enabled
+recent journal context only if enabled
+memory summary only if enabled
+time context only if enabled
+
+If the result is empty, show:
+“No saved context would be included right now. Ragna will respond based only on what you type in the chat.”
+
+9. Keep the preview inside a styled card with selectable text if possible.
+
+10. Add a small note at the bottom:
+“These controls affect what is included with future chat requests from this device.”
+
+E. Add access from the More screen
+
+Update artifacts/mobile/app/(tabs)/more.tsx
+
+1. Add a new menu item under “Your Profile” or “Help & Support” with this label:
+“Ragna Privacy Controls”
+
+Use an appropriate icon like shield or sliders.
+
+Route it to:
+"/ragna-privacy"
+
+2. Keep the rest of the More screen unchanged.
+
+F. Keep naming consistent enough for now
+
+Do not rename the VeraMemoryContext file in this task.
+Do not change storage keys in this task.
+Only update user facing copy so it says Ragna where appropriate on the new screen.
+
+G. Final code quality requirements
+
+1. Keep TypeScript types clean.
+2. Do not duplicate the default privacy object in multiple places if you can avoid it.
+3. Do not break existing onboarding or patient profile saves.
+4. Do not change backend request shape.
+5. Continue sending patientContext as a string.
+
+H. Run checks
+
+After code edits:
+1. Run the available TypeScript check for the mobile app.
+2. Fix any type errors caused by the new settings.
+3. If styles need to be added, keep them local to the new screen or the existing screen being edited.
+
+I. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what changed
+3. Any remaining places where Ragna still uses saved context automatically
+4. Any follow up recommendation before moving to stronger storage or full auth
