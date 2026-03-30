@@ -158,6 +158,14 @@ function RootLayoutNav() {
         name="medication-lookup"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="patient-profile"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ragna-privacy"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
