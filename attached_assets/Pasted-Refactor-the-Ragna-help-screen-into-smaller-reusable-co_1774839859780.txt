@@ -1,0 +1,250 @@
+Refactor the Ragna help screen into smaller reusable components without changing user visible behavior.
+
+Goal
+
+Reduce the size and complexity of artifacts/mobile/app/(tabs)/help.tsx while preserving the current UI, copy, navigation, privacy behavior, memory behavior, and chat flow.
+Do not redesign the screen.
+Do not change backend behavior.
+Do not remove any current feature.
+The screen should look and behave the same after the refactor.
+
+Primary file to refactor
+
+artifacts/mobile/app/(tabs)/help.tsx
+
+Create a new component folder
+
+artifacts/mobile/components/ragna
+
+Create these component files
+
+artifacts/mobile/components/ragna/RagnaHeader.tsx
+artifacts/mobile/components/ragna/RagnaEmptyState.tsx
+artifacts/mobile/components/ragna/RagnaMessageList.tsx
+artifacts/mobile/components/ragna/RagnaComposer.tsx
+artifacts/mobile/components/ragna/RagnaMessageBubble.tsx
+
+If needed, also create
+
+artifacts/mobile/components/ragna/RagnaSuggestions.tsx
+artifacts/mobile/components/ragna/RagnaContextCard.tsx
+
+Rules
+
+1. Do not change the route name or file location of help.tsx.
+2. Do not change current functionality.
+3. Do not remove any current privacy control behavior that was added earlier.
+4. Do not remove any current memory behavior.
+5. Do not change the AI request shape.
+6. Keep all current icons, copy, colors, and layout as close as possible.
+7. Keep styles visually identical unless tiny structural moves are required.
+8. Do not add new packages.
+9. Keep TypeScript clean.
+10. Prefer extracting presentational components and simple view logic, while keeping the core state orchestration in help.tsx.
+
+Refactor plan
+
+A. Keep this logic inside help.tsx
+
+Keep the following in help.tsx unless a very small helper extraction is needed:
+
+screen level state
+conversation loading
+sendMessage
+handleTilePress
+handleClearConversation
+handleShareMessage
+network status wiring
+privacy settings gating
+memory synthesis flow
+patientContext assembly
+route param handling
+scrollToBottom
+effects and refs
+
+The help screen should remain the orchestrator.
+
+B. Extract the top header into RagnaHeader
+
+Create artifacts/mobile/components/ragna/RagnaHeader.tsx
+
+Props should include only what the header needs, for example:
+hasMessages
+memoryCount
+onNewConversation
+
+Behavior to preserve:
+show title Ragna
+show subtitle Your hospice care companion
+show Knows your story pill when memoryCount is greater than 0
+show the edit icon button only when hasMessages is true
+call onNewConversation when the edit button is pressed
+
+Do not move conversation clearing logic into the component.
+The component should be presentational.
+
+C. Extract the empty state into RagnaEmptyState
+
+Create artifacts/mobile/components/ragna/RagnaEmptyState.tsx
+
+This component should render the non conversation state currently shown when there are no messages.
+
+It should accept props for:
+memoryCount
+isPatient
+proactiveOpener
+symptomAlert
+visibleTiles
+livingProfile
+knowsExpanded
+onToggleKnowsExpanded
+onTilePress
+onPressProactiveOpener
+onPressSymptomAlert
+onOpenPatientProfile
+onOpenPrivacyControls
+ragnaChatOnlyMode or equivalent boolean if privacy personalization is off
+styles or shared style object if needed
+
+Behavior to preserve:
+welcome section
+Ragna image
+welcome title and subtitle
+proactive opener card
+symptom alert card
+urgent tiles grid
+What Ragna may use or current equivalent card
+profile nudge
+privacy helper text
+chat only mode helper card if present from earlier work
+change what Ragna uses link if present from earlier work
+
+If the current help.tsx now includes privacy control wording or a manage link to /ragna-privacy, preserve it exactly.
+
+D. Extract the message list into RagnaMessageList
+
+Create artifacts/mobile/components/ragna/RagnaMessageList.tsx
+
+Props should include:
+localMessages
+isLoading
+isStreaming
+suggestions
+onShareMessage
+onSuggestionPress
+
+Responsibilities:
+render the message bubbles
+render the loading bubble
+render the follow up suggestion section if suggestions are available and streaming is not active
+
+Keep the actual message mapping here, but do not own state.
+
+E. Extract the composer into RagnaComposer
+
+Create artifacts/mobile/components/ragna/RagnaComposer.tsx
+
+Props should include:
+inputText
+setInputText or onChangeText
+onSend
+isStreaming
+isOnline
+hasMessages
+insetsBottom
+inputRef if needed
+
+Responsibilities:
+offline banner
+streaming banner
+text input
+send button
+placeholder logic
+editable logic
+
+Preserve the current placeholder text behavior exactly.
+
+F. Extract the assistant message rendering into RagnaMessageBubble
+
+Create artifacts/mobile/components/ragna/RagnaMessageBubble.tsx
+
+Move these pieces out of help.tsx:
+MessageBubble
+RenderedMessage
+renderInline
+parseSuggestions only if it is used only by the bubble layer, otherwise leave parseSuggestions in help.tsx
+
+Requirements:
+Keep long press share behavior working
+Keep current markdown like formatting behavior working
+Keep the current visual styling of user and assistant bubbles
+Do not change content rendering rules
+
+If parseSuggestions is still used by sendMessage in help.tsx, keep it there and do not duplicate it.
+
+G. Styles
+
+There are likely many styles in help.tsx that belong only to extracted sections.
+
+Refactor styles carefully using one of these approaches:
+
+Preferred approach
+1. Keep a shared subset of styles in help.tsx only for layout containers that remain there
+2. Move component specific styles into each new component file
+
+Alternative approach
+Create a shared ragnaStyles.ts file only if truly necessary
+
+Do not create a giant central style file unless it clearly improves maintainability.
+Prefer styles co located with each extracted component.
+
+H. Keep behavior identical
+
+Specific behavior that must remain unchanged:
+starting a conversation
+loading an existing conversation
+scrolling to bottom after messages load
+urgent tile prompts
+suggestion pills
+share assistant message
+clear conversation flow
+memory synthesis when enabled
+privacy controlled patient context assembly
+offline banners
+streaming indicators
+opening patient profile from the nudge
+opening ragna privacy controls if that exists
+all current empty state logic
+
+I. Keep import hygiene clean
+
+After extraction:
+remove unused imports from help.tsx
+keep imports in new components minimal
+use existing aliases like @/constants/colors where appropriate
+
+J. Final size target
+
+After refactor, aim for:
+help.tsx under about 700 lines if reasonably possible
+each new component focused and readable
+no component file larger than needed
+
+Do not force the target if it would create worse architecture, but make a meaningful reduction.
+
+K. Final checks
+
+After edits:
+1. Run the mobile TypeScript check if available
+2. Fix any type errors
+3. Verify no import cycles were created
+4. Report the final line count of help.tsx and each new component file
+
+L. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what was extracted
+3. Final line count of refactored help.tsx
+4. Any behavior that needed special care to preserve
+5. Any remaining part of help.tsx that should be split in a later pass

@@ -1,20 +1,14 @@
-import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Share,
   StyleSheet,
-  Text,
   TextInput,
-  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -35,6 +29,12 @@ import {
   synthesizeProfile,
 } from "@/services/aiService";
 import { VeraEmotionalTone } from "@/types";
+
+import { RagnaComposer } from "@/components/ragna/RagnaComposer";
+import { RagnaEmptyState } from "@/components/ragna/RagnaEmptyState";
+import { RagnaHeader } from "@/components/ragna/RagnaHeader";
+import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
+import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
 
 const URGENT_TILES = [
   {
@@ -102,13 +102,6 @@ const URGENT_TILES = [
     caregiverOnly: true,
   },
 ];
-
-interface LocalMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  isStreaming?: boolean;
-}
 
 function parseSuggestions(raw: string): { text: string; suggestions: string[] } {
   const match = raw.match(/\[SUGGEST:([^\]]+)\]\s*$/);
@@ -331,9 +324,9 @@ export default function HelpScreen() {
           setLocalMessages((prev) =>
             prev.map((m) => {
               if (m.id !== assistantMsgId) return m;
-              const { text, suggestions: parsed } = parseSuggestions(m.content);
+              const { text: parsedText, suggestions: parsed } = parseSuggestions(m.content);
               if (parsed.length > 0) setSuggestions(parsed);
-              return { ...m, content: text, isStreaming: false };
+              return { ...m, content: parsedText, isStreaming: false };
             })
           );
           setIsStreaming(false);
@@ -353,7 +346,7 @@ export default function HelpScreen() {
         }
       );
     },
-    [conversation, isStreaming, buildPatientContext, getRecentSummary, getMemorySummary, journalEntries, scrollToBottom]
+    [conversation, isStreaming, buildPatientContext, getRecentSummary, getMemorySummary, journalEntries, scrollToBottom, ragnaPrivacy]
   );
 
   const handleTilePress = useCallback(
@@ -444,39 +437,11 @@ export default function HelpScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.compassBadge}>
-            <Image
-              source={require("@/assets/images/ragna-icon.png")}
-              style={{ width: 38, height: 38 }}
-              resizeMode="cover"
-            />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>Ragna</Text>
-            <View style={styles.headerSubRow}>
-              <Text style={styles.headerSubtitle}>Your hospice care companion</Text>
-              {memoryCount > 0 && (
-                <View style={styles.memoryPill}>
-                  <Feather name="zap" size={9} color={Colors.accentLight} />
-                  <Text style={styles.memoryPillText}>Knows your story</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          {hasMessages && (
-            <Pressable
-              onPress={handleClearConversation}
-              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-            >
-              <Feather name="edit" size={18} color={Colors.navySub} />
-            </Pressable>
-          )}
-        </View>
-      </View>
+      <RagnaHeader
+        hasMessages={hasMessages}
+        memoryCount={memoryCount}
+        onNewConversation={handleClearConversation}
+      />
 
       <ScrollView
         ref={scrollRef}
@@ -489,365 +454,43 @@ export default function HelpScreen() {
         showsVerticalScrollIndicator={false}
       >
         {!hasMessages ? (
-          <>
-            <View style={styles.welcomeSection}>
-              <View style={styles.compassLarge}>
-                <Image
-                  source={require("@/assets/images/ragna-icon.png")}
-                  style={{ width: 80, height: 80 }}
-                  resizeMode="cover"
-                />
-              </View>
-              <Text style={styles.welcomeTitle}>
-                {memoryCount > 0 ? "Welcome back." : "Hi, I'm Ragna."}
-              </Text>
-              <Text style={styles.welcomeSubtitle}>
-                {memoryCount > 0
-                  ? "I remember our previous conversations. I'm here whenever you need guidance, support, or just someone to talk through what's happening."
-                  : isPatient
-                  ? "Ask me anything about your symptoms, medications, comfort, or what to expect. I'm here to support you."
-                  : "Ask me anything about symptoms, medications, caregiving tasks, equipment, or what to expect. I'll give you clear, step-by-step guidance."}
-              </Text>
-            </View>
-
-            {proactiveOpener && (
-              <Pressable
-                onPress={() => sendMessage(proactiveOpener.sendPrompt)}
-                style={({ pressed }) => [
-                  styles.veraOpenerCard,
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                <View style={styles.veraOpenerAvatar}>
-                  <Image
-                    source={require("@/assets/images/ragna-icon.png")}
-                    style={{ width: 32, height: 32, borderRadius: 8 }}
-                  />
-                </View>
-                <View style={styles.veraOpenerContent}>
-                  <Text style={styles.veraOpenerName}>Ragna</Text>
-                  <Text style={styles.veraOpenerText}>{proactiveOpener.display}</Text>
-                </View>
-                <Feather name="arrow-right" size={16} color={Colors.primary} />
-              </Pressable>
-            )}
-
-            {symptomAlert && (
-              <Pressable
-                onPress={() => sendMessage(symptomAlert.prompt)}
-                style={({ pressed }) => [
-                  styles.symptomAlertCard,
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                <View style={styles.symptomAlertIcon}>
-                  <Feather name="bar-chart-2" size={15} color={Colors.accentLight} />
-                </View>
-                <Text style={styles.symptomAlertText}>{symptomAlert.text}</Text>
-                <Feather name="chevron-right" size={14} color={Colors.accentLight} />
-              </Pressable>
-            )}
-
-            <Text style={styles.tilesLabel}>What's happening right now?</Text>
-            <View style={styles.tilesGrid}>
-              {visibleTiles.map((tile) => (
-                <Pressable
-                  key={tile.label}
-                  onPress={() => handleTilePress(tile)}
-                  style={({ pressed }) => [
-                    styles.tile,
-                    { backgroundColor: Colors.surfaceMid, borderColor: tile.color + "28" },
-                    pressed && { opacity: 0.82, transform: [{ scale: 0.97 }] },
-                  ]}
-                >
-                  <View style={[styles.tileIcon, { backgroundColor: tile.color + "20" }]}>
-                    <Feather name={tile.icon as any} size={18} color={tile.color} />
-                  </View>
-                  <Text style={[styles.tileLabel, { color: tile.color }]}>{tile.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {!ragnaPrivacy.personalizationEnabled && (
-              <View style={styles.chatOnlyBanner}>
-                <Feather name="eye-off" size={13} color={Colors.textMuted} />
-                <Text style={styles.chatOnlyBannerText}>
-                  Ragna is currently in chat-only mode. Saved profile details are not being included with your messages.
-                </Text>
-              </View>
-            )}
-
-            {livingProfile ? (
-              <Pressable
-                onPress={() => setKnowsExpanded((e) => !e)}
-                style={({ pressed }) => [
-                  styles.knowsCard,
-                  pressed && { opacity: 0.9 },
-                ]}
-              >
-                <View style={styles.knowsHeader}>
-                  <Feather name="zap" size={13} color={Colors.accent} />
-                  <Text style={styles.knowsTitle}>What Ragna may use</Text>
-                  <Pressable
-                    onPress={(e) => { e.stopPropagation(); router.push("/ragna-privacy" as any); }}
-                    hitSlop={8}
-                  >
-                    <Text style={styles.knowsManageLink}>Manage</Text>
-                  </Pressable>
-                  <Feather
-                    name={knowsExpanded ? "chevron-up" : "chevron-down"}
-                    size={14}
-                    color={Colors.textMuted}
-                  />
-                </View>
-                {knowsExpanded && (
-                  <Text style={styles.knowsBody}>{livingProfile}</Text>
-                )}
-              </Pressable>
-            ) : null}
-
-            <View style={styles.profileNudge}>
-              <Feather name="user" size={14} color={Colors.primary} />
-              <Text style={styles.profileNudgeText}>
-                Add your patient's name, diagnosis, and medications in{" "}
-                <Text
-                  style={styles.profileNudgeLink}
-                  onPress={() => router.push("/patient-profile" as any)}
-                >
-                  Patient Profile
-                </Text>{" "}
-                and Ragna's responses will be tailored to your specific situation.
-              </Text>
-            </View>
-
-            <View style={styles.profileNudge}>
-              <Feather name="shield" size={14} color={Colors.textSubtle} />
-              <Text style={styles.profileNudgeText}>
-                You can review or{" "}
-                <Text
-                  style={styles.profileNudgeLink}
-                  onPress={() => router.push("/ragna-privacy" as any)}
-                >
-                  change what Ragna uses
-                </Text>{" "}
-                anytime.
-              </Text>
-            </View>
-          </>
+          <RagnaEmptyState
+            memoryCount={memoryCount}
+            isPatient={isPatient}
+            proactiveOpener={proactiveOpener}
+            symptomAlert={symptomAlert}
+            visibleTiles={visibleTiles}
+            livingProfile={livingProfile}
+            knowsExpanded={knowsExpanded}
+            personalizationEnabled={ragnaPrivacy.personalizationEnabled}
+            onToggleKnowsExpanded={() => setKnowsExpanded((e) => !e)}
+            onTilePress={handleTilePress}
+            onPressProactiveOpener={sendMessage}
+            onPressSymptomAlert={sendMessage}
+          />
         ) : (
-          <View style={styles.messagesContainer}>
-            {localMessages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                onLongPress={
-                  msg.role === "assistant" && msg.content
-                    ? () => handleShareMessage(msg.content)
-                    : undefined
-                }
-              />
-            ))}
-            {isLoading && (
-              <View style={styles.loadingBubble}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.loadingText}>Ragna is thinking…</Text>
-              </View>
-            )}
-            {suggestions.length > 0 && !isStreaming && (
-              <View style={styles.suggestionsContainer}>
-                <Text style={styles.suggestionsLabel}>Ask a follow-up</Text>
-                <View style={styles.suggestionPills}>
-                  {suggestions.map((s, i) => (
-                    <Pressable
-                      key={i}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        sendMessage(s);
-                      }}
-                      style={({ pressed }) => [
-                        styles.suggestionPill,
-                        pressed && { opacity: 0.72, transform: [{ scale: 0.97 }] },
-                      ]}
-                    >
-                      <Feather name="message-circle" size={12} color={Colors.primary} style={{ marginRight: 5 }} />
-                      <Text style={styles.suggestionPillText}>{s}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
+          <RagnaMessageList
+            localMessages={localMessages}
+            isLoading={isLoading}
+            isStreaming={isStreaming}
+            suggestions={suggestions}
+            onShareMessage={handleShareMessage}
+            onSuggestionPress={sendMessage}
+          />
         )}
       </ScrollView>
 
-      <View style={[styles.inputBar, { paddingBottom: Platform.OS === "web" ? 84 : 49 + insets.bottom }]}>
-        {!isOnline && (
-          <View style={styles.offlineInputNotice}>
-            <Feather name="wifi-off" size={15} color={Colors.amber} />
-            <Text style={styles.offlineInputText}>
-              No connection — check your internet and try again.
-            </Text>
-          </View>
-        )}
-        {isStreaming && (
-          <View style={styles.streamingBanner}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-            <Text style={styles.streamingBannerText}>Ragna is responding…</Text>
-          </View>
-        )}
-        <View style={styles.inputRow}>
-          <TextInput
-            ref={inputRef}
-            style={[
-              styles.input,
-              hasMessages && !isStreaming && isOnline && styles.inputReady,
-              !isOnline && styles.inputOffline,
-            ]}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder={
-              !isOnline
-                ? "Reconnecting to Ragna…"
-                : isStreaming
-                ? "Ragna is responding…"
-                : hasMessages
-                ? "Reply to Ragna…"
-                : "Describe what's happening or ask anything…"
-            }
-            placeholderTextColor={Colors.textMuted}
-            multiline
-            maxLength={2000}
-            returnKeyType="default"
-            editable={!isStreaming && isOnline}
-          />
-          <Pressable
-            onPress={() => sendMessage(inputText)}
-            disabled={!inputText.trim() || isStreaming || !isOnline}
-            style={({ pressed }) => [
-              styles.sendBtn,
-              (!inputText.trim() || isStreaming || !isOnline) && styles.sendBtnDisabled,
-              pressed && { opacity: 0.8 },
-            ]}
-          >
-            {isStreaming ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Feather name="send" size={18} color="#FFFFFF" />
-            )}
-          </Pressable>
-        </View>
-      </View>
+      <RagnaComposer
+        inputText={inputText}
+        onChangeText={setInputText}
+        onSend={sendMessage}
+        isStreaming={isStreaming}
+        isOnline={isOnline}
+        hasMessages={hasMessages}
+        insetsBottom={insets.bottom}
+        inputRef={inputRef}
+      />
     </KeyboardAvoidingView>
-  );
-}
-
-function MessageBubble({
-  message,
-  onLongPress,
-}: {
-  message: LocalMessage;
-  onLongPress?: () => void;
-}) {
-  const isUser = message.role === "user";
-  const content = message.content;
-  const isStreaming = message.isStreaming;
-
-  return (
-    <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
-      {!isUser && (
-        <Image
-          source={require("@/assets/images/ragna-icon.png")}
-          style={{ width: 26, height: 26, borderRadius: 8 }}
-        />
-      )}
-      <Pressable
-        onLongPress={onLongPress}
-        delayLongPress={450}
-        style={({ pressed }) => [
-          styles.bubble,
-          isUser ? styles.bubbleUser : styles.bubbleAssistant,
-          pressed && onLongPress && { opacity: 0.85 },
-        ]}
-      >
-        {isStreaming && content === "" ? (
-          <View style={styles.typingIndicator}>
-            <View style={[styles.typingDot, styles.typingDot1]} />
-            <View style={[styles.typingDot, styles.typingDot2]} />
-            <View style={[styles.typingDot, styles.typingDot3]} />
-          </View>
-        ) : (
-          <RenderedMessage content={content} isUser={isUser} />
-        )}
-        {isStreaming && content !== "" && (
-          <View style={styles.streamingCursor} />
-        )}
-      </Pressable>
-    </View>
-  );
-}
-
-function RenderedMessage({ content, isUser }: { content: string; isUser: boolean }) {
-  if (isUser) {
-    return <Text style={styles.bubbleTextUser}>{content}</Text>;
-  }
-
-  const lines = content.split("\n");
-  const elements: React.ReactNode[] = [];
-  let key = 0;
-
-  for (const line of lines) {
-    if (line.trim() === "") {
-      elements.push(<View key={key++} style={{ height: 6 }} />);
-    } else if (/^#{1,3}\s/.test(line)) {
-      const text = line.replace(/^#{1,3}\s/, "");
-      elements.push(
-        <Text key={key++} style={styles.msgHeading}>{text}</Text>
-      );
-    } else if (/^[•\-\*]\s/.test(line)) {
-      const text = line.replace(/^[•\-\*]\s/, "");
-      elements.push(
-        <View key={key++} style={styles.msgBulletRow}>
-          <Text style={styles.msgBulletDot}>•</Text>
-          <Text style={styles.msgBulletText}>{renderInline(text)}</Text>
-        </View>
-      );
-    } else if (/^\d+\.\s/.test(line)) {
-      const match = line.match(/^(\d+)\.\s(.+)/);
-      if (match) {
-        elements.push(
-          <View key={key++} style={styles.msgBulletRow}>
-            <Text style={styles.msgStepNum}>{match[1]}.</Text>
-            <Text style={styles.msgBulletText}>{renderInline(match[2])}</Text>
-          </View>
-        );
-      }
-    } else if (/^═+$/.test(line.trim())) {
-      elements.push(<View key={key++} style={styles.msgDivider} />);
-    } else {
-      elements.push(
-        <Text key={key++} style={styles.msgBody}>{renderInline(line)}</Text>
-      );
-    }
-  }
-
-  return <View>{elements}</View>;
-}
-
-function renderInline(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (part.startsWith("**") && part.endsWith("**")) {
-          return (
-            <Text key={i} style={styles.msgBold}>
-              {part.slice(2, -2)}
-            </Text>
-          );
-        }
-        return <Text key={i}>{part}</Text>;
-      })}
-    </>
   );
 }
 
@@ -855,79 +498,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.navyMid,
-    backgroundColor: Colors.navy,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  compassBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: Colors.navyText,
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.navySub,
-  },
-  headerSubRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  memoryPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: Colors.navyMid,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: Colors.accent + "50",
-  },
-  memoryPillText: {
-    fontSize: 9,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.accentLight,
-    letterSpacing: 0.2,
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.navyMid,
-    alignItems: "center",
-    justifyContent: "center",
   },
   scroll: {
     flex: 1,
@@ -940,452 +510,5 @@ const styles = StyleSheet.create({
   },
   scrollContentEmpty: {
     flexGrow: 1,
-  },
-  welcomeSection: {
-    alignItems: "center",
-    paddingTop: 16,
-    paddingBottom: 8,
-    gap: 10,
-  },
-  compassLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 22,
-    overflow: "hidden",
-    marginBottom: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    textAlign: "center",
-    letterSpacing: -0.5,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 21,
-    maxWidth: 320,
-  },
-  tilesLabel: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
-    letterSpacing: -0.2,
-    marginBottom: -4,
-  },
-  tilesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  tile: {
-    width: "47.5%",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    gap: 8,
-  },
-  tileIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tileLabel: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    lineHeight: 18,
-    letterSpacing: -0.1,
-  },
-  profileNudge: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.primary + "50",
-  },
-  profileNudgeText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  profileNudgeLink: {
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
-  },
-  messagesContainer: {
-    gap: 12,
-    paddingTop: 4,
-  },
-  messageRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  messageRowUser: {
-    flexDirection: "row-reverse",
-  },
-  avatarSmall: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    alignSelf: "flex-end",
-  },
-  bubble: {
-    maxWidth: "84%",
-    borderRadius: 16,
-    padding: 12,
-  },
-  bubbleUser: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  bubbleAssistant: {
-    backgroundColor: Colors.surfaceMid,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  bubbleTextUser: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: "#FFFFFF",
-    lineHeight: 22,
-  },
-  typingIndicator: {
-    flexDirection: "row",
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-  typingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: Colors.textMuted,
-  },
-  typingDot1: { opacity: 0.4 },
-  typingDot2: { opacity: 0.7 },
-  typingDot3: { opacity: 1 },
-  streamingCursor: {
-    width: 8,
-    height: 14,
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
-    marginTop: 4,
-    opacity: 0.6,
-  },
-  loadingBubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
-  },
-  loadingText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    fontStyle: "italic",
-  },
-  msgHeading: {
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.2,
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  msgBody: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 22,
-  },
-  msgBold: {
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-  },
-  msgBulletRow: {
-    flexDirection: "row",
-    gap: 6,
-    marginTop: 2,
-  },
-  msgBulletDot: {
-    fontSize: 14,
-    color: Colors.primary,
-    lineHeight: 22,
-    width: 12,
-    flexShrink: 0,
-  },
-  msgStepNum: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: Colors.primary,
-    lineHeight: 22,
-    width: 20,
-    flexShrink: 0,
-  },
-  msgBulletText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 22,
-  },
-  msgDivider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-    marginVertical: 6,
-  },
-  inputBar: {
-    flexDirection: "column",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.divider,
-    backgroundColor: Colors.background,
-  },
-  streamingBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 4,
-  },
-  streamingBannerText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
-    fontStyle: "italic",
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 10,
-  },
-  inputReady: {
-    borderColor: Colors.primary + "60",
-    borderWidth: 1.5,
-    backgroundColor: Colors.primaryPale,
-  },
-  input: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 120,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: Colors.text,
-  },
-  inputOffline: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.amber + "40",
-    opacity: 0.6,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  sendBtnDisabled: {
-    backgroundColor: Colors.divider,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  suggestionsContainer: {
-    marginTop: 8,
-    gap: 8,
-  },
-  suggestionsLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textSubtle,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginLeft: 2,
-  },
-  suggestionPills: {
-    flexDirection: "column",
-    gap: 7,
-  },
-  suggestionPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: Colors.primaryPale,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: Colors.primary + "30",
-  },
-  suggestionPillText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.primaryDark,
-    lineHeight: 18,
-  },
-  offlineInputNotice: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: Colors.amberPale,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    borderWidth: 1,
-    borderColor: Colors.amberLight,
-  },
-  offlineInputText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.amber,
-    lineHeight: 18,
-  },
-  veraOpenerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.primary + "30",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  veraOpenerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    overflow: "hidden",
-    flexShrink: 0,
-  },
-  veraOpenerContent: {
-    flex: 1,
-    gap: 2,
-  },
-  veraOpenerName: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    color: Colors.primary,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  veraOpenerText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.text,
-    lineHeight: 20,
-  },
-  symptomAlertCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: Colors.accentPale,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.accent + "40",
-  },
-  symptomAlertIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    backgroundColor: Colors.accent + "25",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  symptomAlertText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: Colors.accentLight,
-    lineHeight: 19,
-  },
-  knowsCard: {
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 14,
-    padding: 13,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
-  knowsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
-  knowsTitle: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
-    letterSpacing: 0.1,
-  },
-  knowsManageLink: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
-  },
-  knowsBody: {
-    marginTop: 10,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.text,
-    lineHeight: 20,
-  },
-  chatOnlyBanner: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-  },
-  chatOnlyBannerText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    lineHeight: 19,
   },
 });
