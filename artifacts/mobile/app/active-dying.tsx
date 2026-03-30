@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 
-const VERA_COLOR = Colors.primary;
+const RAGNA_COLOR = Colors.primary;
 const TWILIGHT = "#C0A0E8";
 const TWILIGHT_PALE = "#1E1230";
 const TWILIGHT_MID = "#9070B8";
@@ -285,16 +285,16 @@ export default function ActiveDyingScreen() {
               params: { initialMessage: "I'm with my loved one right now and I think they may be actively dying. Can you help me understand what I'm seeing and what to do?" },
             } as any);
           }}
-          style={({ pressed }) => [styles.veraBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+          style={({ pressed }) => [styles.ragnaBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
         >
           <Image
             source={require("@/assets/images/ragna-icon.png")}
             style={{ width: 36, height: 36, borderRadius: 9 }}
             resizeMode="cover"
           />
-          <View style={styles.veraBtnText}>
-            <Text style={styles.veraBtnTitle}>Ask Ragna right now</Text>
-            <Text style={styles.veraBtnSub}>Describe what you're seeing for personalized guidance</Text>
+          <View style={styles.ragnaBtnText}>
+            <Text style={styles.ragnaBtnTitle}>Ask Ragna right now</Text>
+            <Text style={styles.ragnaBtnSub}>Describe what you're seeing for personalized guidance</Text>
           </View>
           <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.7)" />
         </Pressable>
@@ -489,30 +489,30 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary, lineHeight: 20,
   },
 
-  veraBtn: {
+  ragnaBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: VERA_COLOR,
+    backgroundColor: RAGNA_COLOR,
     borderRadius: 16, padding: 16,
-    shadowColor: VERA_COLOR,
+    shadowColor: RAGNA_COLOR,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 4,
     marginBottom: 8,
   },
-  veraBtnIcon: {
+  ragnaBtnIcon: {
     width: 42, height: 42, borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center", justifyContent: "center",
   },
-  veraBtnText: { flex: 1 },
-  veraBtnTitle: {
+  ragnaBtnText: { flex: 1 },
+  ragnaBtnTitle: {
     fontSize: 15, fontFamily: "Inter_700Bold",
     color: "#fff", letterSpacing: -0.2,
   },
-  veraBtnSub: {
+  ragnaBtnSub: {
     fontSize: 12, fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.8)", marginTop: 2,
   },

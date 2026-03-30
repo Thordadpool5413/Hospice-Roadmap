@@ -258,7 +258,7 @@ export default function PainAdScreen() {
           <Pressable
             onPress={handleAskRagna}
             style={({ pressed }) => [
-              styles.veraBtn,
+              styles.ragnaBtn,
               !allAnswered && styles.btnDisabled,
               pressed && { opacity: 0.85 },
             ]}
@@ -268,7 +268,7 @@ export default function PainAdScreen() {
               style={{ width: 28, height: 28, borderRadius: 7 }}
               resizeMode="cover"
             />
-            <Text style={styles.veraBtnText}>Ask Ragna About This Score</Text>
+            <Text style={styles.ragnaBtnText}>Ask Ragna About This Score</Text>
           </Pressable>
         </View>
 
@@ -374,12 +374,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   saveBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  veraBtn: {
+  ragnaBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 8, backgroundColor: Colors.primary, borderRadius: 14,
     paddingVertical: 14,
   },
-  veraBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  ragnaBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
   btnDisabled: { opacity: 0.45 },
 
   disclaimer: {

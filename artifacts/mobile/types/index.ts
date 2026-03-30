@@ -36,6 +36,7 @@ export interface PatientProfile {
   goalsOfCare?: GoalsOfCare;
 }
 
+// Legacy compatibility name retained for now. This type powers Ragna's emotional tone tracking and can be renamed in a later migration pass.
 export type VeraEmotionalTone =
   | "distressed"
   | "calm"
@@ -44,6 +45,7 @@ export type VeraEmotionalTone =
   | "hopeful"
   | "mixed";
 
+// Legacy compatibility name retained for now. This interface powers Ragna's conversational memory and can be renamed in a later migration pass.
 export interface VeraMemory {
   id: string;
   date: string;

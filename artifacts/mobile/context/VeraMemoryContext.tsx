@@ -1,3 +1,5 @@
+// Powers Ragna's conversational memory, living profile, and tile history.
+// File name retained as VeraMemoryContext for storage compatibility — safe to rename in a later migration pass.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
@@ -7,14 +9,17 @@ import React, {
   useState,
 } from "react";
 
+// Legacy compatibility name retained for now. This type powers Ragna memory and can be renamed in a later migration pass.
 import { VeraMemory } from "@/types";
 
+// AsyncStorage keys are frozen — renaming would lose existing user data.
 const STORAGE_KEY = "@vera_memories_v1";
 const PROFILE_KEY = "@vera_living_profile_v1";
 const TILES_KEY = "@vera_tile_history_v1";
 const MAX_MEMORIES = 5;
 const MAX_TILES = 20;
 
+// Legacy compatibility name retained for now. Powers Ragna memory context.
 interface VeraMemoryContextType {
   memories: VeraMemory[];
   livingProfile: string;
@@ -27,14 +32,17 @@ interface VeraMemoryContextType {
   memoryCount: number;
 }
 
+// Legacy compatibility name retained for now. Powers Ragna memory context.
 const VeraMemoryContext = createContext<VeraMemoryContextType | null>(null);
 
+// Legacy compatibility name retained for now. Hook that provides Ragna's memory to consumers.
 export function useVeraMemory(): VeraMemoryContextType {
   const ctx = useContext(VeraMemoryContext);
   if (!ctx) throw new Error("useVeraMemory must be inside VeraMemoryProvider");
   return ctx;
 }
 
+// Legacy compatibility name retained for now. Provides Ragna's memory state to the tree.
 export function VeraMemoryProvider({ children }: { children: React.ReactNode }) {
   const [memories, setMemories] = useState<VeraMemory[]>([]);
   const [livingProfile, setLivingProfile] = useState<string>("");
@@ -95,7 +103,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
 
   const getMemorySummary = useCallback((): string => {
     if (livingProfile) {
-      const lines: string[] = ["--- Vera's Understanding of This Family ---"];
+      const lines: string[] = ["--- Ragna's Understanding of This Family ---"];
       lines.push(livingProfile);
       if (memories.length > 0) {
         lines.push("\nRecent conversation history:");

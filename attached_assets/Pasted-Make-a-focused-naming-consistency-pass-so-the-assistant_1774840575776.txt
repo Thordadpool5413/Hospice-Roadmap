@@ -1,0 +1,178 @@
+Make a focused naming consistency pass so the assistant is represented as Ragna everywhere user facing, and internal naming is cleaned up where it is safe to do so without breaking storage, imports, or existing behavior.
+
+Goal
+
+Standardize the assistant identity across the mobile app and related code paths.
+User facing copy should consistently say Ragna.
+Internal code should be cleaned up where safe.
+Do not break imports.
+Do not break AsyncStorage keys.
+Do not break existing memory behavior.
+Do not change backend functionality in this task.
+Do not redesign the UI.
+
+Files to inspect and update
+
+artifacts/mobile/app/(tabs)/help.tsx
+artifacts/mobile/app/goals-of-care.tsx
+artifacts/mobile/app/patient-profile.tsx
+artifacts/mobile/app/ragna-privacy.tsx
+artifacts/mobile/app/(tabs)/more.tsx
+artifacts/mobile/context/VeraMemoryContext.tsx
+artifacts/mobile/types/index.ts
+artifacts/mobile/components/ragna/*
+artifacts/api-server/src/routes/anthropic/index.ts
+artifacts/api-server/src/prompts/hospiceSystemPrompt.ts
+
+Also run a project wide search for these case variants in the workspace:
+Vera
+vera
+VERA
+
+Rules
+
+1. Do not rename files or directories in this task.
+2. Do not rename VeraMemoryContext.tsx yet.
+3. Do not rename any AsyncStorage keys that already exist.
+4. Do not rename exported symbols if doing so would create a wider ripple than necessary.
+5. Do update user visible copy so it consistently says Ragna.
+6. Do update internal comments, helper labels, and obvious safe variable names where it improves clarity.
+7. Do not change the assistant personality or system prompt meaning in this task.
+8. Do not change route names or navigation paths.
+9. Keep the app behavior identical.
+
+Implementation details
+
+A. User facing copy must consistently say Ragna
+
+Search all user visible text in the mobile app for any use of Vera and replace it with Ragna.
+
+This includes but is not limited to:
+screen titles
+helper text
+privacy text
+button labels
+preview labels
+alerts
+empty states
+success messages
+supporting descriptions
+
+If any screen still says Vera to the user, change it to Ragna.
+
+B. Keep file names stable, but improve internal naming where safe
+
+Do not rename the file:
+artifacts/mobile/context/VeraMemoryContext.tsx
+
+Inside that file, make safe clarity updates:
+
+1. Keep exported hooks and provider names unchanged if changing them would force wide refactors.
+2. Add a short top comment explaining that this context powers Ragna memory and retains the legacy file name for compatibility during the transition.
+3. If there are internal labels, comments, or helper strings that still describe Vera as the assistant, update them to Ragna where safe.
+4. If there is a type or interface with a clearly user facing meaning that references Vera and it can be safely renamed locally without breaking imports, rename it to a neutral or Ragna aligned name.
+5. If a rename would create broad import churn, leave the symbol name and add a clarifying comment instead.
+
+C. Improve local variable names in safe places
+
+In help.tsx and related Ragna components, if there are local variables like:
+veraSummary
+veraProfile
+veraContext
+veraMemoryText
+or similar
+
+rename them to:
+ragnaSummary
+ragnaProfile
+ragnaContext
+ragnaMemoryText
+
+Only do this for local variables, internal helper names, and non exported symbols where it is safe.
+
+D. Prompt and backend copy cleanup
+
+Inspect:
+artifacts/api-server/src/routes/anthropic/index.ts
+artifacts/api-server/src/prompts/hospiceSystemPrompt.ts
+
+Requirements:
+
+1. If any user visible response framing or assistant identity text still names Vera, change it to Ragna.
+2. Keep the actual prompt intent, safety guidance, and clinical language unchanged.
+3. Do not alter API routes or payload shapes.
+4. Do not rename database structures in this task.
+5. If any internal comments or log messages still refer to Vera and can be safely updated, change them to Ragna.
+
+E. Types cleanup
+
+Inspect artifacts/mobile/types/index.ts
+
+If there are types or interfaces that are clearly assistant branded and easy to rename without broad breakage, rename them to neutral names or Ragna aligned names.
+
+Examples:
+VeraMemorySummary could become AssistantMemorySummary or RagnaMemorySummary if the rename is local and safe.
+
+If the type is imported in many places and would cause unnecessary churn, leave the type name alone for now and add a comment only if it improves clarity.
+
+F. More screen and entry points
+
+Inspect artifacts/mobile/app/(tabs)/more.tsx and any menu entry points.
+
+Make sure the app never presents the assistant under two names.
+Any menu item, settings entry, or navigation copy should use Ragna consistently.
+
+G. Search carefully for hidden leftovers
+
+After the targeted edits, run a broader search across the workspace for:
+Vera
+vera
+VERA
+
+Review each hit and categorize it as one of these:
+
+1. user visible and should be changed now
+2. safe internal cleanup and should be changed now
+3. compatibility name that should stay for now
+
+Change categories 1 and 2.
+Leave category 3 in place.
+
+Examples of category 3:
+legacy file names
+legacy storage keys
+exported symbols that would cause broad refactor churn
+migration sensitive schema names if any exist
+
+H. Add transition comments where needed
+
+Where you leave a legacy Vera name for compatibility, add a brief code comment like:
+
+Legacy compatibility name retained for now. This powers Ragna memory and can be renamed in a later migration pass.
+
+Use this sparingly. Only where it helps future maintainers.
+
+I. Do not perform these actions in this task
+
+1. Do not rename the VeraMemoryContext file itself.
+2. Do not rename storage keys.
+3. Do not rename backend routes.
+4. Do not change database schema.
+5. Do not make a large import breaking refactor.
+
+J. Run checks
+
+After edits:
+1. Run the mobile TypeScript check if available
+2. Run the api server TypeScript check if available
+3. Fix any type errors caused by safe renames
+4. Report any legacy Vera references intentionally left in place for compatibility
+
+K. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what was renamed
+3. Any legacy Vera references intentionally left in place
+4. Whether all user visible assistant naming should now consistently show Ragna
+5. Any recommended later migration if we want to fully retire the Vera naming from file names and exports

@@ -354,16 +354,16 @@ export default function SymptomTrackerScreen() {
                 params: { initialMessage: `I just logged today's symptoms: ${symptoms}. Can you help me understand what these levels mean and what I should do to keep my loved one comfortable?` },
               } as any);
             }}
-            style={({ pressed }) => [styles.veraBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+            style={({ pressed }) => [styles.ragnaBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
           >
             <Image
               source={require("@/assets/images/ragna-icon.png")}
               style={{ width: 36, height: 36, borderRadius: 9 }}
               resizeMode="cover"
             />
-            <View style={styles.veraBtnText}>
-              <Text style={styles.veraBtnTitle}>Ask Ragna about today's symptoms</Text>
-              <Text style={styles.veraBtnSub}>Get personalized guidance on what you're seeing</Text>
+            <View style={styles.ragnaBtnText}>
+              <Text style={styles.ragnaBtnTitle}>Ask Ragna about today's symptoms</Text>
+              <Text style={styles.ragnaBtnSub}>Get personalized guidance on what you're seeing</Text>
             </View>
             <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />
           </Pressable>
@@ -497,20 +497,20 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
 
-  veraBtn: {
+  ragnaBtn: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: Colors.primary, borderRadius: 16, padding: 16,
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.22, shadowRadius: 10, elevation: 4,
   },
-  veraBtnIcon: {
+  ragnaBtnIcon: {
     width: 42, height: 42, borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center", justifyContent: "center",
   },
-  veraBtnText: { flex: 1 },
-  veraBtnTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -0.2 },
-  veraBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.8)", marginTop: 2 },
+  ragnaBtnText: { flex: 1 },
+  ragnaBtnTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -0.2 },
+  ragnaBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.8)", marginTop: 2 },
 
   trendsCard: {
     backgroundColor: Colors.surface, borderRadius: 16,

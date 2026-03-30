@@ -234,7 +234,7 @@ router.post("/profile-synthesize", async (req: Request, res: Response) => {
     ? `\nRecent concern areas the user has selected (most recent first): ${tileHistory.slice(0, 10).join(", ")}`
     : "";
 
-  const prompt = `You are maintaining Vera's living understanding of a family navigating the hospice journey. Vera is a hospice care AI companion. This understanding deepens with every conversation.
+  const prompt = `You are maintaining Ragna's living understanding of a family navigating the hospice journey. Ragna is a hospice care AI companion. This understanding deepens with every conversation.
 
 ${currentProfile ? `Current understanding:\n${currentProfile}` : "This is the first conversation — no prior understanding yet."}
 
@@ -245,14 +245,14 @@ Key facts: ${memory.keyFacts.join("; ")}
 Emotional tone this session: ${memory.emotionalTone}
 Topics discussed: ${memory.mainTopics.join(", ")}${tileContext}
 
-Write an updated, synthesized understanding in 3-5 sentences. This is Vera's "living knowledge" of this family — not a transcript summary, but a deepening human understanding:
+Write an updated, synthesized understanding in 3-5 sentences. This is Ragna's "living knowledge" of this family — not a transcript summary, but a deepening human understanding:
 - Who they are (patient name/age/diagnosis if known, caregiver role and name if known)
 - What they are carrying emotionally (fears, recurring worries, what seems unresolved)
 - What patterns have emerged across conversations (what topics keep coming up, what they need most)
 - How their emotional state has changed over time, if at all
-- What Vera should keep in mind going forward — what to gently follow up on, what they may not be ready for yet
+- What Ragna should keep in mind going forward — what to gently follow up on, what they may not be ready for yet
 
-Write in third person as if Vera is describing her understanding of this family to herself. Be specific and human, not clinical. If the same concern keeps appearing, name it explicitly. If something seems unresolved, say so.
+Write in third person as if Ragna is describing her understanding of this family to herself. Be specific and human, not clinical. If the same concern keeps appearing, name it explicitly. If something seems unresolved, say so.
 
 Output ONLY the 3-5 sentence paragraph. No preamble, no labels, no explanation.`;
 
@@ -297,10 +297,10 @@ router.post("/conversations/:id/memory", async (req: Request, res: Response) => 
     }
 
     const transcript = msgs
-      .map((m) => `${m.role === "user" ? "User" : "Vera"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "User" : "Ragna"}: ${m.content}`)
       .join("\n\n");
 
-    const memoryPrompt = `You are a memory extraction system for Vera, a hospice care AI companion. Given the following conversation transcript, extract a concise memory in JSON format that Vera can use in future sessions to feel continuous and aware of this family's journey.
+    const memoryPrompt = `You are a memory extraction system for Ragna, a hospice care AI companion. Given the following conversation transcript, extract a concise memory in JSON format that Ragna can use in future sessions to feel continuous and aware of this family's journey.
 
 Output ONLY valid JSON — no markdown, no explanation, no code fences. Use this exact format:
 {
