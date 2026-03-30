@@ -20,41 +20,57 @@ import { useApp } from "@/context/AppContext";
 // ─── Star field data ──────────────────────────────────────────────────────────
 
 const STARS: Array<{ top: string; left: string; size: number; opacity: number }> = [
-  { top: "3%",  left: "7%",  size: 1.5, opacity: 0.75 },
-  { top: "1%",  left: "22%", size: 1,   opacity: 0.50 },
-  { top: "6%",  left: "43%", size: 2,   opacity: 0.80 },
-  { top: "2%",  left: "63%", size: 1.5, opacity: 0.60 },
-  { top: "5%",  left: "82%", size: 1,   opacity: 0.90 },
-  { top: "11%", left: "14%", size: 1,   opacity: 0.40 },
-  { top: "9%",  left: "34%", size: 1.5, opacity: 0.70 },
-  { top: "13%", left: "54%", size: 1,   opacity: 0.55 },
-  { top: "8%",  left: "75%", size: 2,   opacity: 0.65 },
-  { top: "17%", left: "4%",  size: 1.5, opacity: 0.60 },
-  { top: "15%", left: "28%", size: 1,   opacity: 0.45 },
+  // Upper sky — dense
+  { top: "2%",  left: "5%",  size: 1.5, opacity: 0.80 },
+  { top: "1%",  left: "18%", size: 1,   opacity: 0.55 },
+  { top: "4%",  left: "32%", size: 2,   opacity: 0.85 },
+  { top: "2%",  left: "48%", size: 1,   opacity: 0.50 },
+  { top: "3%",  left: "62%", size: 1.5, opacity: 0.65 },
+  { top: "1%",  left: "78%", size: 2,   opacity: 0.90 },
+  { top: "5%",  left: "90%", size: 1,   opacity: 0.45 },
+  { top: "7%",  left: "12%", size: 1,   opacity: 0.60 },
+  { top: "8%",  left: "27%", size: 1.5, opacity: 0.75 },
+  { top: "6%",  left: "55%", size: 1,   opacity: 0.50 },
+  { top: "9%",  left: "70%", size: 2,   opacity: 0.70 },
+  { top: "7%",  left: "85%", size: 1.5, opacity: 0.60 },
+  // Upper-mid
+  { top: "12%", left: "3%",  size: 1.5, opacity: 0.65 },
+  { top: "11%", left: "22%", size: 1,   opacity: 0.45 },
+  { top: "14%", left: "42%", size: 2,   opacity: 0.80 },
+  { top: "10%", left: "60%", size: 1,   opacity: 0.55 },
+  { top: "13%", left: "75%", size: 1.5, opacity: 0.85 },
+  { top: "15%", left: "92%", size: 1,   opacity: 0.40 },
+  { top: "18%", left: "8%",  size: 1,   opacity: 0.60 },
+  { top: "17%", left: "30%", size: 1.5, opacity: 0.50 },
   { top: "19%", left: "50%", size: 2,   opacity: 0.75 },
-  { top: "16%", left: "70%", size: 1.5, opacity: 0.85 },
-  { top: "21%", left: "90%", size: 1,   opacity: 0.40 },
-  { top: "25%", left: "11%", size: 1,   opacity: 0.60 },
-  { top: "23%", left: "37%", size: 1.5, opacity: 0.50 },
-  { top: "27%", left: "59%", size: 1,   opacity: 0.70 },
-  { top: "24%", left: "81%", size: 2,   opacity: 0.80 },
-  { top: "31%", left: "2%",  size: 1,   opacity: 0.50 },
-  { top: "29%", left: "20%", size: 1.5, opacity: 0.40 },
-  { top: "33%", left: "46%", size: 2,   opacity: 0.65 },
-  { top: "30%", left: "68%", size: 1,   opacity: 0.75 },
-  { top: "37%", left: "16%", size: 1.5, opacity: 0.50 },
-  { top: "35%", left: "40%", size: 1,   opacity: 0.80 },
-  { top: "39%", left: "64%", size: 1.5, opacity: 0.45 },
-  { top: "41%", left: "88%", size: 1,   opacity: 0.60 },
-  { top: "44%", left: "6%",  size: 2,   opacity: 0.70 },
-  { top: "47%", left: "30%", size: 1,   opacity: 0.55 },
-  { top: "49%", left: "55%", size: 1.5, opacity: 0.80 },
-  { top: "51%", left: "77%", size: 1,   opacity: 0.65 },
-  { top: "55%", left: "18%", size: 1.5, opacity: 0.50 },
-  { top: "58%", left: "44%", size: 1,   opacity: 0.70 },
-  { top: "60%", left: "72%", size: 2,   opacity: 0.60 },
-  { top: "63%", left: "9%",  size: 1,   opacity: 0.45 },
-  { top: "67%", left: "50%", size: 1.5, opacity: 0.55 },
+  { top: "16%", left: "68%", size: 1,   opacity: 0.85 },
+  { top: "20%", left: "83%", size: 1.5, opacity: 0.45 },
+  // Around golden streak — sparser (it's bright there)
+  { top: "24%", left: "14%", size: 1,   opacity: 0.35 },
+  { top: "22%", left: "38%", size: 1.5, opacity: 0.45 },
+  { top: "26%", left: "58%", size: 1,   opacity: 0.30 },
+  { top: "23%", left: "79%", size: 2,   opacity: 0.40 },
+  // Below mid — moderate density
+  { top: "32%", left: "6%",  size: 1.5, opacity: 0.55 },
+  { top: "30%", left: "25%", size: 1,   opacity: 0.45 },
+  { top: "35%", left: "47%", size: 2,   opacity: 0.65 },
+  { top: "31%", left: "66%", size: 1,   opacity: 0.70 },
+  { top: "34%", left: "88%", size: 1.5, opacity: 0.50 },
+  { top: "38%", left: "15%", size: 1,   opacity: 0.55 },
+  { top: "40%", left: "40%", size: 1.5, opacity: 0.60 },
+  { top: "37%", left: "62%", size: 1,   opacity: 0.45 },
+  { top: "42%", left: "80%", size: 2,   opacity: 0.65 },
+  // Lower
+  { top: "46%", left: "4%",  size: 1,   opacity: 0.50 },
+  { top: "48%", left: "28%", size: 1.5, opacity: 0.55 },
+  { top: "50%", left: "52%", size: 1,   opacity: 0.70 },
+  { top: "47%", left: "74%", size: 2,   opacity: 0.60 },
+  { top: "54%", left: "16%", size: 1.5, opacity: 0.45 },
+  { top: "56%", left: "42%", size: 1,   opacity: 0.65 },
+  { top: "58%", left: "70%", size: 1.5, opacity: 0.55 },
+  { top: "62%", left: "8%",  size: 1,   opacity: 0.40 },
+  { top: "65%", left: "48%", size: 2,   opacity: 0.50 },
+  { top: "68%", left: "84%", size: 1,   opacity: 0.45 },
 ];
 
 // ─── Cosmic Background ────────────────────────────────────────────────────────
@@ -62,21 +78,43 @@ const STARS: Array<{ top: string; left: string; size: number; opacity: number }>
 function CosmicBackground() {
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-      {/* Base deep space gradient */}
+
+      {/* ── 1. Deep space base ── */}
       <LinearGradient
-        colors={["#05080F", "#080D20", "#060B1C", "#080F24"]}
-        locations={[0, 0.35, 0.65, 1]}
+        colors={["#060010", "#080018", "#070A22", "#060C1E"]}
+        locations={[0, 0.25, 0.60, 1]}
         style={StyleSheet.absoluteFillObject}
       />
-      {/* Upper blue-violet nebula glow */}
-      <View style={bg.nebulaBlue} />
-      {/* Secondary soft blue glow - left */}
-      <View style={bg.nebulaBlue2} />
-      {/* Warm golden star-burst - upper center-right */}
-      <View style={bg.goldenBurst} />
-      {/* Inner golden core */}
-      <View style={bg.goldenCore} />
-      {/* Stars */}
+
+      {/* ── 2. Blue-violet upper nebula (large, centered upper area) ── */}
+      <View style={bg.nebulaCenterTop} />
+
+      {/* ── 3. Blue glow - upper left spread ── */}
+      <View style={bg.nebulaLeftBlue} />
+
+      {/* ── 4. Golden point source - upper right ── */}
+      <View style={bg.goldenPoint} />
+      <View style={bg.goldenPointCore} />
+
+      {/* ── 5. GOLDEN HORIZONTAL STREAK — key visual element ── */}
+      {/* Wide soft glow band — vertical gradient makes it a diffuse horizontal bar */}
+      <LinearGradient
+        colors={["transparent", "rgba(210, 125, 18, 0.30)", "rgba(235, 155, 25, 0.26)", "rgba(210, 125, 18, 0.30)", "transparent"]}
+        locations={[0, 0.3, 0.5, 0.7, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={bg.goldenStreakV}
+      />
+      {/* Sharp bright centre line */}
+      <LinearGradient
+        colors={["transparent", "rgba(255, 165, 30, 0.55)", "rgba(255, 180, 40, 0.65)", "rgba(255, 165, 30, 0.55)", "transparent"]}
+        locations={[0, 0.20, 0.50, 0.80, 1]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={bg.goldenStreakH}
+      />
+
+      {/* ── 6. Stars ── */}
       {STARS.map((s, i) => (
         <View
           key={i}
@@ -92,9 +130,10 @@ function CosmicBackground() {
           }}
         />
       ))}
-      {/* Subtle bottom fade for readability */}
+
+      {/* ── 7. Bottom fade for legibility ── */}
       <LinearGradient
-        colors={["transparent", "rgba(5, 8, 15, 0.60)"]}
+        colors={["transparent", "rgba(5, 6, 18, 0.55)"]}
         style={bg.bottomFade}
       />
     </View>
@@ -102,40 +141,56 @@ function CosmicBackground() {
 }
 
 const bg = StyleSheet.create({
-  nebulaBlue: {
+  // Large centered blue-violet nebula cloud (upper 40% of screen)
+  nebulaCenterTop: {
     position: "absolute",
-    top: -120, left: -80,
+    top: -160, left: -100,
+    width: 500, height: 500,
+    borderRadius: 250,
+    backgroundColor: "rgba(25, 55, 210, 0.20)",
+    transform: [{ scaleX: 1.4 }, { scaleY: 0.9 }],
+  },
+  // Blue spread from upper left
+  nebulaLeftBlue: {
+    position: "absolute",
+    top: 30, left: -60,
+    width: 280, height: 280,
+    borderRadius: 140,
+    backgroundColor: "rgba(30, 65, 195, 0.14)",
+  },
+  // Golden point light source — upper right quadrant (warm, diffuse)
+  goldenPoint: {
+    position: "absolute",
+    top: -60, right: -80,
     width: 380, height: 380,
     borderRadius: 190,
-    backgroundColor: "rgba(20, 60, 200, 0.18)",
-    transform: [{ scaleX: 1.3 }],
+    backgroundColor: "rgba(215, 130, 20, 0.11)",
+    transform: [{ scaleX: 1.3 }, { scaleY: 0.85 }],
   },
-  nebulaBlue2: {
+  goldenPointCore: {
     position: "absolute",
-    top: 60, left: -30,
-    width: 200, height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(40, 80, 220, 0.10)",
+    top: 15, right: 15,
+    width: 160, height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(250, 165, 35, 0.10)",
   },
-  goldenBurst: {
+  // The golden horizontal streak — positioned just below hero card (~37% from top)
+  goldenStreakH: {
     position: "absolute",
-    top: 20, right: -10,
-    width: 260, height: 260,
-    borderRadius: 130,
-    backgroundColor: "rgba(180, 110, 20, 0.14)",
-    transform: [{ scaleX: 1.1 }],
+    top: "36%",
+    left: 0, right: 0,
+    height: 2,
   },
-  goldenCore: {
+  goldenStreakV: {
     position: "absolute",
-    top: 55, right: 30,
-    width: 120, height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(220, 150, 30, 0.10)",
+    top: "30%",
+    left: 0, right: 0,
+    height: 140,
   },
   bottomFade: {
     position: "absolute",
     bottom: 0, left: 0, right: 0,
-    height: 200,
+    height: 250,
   },
 });
 
@@ -233,7 +288,7 @@ function ActionCard({ item, hasChevron, onPress }: {
       <View style={[ac.iconWrap, { backgroundColor: item.color + "28" }]}>
         <Feather name={item.icon as any} size={18} color={item.color} />
       </View>
-      <Text style={[ac.label, item.tint && { color: "#F0C060" }]}>{item.label}</Text>
+      <Text style={[ac.label, item.tint && { color: "#F0C060" }]} numberOfLines={1}>{item.label}</Text>
       {hasChevron && (
         <Feather name="chevron-right" size={16} color={item.tint ? "rgba(200,150,50,0.7)" : "rgba(130,170,255,0.55)"} />
       )}
@@ -245,11 +300,11 @@ const ac = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 13,
-    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 13,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.35,
@@ -257,16 +312,16 @@ const ac = StyleSheet.create({
     elevation: 5,
   },
   iconWrap: {
-    width: 36, height: 36, borderRadius: 10,
+    width: 34, height: 34, borderRadius: 9,
     alignItems: "center", justifyContent: "center",
     flexShrink: 0,
   },
   label: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_700Bold",
     color: "#E8EEFF",
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
 });
 
