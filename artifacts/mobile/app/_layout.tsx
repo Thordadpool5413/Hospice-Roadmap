@@ -69,7 +69,7 @@ function RootLayoutNav() {
           headerTitle: "Eligibility Assessment",
           headerBackTitle: "Back",
           headerTintColor: "#EEF4FF",
-          headerStyle: { backgroundColor: "#141E38" },
+          headerStyle: { backgroundColor: "#091734" },
           headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />
@@ -80,7 +80,7 @@ function RootLayoutNav() {
           headerTitle: "Contact Support",
           headerBackTitle: "Back",
           headerTintColor: "#EEF4FF",
-          headerStyle: { backgroundColor: "#141E38" },
+          headerStyle: { backgroundColor: "#091734" },
           headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />
@@ -91,7 +91,7 @@ function RootLayoutNav() {
           headerTitle: "Privacy Policy",
           headerBackTitle: "Back",
           headerTintColor: "#EEF4FF",
-          headerStyle: { backgroundColor: "#141E38" },
+          headerStyle: { backgroundColor: "#091734" },
           headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />
@@ -102,7 +102,7 @@ function RootLayoutNav() {
           headerTitle: "Terms of Use",
           headerBackTitle: "Back",
           headerTintColor: "#EEF4FF",
-          headerStyle: { backgroundColor: "#141E38" },
+          headerStyle: { backgroundColor: "#091734" },
           headerTitleStyle: { color: "#EEF4FF", fontFamily: "Inter_700Bold" },
         }}
       />

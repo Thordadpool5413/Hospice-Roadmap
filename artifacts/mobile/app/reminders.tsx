@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useReminders } from "@/context/RemindersContext";
 import { Reminder, ReminderRecurrence, ReminderType } from "@/types";
@@ -238,6 +239,7 @@ export default function RemindersScreen() {
 
   return (
     <View style={styles.container}>
+      <CosmicBackground />
       <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 16) }]}>
         <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}>
           <Feather name="arrow-left" size={20} color={Colors.text} />

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { RxNormResult, ttyLabel, useRxNorm } from "@/hooks/useRxNorm";
 
@@ -278,6 +279,7 @@ export default function MedicationLookupScreen() {
 
   return (
     <View style={styles.container}>
+      <CosmicBackground />
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 16) }]}>
         <Pressable

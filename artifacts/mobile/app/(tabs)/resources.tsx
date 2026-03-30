@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { ResourceCard } from "@/components/ResourceCard";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
@@ -58,6 +59,7 @@ export default function ResourcesScreen() {
 
   return (
     <View style={[styles.container]}>
+      <CosmicBackground />
       <ScrollView
         contentContainerStyle={[
           styles.content,

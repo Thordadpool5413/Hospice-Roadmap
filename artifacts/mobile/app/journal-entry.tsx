@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { JOURNAL_TYPE_META, useJournal } from "@/context/JournalContext";
 import { JournalEntryType } from "@/types";
@@ -108,6 +109,7 @@ export default function JournalEntryScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <CosmicBackground />
       {/* Header */}
       <View style={[styles.topBar, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 16) }]}>
         <Pressable

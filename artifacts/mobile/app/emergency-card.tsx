@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 
@@ -89,6 +90,7 @@ export default function EmergencyCardScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <CosmicBackground />
       {/* Header */}
       <View style={styles.header}>
         <Pressable

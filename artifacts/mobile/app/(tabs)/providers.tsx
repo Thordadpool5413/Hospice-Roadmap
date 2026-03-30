@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ProviderCard } from "@/components/ProviderCard";
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
@@ -102,6 +103,7 @@ export default function ProvidersScreen() {
 
   return (
     <View style={styles.container}>
+      <CosmicBackground />
       <ScrollView
         contentContainerStyle={[
           styles.content,
