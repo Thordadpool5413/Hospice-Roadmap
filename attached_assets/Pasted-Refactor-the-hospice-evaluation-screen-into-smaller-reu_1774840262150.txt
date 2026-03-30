@@ -1,0 +1,254 @@
+Refactor the hospice evaluation screen into smaller reusable components without changing user visible behavior.
+
+Goal
+
+Reduce the size and complexity of artifacts/mobile/app/evaluation.tsx while preserving the current UI, copy, navigation, clinical logic, result scoring, haptics, and user flow.
+Do not redesign the screen.
+Do not change backend behavior.
+Do not change the evaluation algorithm.
+The screen should look and behave the same after the refactor.
+
+Primary file to refactor
+
+artifacts/mobile/app/evaluation.tsx
+
+Create a new component folder
+
+artifacts/mobile/components/evaluation
+
+Create these component files
+
+artifacts/mobile/components/evaluation/EvaluationInfoCard.tsx
+artifacts/mobile/components/evaluation/EvaluationQuestionSection.tsx
+artifacts/mobile/components/evaluation/EvaluationSelectOption.tsx
+artifacts/mobile/components/evaluation/EvaluationYesNoToggle.tsx
+artifacts/mobile/components/evaluation/EvaluationCountSelector.tsx
+artifacts/mobile/components/evaluation/EvaluationPainScale.tsx
+artifacts/mobile/components/evaluation/EvaluationResultsView.tsx
+
+If useful, also create
+
+artifacts/mobile/components/evaluation/EvaluationCriteriaCard.tsx
+artifacts/mobile/components/evaluation/evaluationConfig.ts
+
+Rules
+
+1. Do not change the route name or file location of evaluation.tsx.
+2. Do not change runEvaluation behavior.
+3. Do not change the diagnoses list values.
+4. Do not change the performanceLevels values.
+5. Do not change the readiness color meanings.
+6. Keep all current copy, labels, and button titles exactly the same unless a tiny internal cleanup requires a literal move.
+7. Keep styles visually identical unless tiny structural moves are required.
+8. Do not add new packages.
+9. Keep TypeScript clean.
+10. Prefer extracting presentational components and config while keeping screen level state orchestration in evaluation.tsx.
+
+Refactor plan
+
+A. Keep this logic inside evaluation.tsx
+
+Keep the following in evaluation.tsx unless a very small helper extraction is clearly cleaner:
+
+screen level state
+toggleCriteria
+canSubmit
+handleSubmit
+result state switching
+router navigation calls
+safe area insets usage
+runEvaluation call
+
+The screen should remain the orchestrator.
+
+B. Extract the option row component
+
+Move SelectOption out of evaluation.tsx into:
+artifacts/mobile/components/evaluation/EvaluationSelectOption.tsx
+
+Requirements:
+preserve haptic tap behavior
+preserve selected styling
+preserve optional description rendering
+keep props minimal and typed cleanly
+
+C. Extract the yes no toggle component
+
+Move YesNoToggle out of evaluation.tsx into:
+artifacts/mobile/components/evaluation/EvaluationYesNoToggle.tsx
+
+Requirements:
+preserve haptic tap behavior
+preserve active button styling
+keep value typed as boolean | null
+keep onChange behavior unchanged
+
+D. Extract reusable question wrapper
+
+Create:
+artifacts/mobile/components/evaluation/EvaluationQuestionSection.tsx
+
+Purpose:
+render a consistent block wrapper for question title, optional subtitle, and children
+
+Props:
+title
+subtitle optional
+children
+
+Use this wrapper for the diagnosis, performance, weight loss, hospitalizations, decline rate, pain, ADL decline, and advance directives sections.
+
+E. Extract the hospitalizations selector
+
+Create:
+artifacts/mobile/components/evaluation/EvaluationCountSelector.tsx
+
+Props:
+value
+onChange
+options optional defaulting to [0,1,2,3,4]
+
+Behavior:
+preserve current haptic tap behavior
+preserve current display where 4 shows as "4+"
+preserve current button styling
+
+F. Extract the pain scale selector
+
+Create:
+artifacts/mobile/components/evaluation/EvaluationPainScale.tsx
+
+Props:
+value
+onChange
+
+Behavior:
+render 0 through 10 exactly as today
+preserve haptic tap behavior
+preserve current styling
+
+G. Extract the Medicare criteria card
+
+Create:
+artifacts/mobile/components/evaluation/EvaluationCriteriaCard.tsx
+
+Move the full collapsible “Official Medicare Hospice Criteria” card into this component.
+
+Props:
+expanded
+onToggle
+
+Behavior to preserve:
+same title
+same icon usage
+same collapsed and expanded behavior
+same criteria list
+same Medicare.gov link
+same styling
+
+Keep the expanded state in evaluation.tsx.
+
+H. Extract the informational disclaimer card
+
+Create:
+artifacts/mobile/components/evaluation/EvaluationInfoCard.tsx
+
+Move the current banner style informational assessment disclaimer into this component.
+
+Keep the copy exactly the same.
+
+I. Extract the results view
+
+Create:
+artifacts/mobile/components/evaluation/EvaluationResultsView.tsx
+
+Move the entire result screen branch into this component, including:
+
+result hero
+score bar
+key clinical factors
+suggested next steps
+disclaimer box
+Medicare hospice benefit card
+Find CMS Certified Providers button
+Start Over button
+
+Props should include:
+result
+insetsBottom
+onStartOver
+
+This component may call router.push itself for providers, or you may pass an onFindProviders prop. Either is fine, but keep the behavior the same.
+
+Preserve:
+all current copy
+all current result styling
+all current button actions
+Medicare.gov link
+readiness color usage
+
+J. Move static config out of the screen if it improves readability
+
+If helpful, create:
+artifacts/mobile/components/evaluation/evaluationConfig.ts
+
+Move these there:
+diagnoses
+performanceLevels
+readinessColors
+
+Only do this if it clearly improves readability. If you move them, update imports accordingly and keep types correct.
+
+K. Style handling
+
+Preferred approach
+
+1. Keep a small set of layout styles in evaluation.tsx for the screen container and scroll content if they remain there.
+2. Move component specific styles into each extracted component file.
+
+Alternative approach
+
+Create a local shared style helper only if truly necessary.
+
+Do not create one giant style file unless it clearly improves maintainability.
+Prefer styles co located with each extracted component.
+
+L. Keep behavior identical
+
+Specific behavior that must remain unchanged:
+criteria card expand and collapse
+all question selection behavior
+all haptics
+submit disabled logic
+result scoring and readiness display
+Medicare.gov links
+Find CMS Certified Providers navigation
+Start Over reset
+safe area bottom spacing
+scroll behavior
+button labels and text copy
+
+M. Final size target
+
+After refactor, aim for:
+evaluation.tsx under about 350 lines if reasonably possible
+each new component focused and readable
+
+Do not force the target if it makes the architecture worse, but make a meaningful reduction.
+
+N. Final checks
+
+After edits:
+1. Run the mobile TypeScript check if available
+2. Fix any type errors
+3. Verify no import cycles were created
+4. Report the final line count of evaluation.tsx and each new component file
+
+O. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what was extracted
+3. Final line count of refactored evaluation.tsx
+4. Any behavior that needed special care to preserve
+5. Any remaining part of evaluation.tsx that should be split later
