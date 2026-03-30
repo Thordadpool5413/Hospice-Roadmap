@@ -1,0 +1,248 @@
+Refactor the hospice guidance content into a structured content model with metadata and helper utilities, while preserving current app behavior and user visible copy.
+
+Goal
+
+Replace the current giant hardcoded guidance content file with a more structured content architecture that is easier to maintain, review, and govern.
+Do not redesign the UI.
+Do not change user visible guidance copy.
+Do not change route names.
+Do not change search behavior unless required to preserve current behavior.
+Keep the app functioning exactly as it does now from the user perspective.
+
+Primary file to inspect and refactor
+
+artifacts/mobile/data/guidanceContent.ts
+
+Also inspect and update any files that currently import or depend on that data, likely including screens such as:
+
+artifacts/mobile/app/guidance/[id].tsx
+artifacts/mobile/app/(tabs)/index.tsx
+artifacts/mobile/app/(tabs)/help.tsx
+artifacts/mobile/types/index.ts
+
+If the actual project uses a slightly different guidance path or filename, adapt the refactor to the real file locations while preserving the intent of this task.
+
+Create these new folders and files
+
+artifacts/mobile/content/guidance/index.ts
+artifacts/mobile/content/guidance/types.ts
+artifacts/mobile/content/guidance/helpers.ts
+artifacts/mobile/content/guidance/items.ts
+
+If helpful, also create:
+
+artifacts/mobile/content/guidance/categories.ts
+artifacts/mobile/content/guidance/constants.ts
+
+Rules
+
+1. Do not change any user visible guidance wording unless a tiny typo cleanup is required.
+2. Do not change guidance ids if the current app uses ids for routing.
+3. Do not change route names or navigation paths.
+4. Do not change the current search and filtering experience from the user perspective.
+5. Do not add new packages.
+6. Keep TypeScript clean.
+7. Preserve backward compatibility for current imports where reasonably possible.
+8. Do not move this content to the backend in this task.
+9. This is a local content architecture refactor only.
+10. Add metadata fields for governance readiness even if they are not all displayed yet.
+
+Implementation details
+
+A. Define a structured guidance type model
+
+Create artifacts/mobile/content/guidance/types.ts
+
+Define a normalized content model that can represent the current guidance entries.
+
+Required types
+
+1. GuidanceStage
+Values should align to the current app if they already exist. If the app already uses specific journey stage values, reuse those exact values.
+
+2. GuidanceUrgency
+Use a union like:
+"urgent" | "same_day" | "routine" | "planning"
+
+3. GuidanceCategory
+Use a string union or exported constant based type that matches the current content categories already used in the app.
+
+4. GuidanceGovernance
+Interface with:
+owner: string
+reviewDate: string | null
+approved: boolean
+version: string
+sourceType: "clinical_editorial" | "operational" | "product"
+notes?: string
+
+5. GuidanceContentItem
+Interface with at least:
+id: string
+title: string
+summary: string
+category: GuidanceCategory
+stages: GuidanceStage[]
+urgency: GuidanceUrgency
+keywords: string[]
+symptoms?: string[]
+body: string
+relatedIds?: string[]
+governance: GuidanceGovernance
+
+If the current content model already includes fields like icon, audience, disclaimer, bullets, actions, or tags, preserve them in the new interface rather than flattening them away.
+
+B. Move the guidance dataset into structured items
+
+Create artifacts/mobile/content/guidance/items.ts
+
+Requirements
+
+1. Move all existing guidance entries from the old giant file into a structured exported array:
+export const guidanceItems: GuidanceContentItem[] = [...]
+
+2. Preserve all current ids, titles, summaries, body copy, keywords, and category behavior.
+3. Add governance metadata to every item using safe placeholder defaults for now:
+owner: "Unassigned"
+reviewDate: null
+approved: true
+version: "1.0.0"
+sourceType: "clinical_editorial"
+
+4. If some items are more operational than clinical, use sourceType: "operational" where obviously appropriate.
+5. Reuse exact category names from the current app where possible.
+
+C. Create helper utilities
+
+Create artifacts/mobile/content/guidance/helpers.ts
+
+Add helper functions that support the current app behavior and future governance needs.
+
+Required helpers
+
+getAllGuidance(): GuidanceContentItem[]
+getGuidanceById(id: string): GuidanceContentItem | undefined
+getGuidanceByCategory(category: GuidanceCategory): GuidanceContentItem[]
+getGuidanceByStage(stage: GuidanceStage): GuidanceContentItem[]
+searchGuidance(query: string): GuidanceContentItem[]
+getRelatedGuidance(item: GuidanceContentItem): GuidanceContentItem[]
+
+Helper behavior
+
+1. searchGuidance should be case insensitive.
+2. searchGuidance should search across title, summary, keywords, symptoms if present, and body.
+3. getRelatedGuidance should use relatedIds first if present.
+4. If relatedIds are not present, it can fall back to same category or overlapping keywords.
+5. Keep logic simple and deterministic.
+
+Also add a small governance helper:
+
+getItemsMissingReviewDate(): GuidanceContentItem[]
+
+D. Export a stable public surface
+
+Create artifacts/mobile/content/guidance/index.ts
+
+Export:
+guidanceItems
+all types
+all helper functions
+
+E. Preserve old import compatibility if reasonable
+
+Refactor artifacts/mobile/data/guidanceContent.ts
+
+Goal:
+turn the old file into a thin compatibility layer instead of keeping the giant dataset there.
+
+Requirements
+
+1. Remove the giant inline content definitions from this file.
+2. Re export from the new content module in a way that keeps existing imports working as much as possible.
+3. If the old file exported specific named constants or helper functions currently used elsewhere, preserve those exports by mapping them to the new structure.
+
+For example:
+if the old file exported guidanceContent or GUIDANCE_ITEMS, keep exporting the same name from the compatibility file if that avoids broad churn.
+
+This file should become small and intentionally backward compatible.
+
+F. Update consuming screens and code
+
+Inspect all current consumers of guidance content and update them only as needed.
+
+Requirements
+
+1. Keep current screen behavior identical.
+2. If a screen currently expects a different field shape, either:
+   a. adapt the screen minimally, or
+   b. expose a backward compatible mapper from the compatibility layer
+
+Preferred approach:
+minimize screen churn by keeping the public content shape compatible where possible.
+
+Likely screens to verify:
+guidance detail screen
+home or tab surfaces that show guidance cards
+Ragna urgent tile or suggestion flows if they reuse guidance data
+any search or category filter screen
+
+G. Add lightweight content governance readiness
+
+Without changing the UI heavily, add one tiny internal improvement:
+
+If there is a guidance detail screen and it has a reasonable low profile place for non intrusive internal metadata, do not display governance metadata yet.
+This task is about the model, not the UI.
+
+Instead, prepare the data so a later admin or internal review surface can expose:
+owner
+review date
+approved
+version
+source type
+
+H. Optional safe improvement for related content
+
+If the guidance detail screen already has a related content section, wire it to getRelatedGuidance().
+If there is no related content section, do not add one in this task.
+
+I. Keep ids and routing stable
+
+This is critical.
+
+If guidance routes rely on item ids, preserve all ids exactly.
+Do not regenerate ids.
+Do not change links that navigate to guidance detail.
+
+J. Type cleanup
+
+Update artifacts/mobile/types/index.ts only if needed for shared type reuse.
+Prefer importing guidance types from artifacts/mobile/content/guidance/types.ts rather than duplicating them.
+
+K. Final size target
+
+After refactor:
+artifacts/mobile/data/guidanceContent.ts should be small and mostly compatibility exports
+the giant inline dataset should live in the new structured content area
+helpers should be separated from raw content
+types should be separated from data
+
+L. Run checks
+
+After edits:
+1. Run the mobile TypeScript check if available
+2. Fix any type errors
+3. Verify all current guidance screens still compile
+4. Report the final line count for:
+   artifacts/mobile/data/guidanceContent.ts
+   artifacts/mobile/content/guidance/items.ts
+   artifacts/mobile/content/guidance/helpers.ts
+   artifacts/mobile/content/guidance/types.ts
+
+M. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Short summary of what was restructured
+3. Whether guidance ids and current routing remained unchanged
+4. Any consumer screens that needed adjustments
+5. Any next step recommendation for adding real clinical owner and review workflows later
