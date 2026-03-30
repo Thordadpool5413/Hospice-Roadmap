@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
 
@@ -12,17 +12,24 @@ interface VisibleTile {
   activePrompt: string;
 }
 
+interface GuidancePrompt {
+  label: string;
+  activePrompt: string;
+}
+
 interface RagnaEmptyStateProps {
   memoryCount: number;
   isPatient: boolean;
   proactiveOpener: { display: string; sendPrompt: string } | null;
   symptomAlert: { text: string; prompt: string } | null;
   visibleTiles: VisibleTile[];
+  guidancePrompts: GuidancePrompt[];
   livingProfile: string | null;
   knowsExpanded: boolean;
   personalizationEnabled: boolean;
   onToggleKnowsExpanded: () => void;
   onTilePress: (tile: VisibleTile) => void;
+  onGuidancePromptPress: (prompt: string) => void;
   onPressProactiveOpener: (sendPrompt: string) => void;
   onPressSymptomAlert: (prompt: string) => void;
 }
@@ -33,11 +40,13 @@ export function RagnaEmptyState({
   proactiveOpener,
   symptomAlert,
   visibleTiles,
+  guidancePrompts,
   livingProfile,
   knowsExpanded,
   personalizationEnabled,
   onToggleKnowsExpanded,
   onTilePress,
+  onGuidancePromptPress,
   onPressProactiveOpener,
   onPressSymptomAlert,
 }: RagnaEmptyStateProps) {
@@ -120,6 +129,30 @@ export function RagnaEmptyState({
           </Pressable>
         ))}
       </View>
+
+      {guidancePrompts.length > 0 && (
+        <View style={styles.guidanceSection}>
+          <Text style={styles.guidanceLabel}>Common Questions</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.guidanceRow}
+          >
+            {guidancePrompts.map((gp) => (
+              <Pressable
+                key={gp.label}
+                onPress={() => onGuidancePromptPress(gp.activePrompt)}
+                style={({ pressed }) => [
+                  styles.guidanceChip,
+                  pressed && { opacity: 0.78, transform: [{ scale: 0.96 }] },
+                ]}
+              >
+                <Text style={styles.guidanceChipText}>{gp.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {!personalizationEnabled && (
         <View style={styles.chatOnlyBanner}>
@@ -363,6 +396,37 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.text,
     lineHeight: 20,
+  },
+  guidanceSection: {
+    gap: 8,
+    marginHorizontal: -16,
+  },
+  guidanceLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    paddingHorizontal: 16,
+  },
+  guidanceRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
+  guidanceChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: Colors.surfaceMid,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  guidanceChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textSecondary,
   },
   symptomAlertCard: {
     flexDirection: "row",

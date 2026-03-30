@@ -1,0 +1,382 @@
+Build the next major intelligence architecture for Hospice Roadmap so the app becomes a full hospice intelligence platform, not just a chatbot.
+
+Goal
+
+Turn the app into a deeply knowledgeable, role aware, action oriented hospice expert system that can support the full end of life journey for any person involved in care.
+
+The app must be able to support:
+patient
+caregiver
+family member
+friend
+physician
+nurse
+social worker
+chaplain
+other care participant
+
+The app must be able to deeply understand and support:
+what hospice is and how it works
+disease progression
+the dying process
+symptom change
+expected versus urgent changes
+communication coaching
+after hours guidance
+time of death
+immediate after death steps
+grief and bereavement
+caregiver support
+care gap recognition
+advocacy and escalation
+documentation coaching
+middle of the night decision support
+
+This is not a prompt polish task.
+This is an intelligence architecture task.
+
+Do not redesign the app.
+Do not add login.
+Do not change mobile request payload shapes unless clearly necessary.
+Keep current chat flow and streaming behavior working.
+Keep current safety banner behavior working.
+Build a layered hospice intelligence engine.
+
+Files to inspect and update
+
+artifacts/api-server/src/routes/anthropic/index.ts
+artifacts/api-server/src/prompts/hospiceSystemPrompt.ts
+artifacts/mobile/app/(tabs)/help.tsx
+artifacts/mobile/types/index.ts
+artifacts/api-server/src/intelligence/hospice/*
+
+Create these new files
+
+artifacts/api-server/src/intelligence/hospice/types.ts
+artifacts/api-server/src/intelligence/hospice/catalog.ts
+artifacts/api-server/src/intelligence/hospice/retrieval.ts
+artifacts/api-server/src/intelligence/hospice/planner.ts
+artifacts/api-server/src/intelligence/hospice/roleAdaptation.ts
+artifacts/api-server/src/intelligence/hospice/scenarioMap.ts
+artifacts/api-server/src/intelligence/hospice/diseaseModel.ts
+artifacts/api-server/src/intelligence/hospice/dyingProcessModel.ts
+artifacts/api-server/src/intelligence/hospice/symptomModel.ts
+artifacts/api-server/src/intelligence/hospice/timeOfDeathModel.ts
+artifacts/api-server/src/intelligence/hospice/afterDeathModel.ts
+artifacts/api-server/src/intelligence/hospice/griefModel.ts
+artifacts/api-server/src/intelligence/hospice/communicationModel.ts
+artifacts/api-server/src/intelligence/hospice/careGapModel.ts
+artifacts/api-server/src/intelligence/hospice/escalationCoaching.ts
+artifacts/api-server/src/intelligence/hospice/documentationCoach.ts
+artifacts/api-server/src/intelligence/hospice/expectedHospiceSupport.ts
+artifacts/api-server/src/intelligence/hospice/serviceFailureScenarios.ts
+artifacts/api-server/src/intelligence/hospice/redFlags.ts
+artifacts/api-server/src/intelligence/hospice/evaluationFixtures.ts
+
+If helpful also create
+
+artifacts/api-server/src/intelligence/hospice/responseSections.ts
+artifacts/api-server/src/intelligence/hospice/sourceMap.ts
+artifacts/api-server/src/intelligence/hospice/communicationScripts.ts
+
+Rules
+
+1. Build the system as a layered hospice intelligence engine, not one giant prompt.
+2. Make the AI broad, deep, specific, and role aware.
+3. Make the AI strong in real world hospice scenarios, especially after hours.
+4. Make the AI good at both education and action.
+5. Make the AI good at both clinical support and care gap support.
+6. Make the AI good at emotional steadiness and practical next steps.
+7. Do not make the AI generic or vague.
+8. Keep TypeScript clean.
+9. Keep current streaming behavior intact.
+10. Keep current safety escalation behavior intact.
+
+Implementation requirements
+
+A. Types
+
+Create a strong type system that includes:
+RoleType
+JourneyStage
+ConcernDomain
+UrgencyLevel
+AudienceStyle
+CareGapType
+ResponseQualityLevel
+HospiceKnowledgeBlock
+CommunicationPlaybook
+CareGapSignal
+ResponsePlan
+
+B. Catalog
+
+Create a structured hospice catalog with meaningful real first version knowledge blocks covering:
+
+1. hospice foundations
+2. dying process
+3. disease progression
+4. symptom change
+5. urgent versus expected changes
+6. middle of the night scenarios
+7. communication coaching
+8. time of death
+9. after death
+10. grief and bereavement
+11. caregiver support
+12. care gaps and weak hospice response
+13. documentation and advocacy guidance
+
+Each block should include:
+summary
+explanation
+whatMayBeHappening
+whatToDoNow
+whatToSay
+whatToWatchFor
+whatNotToAssume
+whenToEscalate
+hardStops
+relatedIds
+governance
+sources
+
+C. Disease and dying models
+
+Build dedicated models for:
+advanced cancer
+advanced dementia
+heart failure
+lung disease
+stroke related decline
+frailty and general decline
+
+Build a dying process model that maps:
+weeks to days
+days
+hours
+final moments
+uncertain timing
+
+D. Symptom model
+
+Build a structured symptom model covering:
+pain
+shortness of breath
+agitation
+restlessness
+terminal secretions
+confusion
+falls
+fever
+vomiting
+bleeding
+decreased intake
+decreased urine
+unable to swallow
+pressure injury concern
+
+For each symptom area the model should know:
+what it may mean
+what comfort support may help
+what to report
+what to watch for
+when hospice must be called
+when 911 may be needed
+
+E. Communication model
+
+Build communication playbooks for:
+patient
+caregiver
+physician
+nurse
+family
+friend
+child
+mixed group
+
+For each playbook include:
+tone
+goal
+example phrases
+good reporting structure
+common mistakes to avoid
+
+F. Time of death and after death models
+
+Build dedicated models for:
+what may happen in the final moments
+what family may see
+what to do first
+who to call
+what not to rush
+how to support the room
+what hospice may help coordinate next
+
+G. Grief model
+
+Build support content for:
+anticipatory grief
+shock
+guilt
+anger
+relief mixed with sadness
+caregiver exhaustion
+regret
+child grief support
+when to suggest bereavement support
+
+H. Care gap model
+
+Build detection and coaching for:
+poor education
+no preparation
+delayed callback
+vague after hours support
+symptom management gap
+equipment delay
+comfort kit confusion
+family feels abandoned
+time of death unprepared
+after death unprepared
+
+The app should help the user understand:
+what good support should look like
+what may be missing
+what to ask for
+what to say
+what to document
+when to escalate further
+
+I. Retrieval
+
+Build deterministic retrieval that uses:
+latest message
+patient context
+role
+journey stage
+urgency
+scenario map
+care gap signals
+
+The retrieval system should return the most relevant 4 to 8 blocks and related communication playbooks.
+
+J. Planner
+
+Build a structured planner that outputs:
+role
+journeyStage
+urgency
+domains
+matchedScenario
+retrievedBlocks
+careGapSignals
+communicationMode
+requiredSections
+mustSay
+mustAvoid
+suggestedFollowUps
+escalateNow
+
+Required response sections should include combinations of:
+What may be happening
+What to do now
+What to watch for
+What to say
+What hospice should help with
+What to document
+When to call hospice now
+When to call 911 now
+What happens next
+How to support the room
+How to get through tonight
+
+K. Anthropic route integration
+
+Update the Anthropic route so that before sending a prompt it derives:
+role
+journey stage
+urgency
+domains
+care gap signals
+retrieved blocks
+response plan
+
+Inject the grounded context package into the model call.
+Keep mobile request shape unchanged.
+Keep streaming unchanged.
+If retrieval fails, fall back safely.
+
+L. System prompt upgrade
+
+Refactor the system prompt so the model is explicitly instructed to:
+follow the response plan first
+stay grounded in the retrieved blocks
+be strong in dying process, disease progression, symptom support, communication, time of death, after death, grief, and care gaps
+lead with urgency when needed
+give exact next steps
+help the user say the right thing
+support every major hospice role
+avoid false certainty
+avoid vague reassurance
+avoid acting like hospice always did its job well
+avoid hostile escalation language
+never flatten emotionally intense moments into cold robotic text
+
+M. Mobile help screen
+
+Add quick intent prompts in the Ragna screen for:
+What changes are common near the end
+How do I know if this is urgent
+How do I explain this to hospice
+What do I say to the doctor or nurse
+How do I talk to family and friends
+How do I explain this to a child
+What do I do if death happens now
+What happens right after death
+How do I handle grief, guilt, or fear tonight
+No one explained what is happening
+How do I know if hospice is responding appropriately
+What do I document if support is delayed
+
+Keep the current UI style intact.
+
+N. Evaluation fixtures
+
+Create at least 40 evaluation fixtures across:
+dying process
+disease progression
+symptoms
+middle of the night fear
+urgent red flags
+time of death
+after death
+grief
+communication to hospice
+communication to physician
+communication to nurse
+communication to family
+communication to child
+care gaps
+advocacy scripts
+documentation coaching
+
+Each fixture should include:
+id
+userMessage
+roleHint
+expectedUrgency
+expectedDomains
+expectedCareGapType if relevant
+mustCover
+mustNotSay
+
+O. Final checks
+
+Run available api server and mobile TypeScript checks.
+Report files changed.
+Report number of knowledge blocks created.
+Report number of evaluation fixtures created.
+Report covered domains.
+Report remaining gaps needing clinician review.
