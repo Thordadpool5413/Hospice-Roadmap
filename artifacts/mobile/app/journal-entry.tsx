@@ -24,6 +24,17 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ─── Predefined tags ──────────────────────────────────────────────────────────
+
+const PRESET_TAGS = [
+  "Pain", "Breathing", "Sleep", "Nausea", "Appetite",
+  "Anxiety", "Agitation", "Confusion", "Medication",
+  "Nurse Visit", "Doctor Visit", "Family", "Spiritual",
+  "Equipment", "Side Effect", "Comfort Care", "Goals of Care",
+];
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function JournalEntryScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -34,23 +45,37 @@ export default function JournalEntryScreen() {
   const [type, setType] = useState<JournalEntryType>(existing?.type ?? "general");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
-  const [moodLevel, setMoodLevel] = useState<1|2|3|4|5|undefined>(
+  const [moodLevel, setMoodLevel] = useState<1 | 2 | 3 | 4 | 5 | undefined>(
     (existing as any)?.moodLevel ?? undefined
   );
+  const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Keep tags in sync if loading an existing entry after initial render.
+  useEffect(() => {
+    if (existing?.tags) setTags(existing.tags);
+  }, [existing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isEditing = !!existing;
   const canSave = title.trim().length > 0;
+
+  const toggleTag = (tag: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
 
   const handleSave = async () => {
     if (!canSave || isSaving) return;
     setIsSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const moodData = type === "mood" && moodLevel ? { moodLevel } : {};
+    const tagData = tags.length > 0 ? { tags } : { tags: undefined };
     if (isEditing) {
-      await updateEntry(id!, { type, title: title.trim(), body: body.trim(), ...moodData });
+      await updateEntry(id!, { type, title: title.trim(), body: body.trim(), ...moodData, ...tagData });
     } else {
-      await addEntry({ type, title: title.trim(), body: body.trim(), date: todayIsoDate(), ...moodData });
+      await addEntry({ type, title: title.trim(), body: body.trim(), date: todayIsoDate(), ...moodData, ...tagData });
     }
     setIsSaving(false);
     router.back();
@@ -73,7 +98,8 @@ export default function JournalEntryScreen() {
   };
 
   const handleShare = () => {
-    const text = `${title}\n\nType: ${JOURNAL_TYPE_META[type].label}\nDate: ${existing?.date ?? todayIsoDate()}\n\n${body}`;
+    const tagLine = tags.length > 0 ? `\nTags: ${tags.join(", ")}` : "";
+    const text = `${title}\n\nType: ${JOURNAL_TYPE_META[type].label}\nDate: ${existing?.date ?? todayIsoDate()}\n\n${body}${tagLine}`;
     Share.share({ message: text }).catch(() => {});
   };
 
@@ -132,7 +158,7 @@ export default function JournalEntryScreen() {
       >
         {/* Entry type picker */}
         <View style={styles.typePicker}>
-          <Text style={styles.typePickerLabel}>Entry Type</Text>
+          <Text style={styles.sectionLabel}>Entry Type</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
             {(Object.keys(JOURNAL_TYPE_META) as JournalEntryType[]).map((t) => {
               const meta = JOURNAL_TYPE_META[t];
@@ -163,7 +189,7 @@ export default function JournalEntryScreen() {
         {/* Mood level selector — only visible for "mood" type entries */}
         {type === "mood" && (
           <View style={styles.moodSection}>
-            <Text style={styles.fieldLabel}>How are you feeling today?</Text>
+            <Text style={styles.sectionLabel}>How are you feeling today?</Text>
             <View style={styles.moodRow}>
               {([1, 2, 3, 4, 5] as const).map((level) => {
                 const emoji = ["😞", "😟", "😐", "🙂", "😊"][level - 1];
@@ -196,7 +222,7 @@ export default function JournalEntryScreen() {
 
         {/* Title */}
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Title</Text>
+          <Text style={styles.sectionLabel}>Title</Text>
           <TextInput
             style={styles.titleInput}
             value={title}
@@ -210,7 +236,7 @@ export default function JournalEntryScreen() {
 
         {/* Body */}
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>Notes</Text>
+          <Text style={styles.sectionLabel}>Notes</Text>
           <TextInput
             style={styles.bodyInput}
             value={body}
@@ -222,6 +248,46 @@ export default function JournalEntryScreen() {
             maxLength={2000}
           />
           <Text style={styles.charCount}>{body.length}/2000</Text>
+        </View>
+
+        {/* Tag picker */}
+        <View style={styles.tagSection}>
+          <View style={styles.tagHeader}>
+            <Text style={styles.sectionLabel}>Tags</Text>
+            {tags.length > 0 && (
+              <Pressable
+                onPress={() => setTags([])}
+                hitSlop={8}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.tagClearText}>Clear all</Text>
+              </Pressable>
+            )}
+          </View>
+          <Text style={styles.tagHint}>
+            Tap to add. Tags help you filter entries later.
+          </Text>
+          <View style={styles.tagGrid}>
+            {PRESET_TAGS.map((tag) => {
+              const active = tags.includes(tag);
+              return (
+                <Pressable
+                  key={tag}
+                  onPress={() => toggleTag(tag)}
+                  style={({ pressed }) => [
+                    styles.tagChip,
+                    active && styles.tagChipActive,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  {active && <Feather name="check" size={11} color={Colors.primary} />}
+                  <Text style={[styles.tagChipText, active && styles.tagChipTextActive]}>
+                    {tag}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* Tips */}
@@ -297,23 +363,19 @@ const styles = StyleSheet.create({
   saveBtnTextDisabled: {
     color: Colors.textSubtle,
   },
-  scroll: {
-    flex: 1,
-  },
+  scroll: { flex: 1 },
   scrollContent: {
     padding: 20,
     gap: 20,
   },
-  typePicker: {
-    gap: 10,
-  },
-  typePickerLabel: {
+  sectionLabel: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     color: Colors.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
+  typePicker: { gap: 10 },
   typeRow: {
     flexDirection: "row",
     gap: 8,
@@ -335,16 +397,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.textMuted,
   },
-  field: {
-    gap: 8,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
+  field: { gap: 8 },
   titleInput: {
     backgroundColor: Colors.surface,
     borderRadius: 14,
@@ -373,14 +426,54 @@ const styles = StyleSheet.create({
     color: Colors.textSubtle,
     textAlign: "right",
   },
-  tipsBox: {
-    backgroundColor: Colors.primaryPale,
-    borderRadius: 14,
-    padding: 14,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary + "25",
+  // ── Tag picker ──
+  tagSection: { gap: 10 },
+  tagHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  tagHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    marginTop: -4,
+  },
+  tagClearText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primary,
+  },
+  tagGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  tagChipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryPale,
+  },
+  tagChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  tagChipTextActive: {
+    color: Colors.primary,
+    fontFamily: "Inter_600SemiBold",
+  },
+  // ── Mood ──
   moodSection: { gap: 8 },
   moodRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   moodBtn: {
@@ -392,6 +485,15 @@ const styles = StyleSheet.create({
   moodLabel: {
     fontSize: 10, fontFamily: "Inter_500Medium",
     color: Colors.textMuted, textAlign: "center",
+  },
+  // ── Tips ──
+  tipsBox: {
+    backgroundColor: Colors.primaryPale,
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary + "25",
   },
   tipsTitle: {
     fontSize: 13,
