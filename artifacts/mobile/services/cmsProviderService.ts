@@ -1,28 +1,15 @@
-import { Platform } from "react-native";
-
 import { CmsQualityData, CmsSpendingData, Provider } from "@/types";
+import {
+  apiBase,
+  fetchJson,
+  makeRequestTimeoutSignal,
+  mergeJsonHeaders,
+} from "./apiClient";
 
-function getApiBase(): string {
-  const envUrl = process.env["EXPO_PUBLIC_API_URL"];
-  if (envUrl) return envUrl;
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    const apiHostname = hostname.replace(".expo.", ".");
-    return `${window.location.protocol}//${apiHostname}/api`;
-  }
-  return "http://localhost:80/api";
-}
-
-function apiBase(): string {
-  return getApiBase();
-}
-
-function makeSignal(ms: number): AbortSignal {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), ms);
-  controller.signal.addEventListener("abort", () => clearTimeout(id));
-  return controller.signal;
-}
+// CMS endpoints hit external government APIs proxied by the backend — they
+// can be noticeably slower than internal endpoints, so timeouts are higher.
+const CMS_TIMEOUT_MS = 20_000;
+const QUALITY_SUMMARY_TIMEOUT_MS = 30_000; // Batch endpoint is slowest.
 
 interface SearchProvidersResponse {
   providers: Provider[];
@@ -39,38 +26,26 @@ export async function searchCmsProviders(params: {
   offset?: number;
 }): Promise<SearchProvidersResponse> {
   const base = apiBase();
-  const url = new URL(`${base}/cms/providers`, "https://placeholder.dev");
-  if (params.state) url.searchParams.set("state", params.state);
-  if (params.zip) url.searchParams.set("zip", params.zip);
-  if (params.limit) url.searchParams.set("limit", String(params.limit));
-  if (params.offset) url.searchParams.set("offset", String(params.offset));
+  const query = new URLSearchParams();
+  if (params.state) query.set("state", params.state);
+  if (params.zip) query.set("zip", params.zip);
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.offset) query.set("offset", String(params.offset));
 
-  const fetchUrl = `${base}/cms/providers?${url.searchParams.toString()}`;
-  const res = await fetch(fetchUrl, {
-    headers: { Accept: "application/json" },
-    signal: makeSignal(20000),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`CMS search failed (${res.status}): ${body}`);
-  }
-
-  return res.json();
+  return fetchJson<SearchProvidersResponse>(
+    `${base}/cms/providers?${query.toString()}`,
+    {
+      headers: mergeJsonHeaders(),
+      timeoutMs: CMS_TIMEOUT_MS,
+    }
+  );
 }
 
 export async function fetchQualityData(ccn: string): Promise<CmsQualityData> {
-  const res = await fetch(`${apiBase()}/cms/quality/${ccn}`, {
-    headers: { Accept: "application/json" },
-    signal: makeSignal(20000),
+  return fetchJson<CmsQualityData>(`${apiBase()}/cms/quality/${ccn}`, {
+    headers: mergeJsonHeaders(),
+    timeoutMs: CMS_TIMEOUT_MS,
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Quality data failed (${res.status}): ${body}`);
-  }
-
-  return res.json();
 }
 
 export interface QualitySummary {
@@ -83,33 +58,35 @@ export async function fetchQualitySummary(
   ccns: string[]
 ): Promise<Record<string, QualitySummary>> {
   if (ccns.length === 0) return {};
-  const res = await fetch(
-    `${apiBase()}/cms/quality-summary?ccns=${ccns.join(",")}`,
-    {
-      headers: { Accept: "application/json" },
-      signal: makeSignal(30000),
-    }
-  );
 
-  if (!res.ok) return {};
-
-  const data = (await res.json()) as { summaries: Record<string, QualitySummary> };
-  return data.summaries;
+  // This endpoint is used as a background enrichment — silently returns {} on
+  // any failure rather than surfacing an error to the user.
+  try {
+    const res = await fetch(
+      `${apiBase()}/cms/quality-summary?ccns=${ccns.join(",")}`,
+      {
+        headers: mergeJsonHeaders(),
+        signal: makeRequestTimeoutSignal(QUALITY_SUMMARY_TIMEOUT_MS),
+      }
+    );
+    if (!res.ok) return {};
+    const data = (await res.json()) as {
+      summaries: Record<string, QualitySummary>;
+    };
+    return data.summaries;
+  } catch {
+    return {};
+  }
 }
 
 export async function fetchSpendingData(ccn: string): Promise<CmsSpendingData> {
-  const res = await fetch(`${apiBase()}/cms/spending/${ccn}`, {
-    headers: { Accept: "application/json" },
-    signal: makeSignal(20000),
+  return fetchJson<CmsSpendingData>(`${apiBase()}/cms/spending/${ccn}`, {
+    headers: mergeJsonHeaders(),
+    timeoutMs: CMS_TIMEOUT_MS,
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Spending data failed (${res.status}): ${body}`);
-  }
-
-  return res.json();
 }
+
+// ─── US States list ──────────────────────────────────────────────────────────
 
 const US_STATES = [
   { value: "AL", label: "Alabama" },
