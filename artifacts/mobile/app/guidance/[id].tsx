@@ -247,7 +247,7 @@ export default function GuidanceDetailScreen() {
             } as any);
           }}
           style={({ pressed }) => [
-            styles.askVeraBtn,
+            styles.askRagnaBtn,
             pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
           ]}
         >
@@ -256,9 +256,9 @@ export default function GuidanceDetailScreen() {
             style={{ width: 36, height: 36, borderRadius: 9 }}
             resizeMode="cover"
           />
-          <View style={styles.askVeraBtnText}>
-            <Text style={styles.askVeraBtnTitle}>Ask Ragna about this</Text>
-            <Text style={styles.askVeraBtnSub}>Get personalized guidance on "{scenario.title}"</Text>
+          <View style={styles.askRagnaBtnText}>
+            <Text style={styles.askRagnaBtnTitle}>Ask Ragna about this</Text>
+            <Text style={styles.askRagnaBtnSub}>Get personalized guidance on "{scenario.title}"</Text>
           </View>
           <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />
         </Pressable>
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
   },
-  askVeraBtn: {
+  askRagnaBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  askVeraBtnIcon: {
+  askRagnaBtnIcon: {
     width: 40,
     height: 40,
     borderRadius: 11,
@@ -671,14 +671,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  askVeraBtnText: { flex: 1 },
-  askVeraBtnTitle: {
+  askRagnaBtnText: { flex: 1 },
+  askRagnaBtnTitle: {
     fontSize: 15,
     fontFamily: "Inter_700Bold",
     color: "#fff",
     letterSpacing: -0.2,
   },
-  askVeraBtnSub: {
+  askRagnaBtnSub: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.8)",
