@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useJournal } from "@/context/JournalContext";
 
@@ -147,6 +148,7 @@ export default function PainAdScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0) }]}>
+      <CosmicBackground />
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}

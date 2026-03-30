@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { JourneyStageCard } from "@/components/JourneyStageCard";
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { JourneyStage } from "@/types";
@@ -80,8 +81,10 @@ export default function JourneyScreen() {
   const activeDesc = stageDescriptions[activeStage];
 
   return (
+    <View style={styles.container}>
+    <CosmicBackground />
     <ScrollView
-      style={styles.container}
+      style={{ flex: 1 }}
       contentContainerStyle={[
         styles.content,
         {
@@ -180,6 +183,7 @@ export default function JourneyScreen() {
         </View>
       </View>
     </ScrollView>
+    </View>
   );
 }
 

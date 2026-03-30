@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { MedicationPicker } from "@/components/MedicationPicker";
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { MedicationEntry, PatientProfile } from "@/types";
@@ -139,6 +140,7 @@ export default function PatientProfileScreen() {
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <CosmicBackground />
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}

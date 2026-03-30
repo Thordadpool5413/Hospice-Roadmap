@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { FontScale, useA11y } from "@/context/AccessibilityContext";
 import { useApp } from "@/context/AppContext";
@@ -126,8 +127,10 @@ export default function MoreScreen() {
   };
 
   return (
+    <View style={styles.container}>
+    <CosmicBackground />
     <ScrollView
-      style={styles.container}
+      style={{ flex: 1 }}
       contentContainerStyle={[
         styles.content,
         {
@@ -379,6 +382,7 @@ export default function MoreScreen() {
 
       <Text style={styles.versionText}>Hospice Roadmap v1.0.0</Text>
     </ScrollView>
+    </View>
   );
 }
 

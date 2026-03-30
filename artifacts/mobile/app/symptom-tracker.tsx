@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useSymptoms } from "@/context/SymptomContext";
 import { SymptomEntry } from "@/types";
@@ -588,6 +589,7 @@ export default function SymptomTrackerScreen() {
 
   return (
     <View style={[sc.container, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0) }]}>
+      <CosmicBackground />
       {/* ── Header ── */}
       <View style={sc.header}>
         <Pressable
