@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
 import {
@@ -15,147 +16,302 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { JOURNAL_TYPE_META, useJournal } from "@/context/JournalContext";
-import { useReminders } from "@/context/RemindersContext";
-import { JourneyStage } from "@/types";
 
-// ─── Stage display metadata ──────────────────────────────────────────────────
-const STAGE_META: Record<JourneyStage, { label: string; color: string; bg: string; icon: string; desc: string }> = {
-  before: { label: "Before Hospice", color: Colors.journeyBefore, bg: Colors.journeyBeforePale, icon: "search", desc: "Research, planning & eligibility guidance" },
-  during: { label: "During Hospice", color: Colors.journeyDuring, bg: Colors.journeyDuringPale, icon: "heart", desc: "Day-to-day care support & navigation" },
-  after:  { label: "After Hospice",  color: Colors.journeyAfter,  bg: Colors.journeyAfterPale,  icon: "sun",   desc: "Grief, bereavement & moving forward" },
+// ─── Role × Content Config ───────────────────────────────────────────────────
+
+type ActionItem = {
+  label: string;
+  icon: string;
+  route: string;
+  color: string;
+};
+type ResourceItem = {
+  label: string;
+  sub: string;
+  icon: string;
+  route: string;
+  color: string;
+};
+type RoleConfig = {
+  title: string;
+  contextLine: (patientName?: string) => string;
+  heroTitle: string;
+  heroSubtitle: string;
+  keyActions: ActionItem[];
+  resources: ResourceItem[];
 };
 
-// ─── Tool card definition ────────────────────────────────────────────────────
-type Tool = { label: string; sub: string; icon: string; route: string; iconColor: string };
+const ROLE_CONFIG: Record<string, RoleConfig> = {
+  caregiver: {
+    title: "Caregiver Home",
+    contextLine: (n) => n ? `Supporting ${n} today` : "Supporting your loved one today",
+    heroTitle: "What is happening right now?",
+    heroSubtitle: "Get step by step help for what is happening right now",
+    keyActions: [
+      { label: "Symptom Log",   icon: "plus-square",  route: "/symptom-tracker", color: Colors.accentSymptom    },
+      { label: "Journal",       icon: "edit-3",        route: "/journal",          color: Colors.accentJournal    },
+      { label: "Goals of Care", icon: "heart",         route: "/goals-of-care",    color: Colors.accentGoals      },
+      { label: "Reminders",     icon: "bell",          route: "/reminders",        color: Colors.accentReminders  },
+    ],
+    resources: [
+      { label: "Situation Guide", sub: "What do I do now?",           icon: "book-open", route: "/situation-finder", color: Colors.accentSituation  },
+      { label: "Care Wishes",     sub: "Review & document care wishes", icon: "heart",    route: "/goals-of-care",    color: Colors.accentCareWishes },
+    ],
+  },
+  patient: {
+    title: "Patient Home",
+    contextLine: () => "Your care and comfort today",
+    heroTitle: "How are you feeling right now?",
+    heroSubtitle: "Get step by step help for symptoms, comfort, and next steps",
+    keyActions: [
+      { label: "Symptom Log",  icon: "plus-square", route: "/symptom-tracker", color: Colors.accentSymptom   },
+      { label: "Journal",      icon: "edit-3",       route: "/journal",          color: Colors.accentJournal   },
+      { label: "Care Wishes",  icon: "heart",        route: "/goals-of-care",    color: Colors.accentCareWishes},
+      { label: "Reminders",    icon: "bell",         route: "/reminders",        color: Colors.accentReminders },
+    ],
+    resources: [
+      { label: "Situation Guide", sub: "What do I do now?",      icon: "book-open", route: "/situation-finder", color: Colors.accentSituation },
+      { label: "Goals of Care",   sub: "Review what matters most", icon: "star",    route: "/goals-of-care",    color: Colors.accentGoals     },
+    ],
+  },
+  other: {
+    title: "Support Home",
+    contextLine: () => "Helping someone through hospice",
+    heroTitle: "What do you need help with today?",
+    heroSubtitle: "Get step by step help, guidance, and next steps",
+    keyActions: [
+      { label: "Journal",         icon: "edit-3",     route: "/journal",          color: Colors.accentJournal   },
+      { label: "Goals of Care",   icon: "heart",      route: "/goals-of-care",    color: Colors.accentGoals     },
+      { label: "Reminders",       icon: "bell",       route: "/reminders",        color: Colors.accentReminders },
+      { label: "Situation Guide", icon: "book-open",  route: "/situation-finder", color: Colors.accentSituation },
+    ],
+    resources: [
+      { label: "Care Wishes",  sub: "Review & document care wishes", icon: "heart",       route: "/goals-of-care",    color: Colors.accentCareWishes },
+      { label: "Symptom Log",  sub: "Track important changes",       icon: "bar-chart-2", route: "/symptom-tracker",  color: Colors.accentSymptom    },
+    ],
+  },
+};
 
-// ─── Role + Stage → tools ────────────────────────────────────────────────────
-function getRoleTools(role: string, stage: JourneyStage): Tool[] {
-  if (role === "patient") {
-    if (stage === "before") return [
-      { label: "Symptom Log",    sub: "Track how you're feeling",   icon: "bar-chart-2",  route: "/symptom-tracker", iconColor: Colors.journeyBefore },
-      { label: "Eligibility",    sub: "Am I eligible for hospice?", icon: "clipboard",    route: "/evaluation",       iconColor: Colors.journeyBefore },
-      { label: "Goals of Care",  sub: "What matters most to you",   icon: "star",         route: "/goals-of-care",    iconColor: Colors.journeyAfter  },
-      { label: "Find Providers", sub: "Hospice programs near you",  icon: "map-pin",      route: "/(tabs)/providers", iconColor: Colors.primary        },
-    ];
-    if (stage === "during") return [
-      { label: "Symptom Log",   sub: "Track how you're feeling today", icon: "bar-chart-2", route: "/symptom-tracker", iconColor: Colors.journeyBefore },
-      { label: "Journal",       sub: "Write what's on your mind",      icon: "edit-3",      route: "/journal",          iconColor: Colors.primary        },
-      { label: "Goals of Care", sub: "What matters most to you",       icon: "star",        route: "/goals-of-care",    iconColor: Colors.journeyAfter  },
-      { label: "Reminders",     sub: "Medication & care schedule",     icon: "bell",        route: "/reminders",        iconColor: Colors.primary        },
-    ];
-    // after
-    return [
-      { label: "Journal",      sub: "Write what's on your mind", icon: "edit-3",       route: "/journal",          iconColor: Colors.primary        },
-      { label: "Get Support",  sub: "Grief & bereavement help",  icon: "message-circle",route: "/support",           iconColor: Colors.journeyAfter  },
-      { label: "Find Providers",sub: "Find continuing care",     icon: "map-pin",      route: "/(tabs)/providers", iconColor: Colors.journeyBefore },
-      { label: "Goals of Care",sub: "Review & update wishes",   icon: "star",         route: "/goals-of-care",    iconColor: Colors.journeyAfter  },
-    ];
-  }
+// ─── Shared Card Components ───────────────────────────────────────────────────
 
-  if (role === "caregiver") {
-    if (stage === "before") return [
-      { label: "Eligibility",    sub: "Check if your patient qualifies", icon: "clipboard",   route: "/evaluation",       iconColor: Colors.journeyBefore },
-      { label: "Find Providers", sub: "Hospice programs in your area",   icon: "map-pin",     route: "/(tabs)/providers", iconColor: Colors.primary        },
-      { label: "Situation Guide",sub: "Step-by-step for any situation",  icon: "book-open",   route: "/situation-finder", iconColor: Colors.primary        },
-      { label: "Goals of Care",  sub: "Document the patient's wishes",   icon: "star",        route: "/goals-of-care",    iconColor: Colors.journeyAfter  },
-    ];
-    if (stage === "during") return [
-      { label: "Symptom Log",     sub: "Track the patient's symptoms",  icon: "bar-chart-2",  route: "/symptom-tracker", iconColor: Colors.journeyBefore },
-      { label: "Situation Guide", sub: "Step-by-step for any situation", icon: "book-open",   route: "/situation-finder", iconColor: Colors.primary        },
-      { label: "Active Dying",    sub: "What to expect in final hours",  icon: "heart",       route: "/active-dying",     iconColor: Colors.journeyAfter  },
-      { label: "Goals of Care",   sub: "Review & document care wishes",  icon: "star",        route: "/goals-of-care",    iconColor: Colors.journeyAfter  },
-    ];
-    // after
-    return [
-      { label: "Journal",       sub: "Process your caregiving journey", icon: "edit-3",        route: "/journal",          iconColor: Colors.primary        },
-      { label: "Get Support",   sub: "Grief & bereavement resources",  icon: "message-circle", route: "/support",           iconColor: Colors.journeyAfter  },
-      { label: "Find Providers",sub: "Find ongoing support services",  icon: "map-pin",       route: "/(tabs)/providers", iconColor: Colors.journeyBefore },
-      { label: "Situation Guide",sub: "Browse guidance scenarios",     icon: "book-open",     route: "/situation-finder", iconColor: Colors.primary        },
-    ];
-  }
+function HeroRagnaCard({ title, subtitle, onPress }: {
+  title: string; subtitle: string; onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [pressed && { opacity: 0.93, transform: [{ scale: 0.988 }] }]}
+    >
+      <View style={hero.outer}>
+        {/* Glow border layer */}
+        <View style={hero.glowBorder} />
+        <View style={hero.inner}>
+          <Text style={hero.question}>{title}</Text>
 
-  // role === "other"
-  if (stage === "before") return [
-    { label: "Journey Guide",   sub: "Understand the hospice process", icon: "compass",     route: "/(tabs)/journey",   iconColor: Colors.journeyBefore },
-    { label: "Eligibility",     sub: "What qualifies for hospice",     icon: "clipboard",   route: "/evaluation",       iconColor: Colors.journeyBefore },
-    { label: "Find Providers",  sub: "Hospice programs near you",      icon: "map-pin",     route: "/(tabs)/providers", iconColor: Colors.primary        },
-    { label: "Situation Guide", sub: "Browse 60+ guidance scenarios",  icon: "book-open",   route: "/situation-finder", iconColor: Colors.primary        },
-  ];
-  if (stage === "during") return [
-    { label: "Journey Guide",   sub: "Navigate the hospice journey",  icon: "compass",     route: "/(tabs)/journey",   iconColor: Colors.journeyBefore },
-    { label: "Situation Guide", sub: "Browse 60+ guidance scenarios", icon: "book-open",   route: "/situation-finder", iconColor: Colors.primary        },
-    { label: "Find Providers",  sub: "Hospice providers near you",    icon: "map-pin",     route: "/(tabs)/providers", iconColor: Colors.primary        },
-    { label: "Goals of Care",   sub: "Understand care preferences",   icon: "star",        route: "/goals-of-care",    iconColor: Colors.journeyAfter  },
-  ];
-  return [
-    { label: "Journey Guide",  sub: "Understand what comes next",    icon: "compass",       route: "/(tabs)/journey",   iconColor: Colors.journeyBefore },
-    { label: "Get Support",    sub: "Grief & bereavement resources", icon: "message-circle", route: "/support",           iconColor: Colors.journeyAfter  },
-    { label: "Find Providers", sub: "Find ongoing care services",    icon: "map-pin",       route: "/(tabs)/providers", iconColor: Colors.primary        },
-    { label: "Situation Guide",sub: "Browse guidance scenarios",     icon: "book-open",     route: "/situation-finder", iconColor: Colors.primary        },
-  ];
+          {/* Ask Ragna CTA row */}
+          <LinearGradient
+            colors={["#1C3378", "#2E2870"]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={hero.ctaRow}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={hero.ragnaAvatar}
+              resizeMode="cover"
+            />
+            <Text style={hero.ctaLabel}>Ask Ragna</Text>
+            <View style={hero.chevronWrap}>
+              <Feather name="chevron-right" size={17} color="#fff" />
+            </View>
+          </LinearGradient>
+
+          <Text style={hero.subtitle}>{subtitle}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
 }
 
-// ─── Role-specific Ragna subtitle ────────────────────────────────────────────
-function getRagnaTagline(role: string, stage: JourneyStage): string {
-  if (role === "patient") {
-    if (stage === "before") return "Ask anything — symptoms, what hospice means, what to expect";
-    if (stage === "during") return "Here with you any time — day or night";
-    return "Here to listen and help as you move forward";
-  }
-  if (role === "caregiver") {
-    if (stage === "before") return "Get clear answers about eligibility, planning & what's ahead";
-    if (stage === "during") return "Get help with what's happening right now";
-    return "Support for grief, next steps & your own wellbeing";
-  }
-  return "Your guide through every stage of hospice";
-}
+const hero = StyleSheet.create({
+  outer: {
+    borderRadius: 18,
+    padding: 2,
+    shadowColor: "#58C8FF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  glowBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#58C8FF",
+    opacity: 0.65,
+  },
+  inner: {
+    backgroundColor: "rgba(20, 40, 88, 0.92)",
+    borderRadius: 16,
+    padding: 18,
+    gap: 14,
+  },
+  question: {
+    fontSize: 21,
+    fontFamily: "Inter_700Bold",
+    color: "#F3F6FF",
+    letterSpacing: -0.4,
+    lineHeight: 27,
+  },
+  ctaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: "rgba(130, 190, 255, 0.20)",
+  },
+  ragnaAvatar: { width: 38, height: 38, borderRadius: 10, flexShrink: 0 },
+  ctaLabel: { flex: 1, fontSize: 17, fontFamily: "Inter_700Bold", color: "#F3F6FF", letterSpacing: -0.2 },
+  chevronWrap: {
+    width: 28, height: 28, borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center", justifyContent: "center",
+  },
+  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#8F9AB8", lineHeight: 18 },
+});
 
-function formatReminderTime(dt: string): string {
-  try {
-    const d = new Date(dt);
-    return d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  } catch { return dt; }
+function ActionCard({ item, onPress }: { item: ActionItem; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        ac.card,
+        pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+      ]}
+    >
+      <View style={[ac.iconWrap, { backgroundColor: item.color + "22" }]}>
+        <Feather name={item.icon as any} size={20} color={item.color} />
+      </View>
+      <Text style={ac.label}>{item.label}</Text>
+      <Feather name="chevron-right" size={13} color={Colors.textSubtle} style={ac.caret} />
+    </Pressable>
+  );
 }
+const ac = StyleSheet.create({
+  card: {
+    width: "48%",
+    backgroundColor: "rgba(22, 39, 84, 0.88)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(130, 190, 255, 0.18)",
+    padding: 14,
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  iconWrap: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  label: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#F3F6FF", letterSpacing: -0.2, flex: 1 },
+  caret: { alignSelf: "flex-end" },
+});
 
-// ─── Component ───────────────────────────────────────────────────────────────
+function ResourceCard({ item, onPress }: { item: ResourceItem; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        rc.card,
+        pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+      ]}
+    >
+      <View style={[rc.iconWrap, { backgroundColor: item.color + "22" }]}>
+        <Feather name={item.icon as any} size={18} color={item.color} />
+      </View>
+      <Text style={rc.label}>{item.label}</Text>
+      <Text style={rc.sub} numberOfLines={2}>{item.sub}</Text>
+    </Pressable>
+  );
+}
+const rc = StyleSheet.create({
+  card: {
+    flex: 1,
+    backgroundColor: "rgba(22, 39, 84, 0.84)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(109, 146, 219, 0.28)",
+    padding: 14,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  label: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#F3F6FF", letterSpacing: -0.2 },
+  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#8F9AB8", lineHeight: 16 },
+});
+
+function JourneyCard({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        jc.card,
+        pressed && { opacity: 0.88 },
+      ]}
+    >
+      <View style={jc.iconWrap}>
+        <Feather name="navigation" size={20} color={Colors.accentJourney} />
+      </View>
+      <View style={jc.textWrap}>
+        <Text style={jc.title}>During Hospice</Text>
+        <Text style={jc.sub}>Journey Guide →</Text>
+      </View>
+      <Feather name="chevron-right" size={16} color={Colors.textSubtle} />
+    </Pressable>
+  );
+}
+const jc = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: "rgba(21, 40, 86, 0.88)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(120, 170, 255, 0.24)",
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  iconWrap: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: Colors.accentJourney + "20",
+    alignItems: "center", justifyContent: "center",
+  },
+  textWrap: { flex: 1 },
+  title: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#F3F6FF", letterSpacing: -0.2 },
+  sub: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.accentJourney, marginTop: 2 },
+});
+
+// ─── Home Screen ──────────────────────────────────────────────────────────────
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useApp();
-  const { entries } = useJournal();
-  const { reminders } = useReminders();
 
   const role  = user?.role ?? "other";
-  const stage = user?.journeyStage ?? "during";
-  const stageMeta = STAGE_META[stage];
-  const tools = getRoleTools(role, stage);
-
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-  };
-
-  const displayName = (() => {
-    if (role === "caregiver") {
-      const name = user?.patientProfile?.patientName?.trim();
-      if (name) return `Supporting ${name}`;
-      return "Caregiver";
-    }
-    if (role === "patient") return "Patient";
-    return "Welcome";
-  })();
-
-  const nextReminder = useMemo(() => {
-    const now = Date.now();
-    return reminders
-      .filter((r) => r.enabled && new Date(r.datetime).getTime() > now)
-      .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())[0] ?? null;
-  }, [reminders]);
-
-  const lastEntry = entries[0] ?? null;
-  const hasActivity = !!nextReminder || !!lastEntry;
+  const config = useMemo(() => ROLE_CONFIG[role] ?? ROLE_CONFIG.other, [role]);
+  const patientName = user?.patientProfile?.patientName?.trim();
+  const contextLine = config.contextLine(patientName);
 
   const tap = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -164,231 +320,154 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={sc.container}
       contentContainerStyle={[
-        styles.content,
+        sc.content,
         { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 18), paddingBottom: insets.bottom + 110 },
       ]}
       showsVerticalScrollIndicator={false}
     >
+      {/* ── Background ambient glow ── */}
+      <View style={sc.ambientGlow} pointerEvents="none" />
+
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Image
-            source={require("@/assets/images/app-icon.png")}
-            style={styles.appIcon}
-            resizeMode="cover"
-          />
-          <View>
-            <Text style={styles.greeting}>{greeting()}</Text>
-            <Text style={styles.displayName} numberOfLines={1}>{displayName}</Text>
+      <View style={sc.header}>
+        <View style={sc.headerLeft}>
+          <Text style={sc.pageTitle}>{config.title}</Text>
+          {/* Stage pill */}
+          <View style={sc.stagePill}>
+            <View style={sc.stageDot} />
+            <Text style={sc.stagePillText}>During Hospice</Text>
           </View>
+          <Text style={sc.contextLine}>{contextLine}</Text>
         </View>
-        <View style={styles.headerRight}>
-          <Pressable
-            onPress={() => router.push("/(tabs)/more")}
-            style={({ pressed }) => [styles.stagePill, { backgroundColor: stageMeta.bg }, pressed && { opacity: 0.75 }]}
-          >
-            <View style={[styles.stagePillDot, { backgroundColor: stageMeta.color }]} />
-            <Text style={[styles.stagePillText, { color: stageMeta.color }]}>{stageMeta.label}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/(tabs)/more")}
-            style={({ pressed }) => [styles.settingsBtn, pressed && { opacity: 0.6 }]}
-          >
-            <Feather name="settings" size={20} color={Colors.textSecondary} />
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => tap("/(tabs)/more")}
+          style={({ pressed }) => [sc.settingsBtn, pressed && { opacity: 0.65 }]}
+        >
+          <Feather name="settings" size={20} color={Colors.textSecondary} />
+        </Pressable>
       </View>
 
-      {/* ── Ragna hero card ── */}
-      <Pressable
+      {/* ── Hero ── */}
+      <HeroRagnaCard
+        title={config.heroTitle}
+        subtitle={config.heroSubtitle}
         onPress={() => tap("/(tabs)/help")}
-        style={({ pressed }) => [styles.ragnaCard, pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] }]}
-      >
-        <Image
-          source={require("@/assets/images/ragna-icon.png")}
-          style={styles.ragnaPortrait}
-          resizeMode="cover"
-        />
-        <View style={styles.ragnaText}>
-          <Text style={styles.ragnaTitle}>Ask Ragna</Text>
-          <Text style={styles.ragnaSub}>{getRagnaTagline(role, stage)}</Text>
-        </View>
-        <View style={styles.ragnaCaret}>
-          <Feather name="chevron-right" size={18} color={Colors.primary} />
-        </View>
-      </Pressable>
+      />
 
-      {/* ── Role-specific tools ── */}
-      <View>
-        <Text style={styles.sectionTitle}>
-          {role === "patient" ? "Your tools" : role === "caregiver" ? "Care tools" : "Explore"}
-        </Text>
-        <View style={styles.toolGrid}>
-          {tools.map((t) => (
-            <Pressable
-              key={t.label}
-              onPress={() => tap(t.route)}
-              style={({ pressed }) => [styles.toolCard, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
-            >
-              <View style={[styles.toolIconWrap, { backgroundColor: t.iconColor + "22" }]}>
-                <Feather name={t.icon as any} size={18} color={t.iconColor} />
-              </View>
-              <View style={styles.toolTextWrap}>
-                <Text style={styles.toolLabel}>{t.label}</Text>
-                <Text style={styles.toolSub} numberOfLines={2}>{t.sub}</Text>
-              </View>
-            </Pressable>
+      {/* ── Key Actions ── */}
+      <View style={sc.section}>
+        <Text style={sc.sectionTitle}>Key Actions</Text>
+        <View style={sc.actionGrid}>
+          {config.keyActions.map((item) => (
+            <ActionCard key={item.label} item={item} onPress={() => tap(item.route)} />
           ))}
         </View>
       </View>
 
-      {/* ── Activity snapshot ── */}
-      {hasActivity && (
-        <View>
-          <Text style={styles.sectionTitle}>Activity</Text>
-          <View style={styles.activityCol}>
-            {nextReminder && (
-              <Pressable
-                onPress={() => tap("/reminders")}
-                style={({ pressed }) => [styles.activityRow, pressed && { opacity: 0.88 }]}
-              >
-                <View style={[styles.activityIcon, { backgroundColor: Colors.primaryPale }]}>
-                  <Feather name="bell" size={15} color={Colors.primary} />
-                </View>
-                <View style={styles.activityText}>
-                  <Text style={styles.activityMeta}>Next reminder</Text>
-                  <Text style={styles.activityTitle} numberOfLines={1}>{nextReminder.label}</Text>
-                  <Text style={styles.activityTime}>{formatReminderTime(nextReminder.datetime)}</Text>
-                </View>
-                <Feather name="chevron-right" size={14} color={Colors.textSubtle} />
-              </Pressable>
-            )}
-            {lastEntry && (() => {
-              const meta = JOURNAL_TYPE_META[lastEntry.type];
-              return (
-                <Pressable
-                  onPress={() => tap("/journal")}
-                  style={({ pressed }) => [styles.activityRow, pressed && { opacity: 0.88 }]}
-                >
-                  <View style={[styles.activityIcon, { backgroundColor: meta.bg }]}>
-                    <Feather name={meta.icon as any} size={15} color={meta.color} />
-                  </View>
-                  <View style={styles.activityText}>
-                    <Text style={styles.activityMeta}>Latest journal entry</Text>
-                    <Text style={styles.activityTitle} numberOfLines={1}>{lastEntry.title}</Text>
-                    <Text style={styles.activityTime}>{lastEntry.date}</Text>
-                  </View>
-                  <Feather name="chevron-right" size={14} color={Colors.textSubtle} />
-                </Pressable>
-              );
-            })()}
-          </View>
+      {/* ── Helpful Resources ── */}
+      <View style={sc.section}>
+        <Text style={sc.sectionTitle}>Helpful Resources</Text>
+        <View style={sc.resourceRow}>
+          {config.resources.map((item) => (
+            <ResourceCard key={item.label} item={item} onPress={() => tap(item.route)} />
+          ))}
         </View>
-      )}
-
-      {/* ── Your Journey ── */}
-      <View>
-        <Text style={styles.sectionTitle}>Your Journey</Text>
-        <Pressable
-          onPress={() => tap("/(tabs)/journey")}
-          style={({ pressed }) => [styles.journeyCard, { borderLeftColor: stageMeta.color }, pressed && { opacity: 0.88 }]}
-        >
-          <View style={[styles.journeyIconWrap, { backgroundColor: stageMeta.color + "20" }]}>
-            <Feather name={stageMeta.icon as any} size={20} color={stageMeta.color} />
-          </View>
-          <View style={styles.journeyText}>
-            <Text style={[styles.journeyStage, { color: stageMeta.color }]}>{stageMeta.label}</Text>
-            <Text style={styles.journeyDesc}>{stageMeta.desc}</Text>
-            <Text style={styles.journeyLink}>Open Journey Navigator →</Text>
-          </View>
-          <Feather name="chevron-right" size={15} color={Colors.textSubtle} />
-        </Pressable>
       </View>
+
+      {/* ── Journey card ── */}
+      <JourneyCard onPress={() => tap("/(tabs)/journey")} />
+
     </ScrollView>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const sc = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content:   { paddingHorizontal: 20, gap: 24 },
+  content:   { paddingHorizontal: 20, gap: 22 },
+
+  // Ambient background glow
+  ambientGlow: {
+    position: "absolute",
+    top: -80, left: -60, right: -60,
+    height: 320,
+    borderRadius: 200,
+    backgroundColor: "rgba(40, 100, 200, 0.07)",
+    transform: [{ scaleX: 1.4 }],
+  },
 
   // Header
-  header:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  headerLeft:  { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  appIcon:     { width: 36, height: 36, borderRadius: 10 },
-  greeting:    { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
-  displayName: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text, letterSpacing: -0.2 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  stagePill:   { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 20 },
-  stagePillDot:{ width: 7, height: 7, borderRadius: 4 },
-  stagePillText:{ fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  settingsBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surfaceMid, alignItems: "center", justifyContent: "center" },
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  headerLeft: { flex: 1, gap: 6 },
+  pageTitle: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    color: "#F3F6FF",
+    letterSpacing: -0.5,
+  },
 
-  // Ragna hero
-  ragnaCard: {
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 18,
-    padding: 16,
+  // Stage pill — fixed warm rose
+  stagePill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    borderWidth: 1,
-    borderColor: Colors.primary + "35",
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: Colors.stagePillBg,
+    alignSelf: "flex-start",
   },
-  ragnaPortrait: { width: 52, height: 52, borderRadius: 14, flexShrink: 0 },
-  ragnaText:     { flex: 1, gap: 3 },
-  ragnaTitle:    { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.text, letterSpacing: -0.3 },
-  ragnaSub:      { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSecondary, lineHeight: 18 },
-  ragnaCaret:    { width: 32, height: 32, borderRadius: 9, backgroundColor: Colors.primary + "18", alignItems: "center", justifyContent: "center" },
+  stageDot: {
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: Colors.stagePillDot,
+  },
+  stagePillText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.stagePillText,
+  },
 
-  // Section title
-  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.text, letterSpacing: -0.3, marginBottom: 12 },
+  contextLine: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 19,
+  },
 
-  // Tool grid — 2 columns, each card has icon + label + subtitle
-  toolGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  toolCard: {
-    width: "47.5%",
+  settingsBtn: {
+    width: 40, height: 40, borderRadius: 12,
     backgroundColor: Colors.surfaceMid,
-    borderRadius: 16,
-    padding: 14,
+    borderWidth: 1, borderColor: Colors.divider,
+    alignItems: "center", justifyContent: "center",
+    marginTop: 4,
+  },
+
+  // Sections
+  section: { gap: 12 },
+  sectionTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: "#F3F6FF",
+    letterSpacing: -0.3,
+  },
+
+  // Key actions grid — 2×2
+  actionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
   },
-  toolIconWrap: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  toolTextWrap: { gap: 3 },
-  toolLabel:    { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.text, letterSpacing: -0.2 },
-  toolSub:      { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted, lineHeight: 15 },
 
-  // Activity
-  activityCol:  { gap: 8 },
-  activityRow:  { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 14, padding: 13, borderWidth: 1, borderColor: Colors.divider },
-  activityIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  activityText: { flex: 1, gap: 1 },
-  activityMeta: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: Colors.textSubtle, textTransform: "uppercase", letterSpacing: 0.4 },
-  activityTitle:{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.text, letterSpacing: -0.1 },
-  activityTime: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
-
-  // Journey card
-  journeyCard: {
+  // Resources row — 2 equal cards
+  resourceRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 14,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    borderLeftWidth: 3,
+    gap: 10,
   },
-  journeyIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  journeyText:     { flex: 1, gap: 3 },
-  journeyStage:    { fontSize: 14, fontFamily: "Inter_700Bold", letterSpacing: -0.2 },
-  journeyDesc:     { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSecondary, lineHeight: 17 },
-  journeyLink:     { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.primary, marginTop: 2 },
 });

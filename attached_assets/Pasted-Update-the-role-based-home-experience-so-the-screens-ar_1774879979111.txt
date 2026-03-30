@@ -1,0 +1,317 @@
+Update the role based home experience so the screens are redesigned for Patient, Caregiver, and Other using one shared design system and one shared layout shell.
+
+Important:
+Do not redesign the visual style again.
+Match the current dark premium mockup style exactly.
+Keep the same color mood, spacing, card shape, card glow, section order, and overall layout structure already approved.
+
+Goal
+
+Build one shared home screen shell that changes by role.
+
+The same overall structure should be used for:
+Patient
+Caregiver
+Other
+
+Only the content, labels, and card set should adapt by role.
+The layout, theme, spacing, and visual design should stay consistent.
+
+Core design structure for all roles
+
+1. Top title area
+2. Stage pill
+3. Supporting or context line
+4. Main Ask Ragna hero card
+5. Key Actions section
+6. Helpful Resources section
+7. Journey card
+8. Bottom nav
+
+Keep this structure identical for all three roles.
+
+Do not bring back:
+Active Dying on the main home screen
+Call Hospice on the main home screen
+Emergency Card on the main home screen
+
+Do not add extra sections.
+Do not flatten the design.
+Do not change the approved color and glow system.
+
+Role specific content rules
+
+Caregiver screen
+
+Title:
+Caregiver Home
+
+Context line:
+Supporting {patientName} today
+
+If no patient name exists:
+Supporting your loved one today
+
+Hero title:
+What is happening right now?
+
+Hero action:
+Ask Ragna
+
+Hero subtitle:
+Get step by step help for what is happening right now
+
+Key Actions cards in a two by two grid:
+Symptom Log
+Journal
+Goals of Care
+Reminders
+
+Helpful Resources cards:
+Situation Guide
+subtitle:
+What do I do now?
+
+Care Wishes
+subtitle:
+Review & document care wishes
+
+Journey card:
+During Hospice
+subtitle:
+Journey Guide
+
+Patient screen
+
+Title:
+Patient Home
+
+Context line:
+Your care and comfort today
+
+Hero title:
+How are you feeling right now?
+
+Hero action:
+Ask Ragna
+
+Hero subtitle:
+Get step by step help for symptoms, comfort, and next steps
+
+Key Actions cards in a two by two grid:
+Symptom Log
+Journal
+Care Wishes
+Reminders
+
+Helpful Resources cards:
+Situation Guide
+subtitle:
+What do I do now?
+
+Goals of Care
+subtitle:
+Review what matters most
+
+Journey card:
+During Hospice
+subtitle:
+Journey Guide
+
+Other screen
+
+Title:
+Support Home
+
+Context line:
+Helping someone through hospice
+
+Hero title:
+What do you need help with today?
+
+Hero action:
+Ask Ragna
+
+Hero subtitle:
+Get step by step help, guidance, and next steps
+
+Key Actions cards in a two by two grid:
+Journal
+Goals of Care
+Reminders
+Situation Guide
+
+Helpful Resources cards:
+Care Wishes
+subtitle:
+Review & document care wishes
+
+Symptom Log
+subtitle:
+Track important changes
+
+Journey card:
+During Hospice
+subtitle:
+Journey Guide
+
+Shared visual system
+
+Do not change this visual system.
+
+Background
+Primary dark navy: #091734
+Secondary dark navy: #10214A
+Deep panel blue: #14295A
+Soft overlay blue: #1A3470
+
+Text
+Primary text: #F3F6FF
+Secondary text: #B6C0DA
+Muted text: #8F9AB8
+
+Borders and glow
+Soft blue border: #355E9F
+Hero glow: #63C8FF
+Card edge highlight: rgba(130, 190, 255, 0.18)
+
+Stage pill
+Background: #4C2A39
+Text: #F09A7A
+Dot: #FF8B68
+
+Hero
+Outer fill: rgba(20, 40, 88, 0.78)
+Inner row gradient start: #233E86
+Inner row gradient end: #3D367F
+Hero border glow: #58C8FF
+
+Key Action accent colors
+Symptom Log: #67B7FF
+Journal: #D59A32
+Goals of Care: #B97DFF
+Care Wishes: #C48BFF
+Reminders: #59D0D5
+Situation Guide: #73B9FF
+
+Helpful Resources cards
+Fill: rgba(22, 39, 84, 0.84)
+Border: rgba(109, 146, 219, 0.28)
+
+Journey card
+Fill: rgba(21, 40, 86, 0.88)
+Border: rgba(120, 170, 255, 0.24)
+Journey accent: #58B6FF
+
+Bottom nav
+Background: rgba(10, 20, 48, 0.96)
+Active: #77C8FF
+Inactive: #A3AECF
+Chat dot: #7CFF7A
+
+Layout rules
+
+1. Keep the hero card as the largest element.
+2. Keep Key Actions as a two by two grid.
+3. Keep Helpful Resources as two medium cards with subtitles.
+4. Keep Journey as one full width card.
+5. Keep spacing calm and generous.
+6. Keep corners rounded.
+7. Keep card shadows soft and premium.
+8. Keep the approved background glow and subtle star texture only if already implemented cleanly.
+9. Do not change bottom nav structure.
+10. Keep Chat with the green status dot.
+11. Keep Home active when on the home screen.
+
+Architecture requirement
+
+Do not create three totally separate home screens if that causes duplicate code.
+
+Instead:
+create one shared HomeShell component
+create one shared ActionCard component
+create one shared ResourceCard component
+create one shared JourneyCard component
+create one shared HeroRagnaCard component
+
+Then drive the content through a role config object.
+
+Suggested config structure
+
+roleHomeConfig = {
+  caregiver: {
+    title: "Caregiver Home",
+    contextLine: ...
+    heroTitle: ...
+    heroSubtitle: ...
+    keyActions: [...],
+    resources: [...],
+    journeyTitle: "During Hospice",
+    journeySubtitle: "Journey Guide"
+  },
+  patient: {
+    ...
+  },
+  other: {
+    ...
+  }
+}
+
+Behavior requirements
+
+1. Detect the selected role from the existing onboarding or app state.
+2. Render the correct home variant automatically.
+3. Keep existing navigation routes for each card action.
+4. Do not break Ask Ragna navigation.
+5. Do not change the bottom tab structure.
+6. Do not change the stage pill styling.
+7. Do not remove the settings button.
+
+Important labels to use exactly
+
+Caregiver Home
+Patient Home
+Support Home
+Supporting {patientName} today
+Supporting your loved one today
+Your care and comfort today
+Helping someone through hospice
+What is happening right now?
+How are you feeling right now?
+What do you need help with today?
+Ask Ragna
+Get step by step help for what is happening right now
+Get step by step help for symptoms, comfort, and next steps
+Get step by step help, guidance, and next steps
+Key Actions
+Symptom Log
+Journal
+Goals of Care
+Care Wishes
+Reminders
+Helpful Resources
+Situation Guide
+What do I do now?
+Review & document care wishes
+Review what matters most
+Track important changes
+During Hospice
+Journey Guide
+Home
+Chat
+More
+Resources
+
+Implementation guidance
+
+Update the existing post role selection home screen.
+Preserve current navigation.
+Preserve current color theme.
+Preserve current visual hierarchy.
+Only change the home screen content and structure by role.
+
+After updating, return:
+1. Files changed
+2. Summary of how role based rendering was implemented
+3. Which shared components were created
+4. Any existing route or state dependency that made the role switch harder than expected
