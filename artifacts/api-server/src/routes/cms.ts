@@ -166,7 +166,7 @@ router.get("/cms/providers", async (req: Request, res: Response) => {
 
 router.get("/cms/quality/:ccn", async (req: Request, res: Response) => {
   try {
-    const { ccn } = req.params;
+    const ccn = req.params.ccn as string;
     if (!ccn || ccn.length < 4) {
       res.status(400).json({ error: "Valid CCN (CMS Certification Number) is required" });
       return;
@@ -342,7 +342,7 @@ router.get("/cms/quality-summary", async (req: Request, res: Response) => {
 
 router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
   try {
-    const { ccn } = req.params;
+    const ccn = req.params.ccn as string;
     if (!ccn || ccn.length < 4) {
       res.status(400).json({ error: "Valid CCN (CMS Certification Number) is required" });
       return;

@@ -174,7 +174,6 @@ export default function SupportScreen() {
         { paddingBottom: insets.bottom + 40 },
       ]}
       showsVerticalScrollIndicator={false}
-      bottomOffset={24}
       keyboardShouldPersistTaps="handled"
     >
       {/* Intro */}
