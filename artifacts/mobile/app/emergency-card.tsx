@@ -278,7 +278,7 @@ export default function EmergencyCardScreen() {
         <View style={styles.privacyNote}>
           <Feather name="lock" size={12} color={Colors.textSubtle} />
           <Text style={styles.privacyText}>
-            All information on this card is stored only on this device and is never shared.
+            Information on this card is stored on this device for quick access. It is not automatically shared. If you use Ragna, relevant profile details may be included with your request.
           </Text>
         </View>
       </ScrollView>

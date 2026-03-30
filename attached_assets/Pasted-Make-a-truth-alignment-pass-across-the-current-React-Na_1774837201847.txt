@@ -1,0 +1,170 @@
+Make a truth alignment pass across the current React Native Expo iOS app. Do not redesign the UI. Keep the layout and styling intact unless a tiny helper text addition is needed. Only update user facing copy and the minimal support screen behavior needed so the app says exactly what it does today.
+
+Files to edit:
+
+artifacts/mobile/app/onboarding.tsx
+artifacts/mobile/app/privacy.tsx
+artifacts/mobile/app/support.tsx
+artifacts/mobile/app/patient-profile.tsx
+artifacts/mobile/app/goals-of-care.tsx
+artifacts/mobile/app/emergency-card.tsx
+artifacts/mobile/app/terms.tsx
+
+Important rules:
+
+1. Do not claim data is never shared.
+2. Do not claim data is shared only with Ragna.
+3. Do not claim the app uses secure storage if it is actually using AsyncStorage or standard local app storage.
+4. Do not claim there is an in app analytics opt out setting unless it actually exists.
+5. Do not claim the support form submits inside the app or guarantees a response time if the screen only opens the user’s email app.
+6. Do not claim there is a real referral or information request workflow if that is not actually implemented.
+7. Keep all wording calm, simple, and trustworthy.
+
+Specific changes required:
+
+A. Update onboarding footer note in artifacts/mobile/app/onboarding.tsx
+
+Find the footer note text:
+"Your information is private and never shared."
+
+Replace it with:
+"You control what you enter. Some saved information is stored on your device. If you use Ragna, relevant context may be sent securely to generate personalized responses."
+
+B. Update privacy policy copy in artifacts/mobile/app/privacy.tsx
+
+Replace the section bodies with wording that matches the current product behavior.
+
+Use this exact content for the sections array bodies:
+
+Information We Collect:
+"Hospice Roadmap collects the information you choose to enter, such as your role, journey stage, patient profile details, goals of care, symptom tracking, reminders, journal entries, support messages, and conversations with Ragna. Some of this information is stored locally on your device to support app features. When you use server backed features such as Ragna or provider search, information needed for those features may be transmitted to our server."
+
+How We Use Your Information:
+"Information you provide is used to:\n\n• Personalize your app experience\n• Generate guidance when you use Ragna\n• Power provider search and related app features\n• Help you contact support when you choose to do so\n\nWe do not sell or rent your personal information for marketing purposes."
+
+Data Storage and Security:
+"Many saved items in Hospice Roadmap are stored locally on your device using standard app storage. When you use server backed features, information needed for those features is transmitted over encrypted connections when available. No method of electronic storage or transmission is completely secure."
+
+Medical Information Disclaimer:
+"Hospice Roadmap is an educational and navigation platform. Information entered into the app is used to support app features and personalization. It is not part of a medical record created by a healthcare provider.\n\nThis app is not a substitute for professional medical care."
+
+Third Party Services:
+"We use third party infrastructure to support app functionality, which may include AI generated responses and public provider data services. We do not use advertising networks or sell data to data brokers."
+
+Your Rights:
+"You can edit or remove much of your locally stored information directly in the app. If you have questions about deleting information associated with support or other server backed features, contact our support team. This version of the app does not currently include an in app analytics opt out control."
+
+You can keep the other sections, but make sure the full privacy screen no longer claims:
+1. secure storage
+2. anonymized analytics opt out in settings
+3. referral and information requests as an implemented workflow
+
+C. Update support screen copy and behavior in artifacts/mobile/app/support.tsx
+
+1. Import Alert from react native.
+2. Change the intro text from:
+"Our support team is here to help with questions about hospice, providers, referrals, or any other aspect of the journey."
+
+To:
+"Use this form to prepare an email to our support team from your email app. You can use it for hospice questions, provider search help, or general app support."
+
+3. Change the submit button title from:
+"Send Message"
+
+To:
+"Open Email App"
+
+4. Add a small helper text under the button:
+"This does not send inside the app. It opens your email app with a prefilled message."
+
+5. In handleSubmit, only set submitted to true after Linking.openURL succeeds.
+6. If the device cannot open the email composer, show:
+Alert.alert(
+  "No Email App Available",
+  "We could not open an email composer on this device. Please email support@hospiceroadmap.app directly."
+);
+
+7. Remove the current silent failure behavior.
+8. Update the success state title from:
+"Message Received"
+
+To:
+"Email Draft Opened"
+
+9. Update the success body from:
+"Thank you for reaching out. Our team will respond within 1 business day via your preferred contact method."
+
+To:
+"We opened your email app with a prefilled message to support@hospiceroadmap.app. Your request is not sent until you tap send in your email app."
+
+D. Update patient profile wording in artifacts/mobile/app/patient-profile.tsx
+
+1. Change the banner body from:
+"This information stays on your device and helps Ragna give guidance specific to your patient's situation. Every field is optional."
+
+To:
+"This information is stored on your device and can be used to personalize Ragna. If you chat with Ragna, relevant details may be sent with your request. Every field is optional."
+
+2. Change the save success alert body from:
+"Ragna will now use this information to give you personalized guidance."
+
+To:
+"This information can now be used to personalize Ragna. It is stored on this device and may be included when you chat with Ragna."
+
+E. Update goals of care wording in artifacts/mobile/app/goals-of-care.tsx
+
+1. Change the intro body from:
+"These answers are private and will be shared only with Ragna to make her guidance personal and meaningful — not generic. Answer as much or as little as you're comfortable with."
+
+To:
+"These answers are stored on your device and can be used to personalize Ragna. If you chat with Ragna, relevant goals of care details may be included with your request. Answer as much or as little as you want."
+
+2. Change the preview title from:
+"What Ragna will know"
+
+To:
+"How Ragna may use this"
+
+3. Change the preview body from:
+"Every conversation with Ragna will be shaped by these goals. She'll reference what matters most, honor your loved one's wishes, and flag when a decision conflicts with their values."
+
+To:
+"Ragna may use these goals to personalize guidance, reference what matters most, and highlight when a decision may conflict with the values you recorded."
+
+F. Update emergency card privacy note in artifacts/mobile/app/emergency-card.tsx
+
+Replace:
+"All information on this card is stored only on this device and is never shared."
+
+With:
+"Information on this card is stored on this device for quick access. It is not automatically shared, but relevant profile details may be used if you choose to chat with Ragna."
+
+G. Update terms wording in artifacts/mobile/app/terms.tsx
+
+Find the section currently titled:
+"Referral and Information Requests"
+
+Change the title to:
+"Support Requests"
+
+Change the body to:
+"The Contact Support screen opens your email app with a prefilled message to our support team. Your message is not sent until you choose to send it from your email app. We do not guarantee service, admission, referral placement, or response times through this feature."
+
+H. After the direct edits above, run a project wide search in artifacts/mobile for the following phrases and update any remaining user facing copy that makes unsupported claims:
+
+never shared
+shared only with Ragna
+stored only on this device
+secure storage
+opt out of anonymized data collection
+within 1 business day
+referral and information requests
+
+Only update user visible copy. Do not change clinical guidance content, internal comments, or backend behavior in this task except for the minimal support screen submit logic described above.
+
+I. Final output
+
+After making the edits, give me:
+1. A short list of files changed
+2. A short summary of what was updated
+3. Any user facing copy that still might need legal or privacy review

@@ -110,7 +110,7 @@ export default function PatientProfileScreen() {
     updatePatientProfile({ ...profile, medications, comfortKitMedications });
     Alert.alert(
       "Profile Saved",
-      "Ragna will now use this information to give you personalized guidance.",
+      "This information can now be used to personalize Ragna. It is stored on this device and may be included when you chat with Ragna.",
       [{ text: "Done", onPress: () => router.back() }]
     );
   };
@@ -172,7 +172,7 @@ export default function PatientProfileScreen() {
           <View style={styles.bannerText}>
             <Text style={styles.bannerTitle}>Personalize Ragna</Text>
             <Text style={styles.bannerBody}>
-              This information stays on your device and helps Ragna give guidance specific to your patient's situation. Every field is optional.
+              This information is stored on your device and can be used to personalize Ragna. If you chat with Ragna, relevant details may be sent with your request. Every field is optional.
             </Text>
           </View>
         </View>
