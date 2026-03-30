@@ -154,6 +154,10 @@ function RootLayoutNav() {
         name="data-controls"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="medication-lookup"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

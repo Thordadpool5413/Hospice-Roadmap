@@ -78,6 +78,7 @@ export default function MoreScreen() {
       subtitle: "Guidance tools for specific care situations",
       items: [
         { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder" },
+        { label: "Medication Lookup", icon: "package", route: "/medication-lookup" },
         ...(!isPatient ? [
           { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying" } as MenuItem,
           { label: "Pain Assessment Tool", icon: "activity", route: "/painad" } as MenuItem,
