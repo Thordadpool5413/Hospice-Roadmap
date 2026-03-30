@@ -174,3 +174,73 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+---
+
+## Hospice Intelligence Engine (Server-Side)
+
+Located at `artifacts/api-server/src/intelligence/hospice/`. All files are server-side only — the mobile app only sends `content` + `patientContext` and receives streamed text back. The intelligence engine runs between the incoming message and the Anthropic API call.
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `types.ts` | All enumerations: `ConcernDomain`, `UrgencyLevel`, `CareGapType`, `AudienceStyle`, plus `ResponsePlan`, `KnowledgeBlock` interfaces |
+| `catalog.ts` | 35+ knowledge blocks across 13 domains (pain, dyspnea, dying process, time of death, after death, grief, care gaps, etc.) |
+| `diseaseModel.ts` | 6 disease trajectories: cancer, CHF, COPD, dementia, ALS, renal, liver, Parkinson's |
+| `dyingProcessModel.ts` | 4 phases of the dying process with clinical signs and appropriate interventions |
+| `symptomModel.ts` | 13 individual symptom profiles with urgency signals and escalation triggers |
+| `communicationModel.ts` | 8 communication playbooks for difficult conversations |
+| `timeOfDeathModel.ts` | What to do at the moment of death; who to call; what order |
+| `afterDeathModel.ts` | Post-death practical guidance (pronouncement, medication disposal, funeral home) |
+| `griefModel.ts` | 9 grief types with specific response guidance |
+| `careGapModel.ts` | 12 care gap signal types with escalation scripts |
+| `escalationCoaching.ts` | 5 scripts for escalating hospice calls/complaints |
+| `documentationCoach.ts` | Guidance for documenting care failures with date/time/name |
+| `expectedHospiceSupport.ts` | What good hospice care looks like across all service types |
+| `serviceFailureScenarios.ts` | 6 specific hospice failure scenarios with detection and advocacy |
+| `redFlags.ts` | 10 absolute red flags that always require immediate hospice or 911 contact |
+| `scenarioMap.ts` | 20+ pattern → domain mappings for deterministic signal detection |
+| `roleAdaptation.ts` | Response style adaptation by role (caregiver, patient, family, nurse) |
+| `retrieval.ts` | Deterministic block retrieval by domain matching and urgency signals |
+| `planner.ts` | `buildResponsePlan(messageText, patientContext)` — entry point; returns `ResponsePlan` with `injectedKnowledge` string |
+| `evaluationFixtures.ts` | 46 evaluation fixtures covering all major clinical scenarios |
+
+### Integration
+
+- `artifacts/api-server/src/routes/anthropic/index.ts` calls `buildResponsePlan()` before each Anthropic streaming call and appends `plan.injectedKnowledge` to the system prompt under an `INTELLIGENCE PACKAGE` header
+- `artifacts/api-server/src/routes/anthropic/systemPrompt.ts` includes a full section on how Ragna should interpret and use the intelligence package (urgency-based response style, required sections, must-say, must-avoid, knowledge block usage)
+
+---
+
+## Ragna AI Chat Screen — Mobile
+
+- **`artifacts/mobile/components/ragna/RagnaEmptyState.tsx`** — empty state with two prompt tiers:
+  - **Urgent Tiles** (2-column grid): `URGENT_TILES` — 11 scenario tiles with role-specific prompts and color coding
+  - **Common Questions** (horizontal chip scroll): `GUIDANCE_PROMPTS` — 12 contextual guidance questions below the tiles
+- **`artifacts/mobile/app/(tabs)/help.tsx`** — main Ragna chat screen; sends symptom summary, journal context, memory summary, goals of care, and patient profile with every message (respecting privacy controls)
+
+---
+
+## Screens Added
+
+| Screen | Route | Purpose |
+|--------|-------|---------|
+| Symptom Tracker | `/symptom-tracker` | Daily check-in (pain/breathlessness/nausea/agitation/appetite), 7-day trend bars, history |
+| Goals of Care | `/goals-of-care` | 4-question form (what matters most, good day, avoid, DNR), saved to patient profile |
+| Active Dying Protocol | `/active-dying` | Clinical reference for the dying process with phase-by-phase guidance |
+| PAINAD Scale | `/painad` | Nonverbal pain assessment tool for dementia/non-verbal patients |
+| Situation Finder | `/situation-finder` | Symptom/scenario-based guidance lookup |
+| Medication Lookup | `/medication-lookup` | 20+ hospice medications with RxNorm reference |
+| Emergency Card | `/emergency-card` | Quick-access card with all hospice contacts, tappable to call |
+
+## Context Providers
+
+| Context | Purpose |
+|---------|---------|
+| `AppContext` | User profile, patient profile, goals of care, privacy settings, `buildPatientContext()` |
+| `SymptomContext` | AsyncStorage-backed symptom entries with `getRecentSummary(days)` for Ragna |
+| `JournalContext` | Caregiver journal entries with tag filtering and export |
+| `RemindersContext` | Medication/appointment reminders with local notification support |
+| `VeraMemoryContext` | Ragna's cross-conversation memory (summary, key facts, emotional tone, topics) |
+| `AccessibilityContext` | Font scale and high-contrast mode |

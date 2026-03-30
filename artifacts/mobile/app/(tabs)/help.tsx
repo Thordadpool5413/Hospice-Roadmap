@@ -36,6 +36,65 @@ import { RagnaHeader } from "@/components/ragna/RagnaHeader";
 import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
 import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
 
+const GUIDANCE_PROMPTS: { label: string; prompt: string; caregiverOnly?: boolean; patientPrompt?: string }[] = [
+  {
+    label: "What changes near the end?",
+    prompt: "What physical changes are common as someone approaches the end of life? Help me understand what to watch for and what is normal.",
+    patientPrompt: "What physical changes happen near the end of life? I want to understand what is happening with my body.",
+  },
+  {
+    label: "How do I know if this is urgent?",
+    prompt: "I'm not sure if what I'm seeing with my patient is urgent enough to call hospice. Can you help me understand what changes require an immediate call versus what can wait?",
+    patientPrompt: "I'm not sure if what I'm feeling is urgent enough to ask for help. Can you help me understand what's an emergency and what can wait?",
+  },
+  {
+    label: "What do I say to the hospice nurse?",
+    prompt: "Help me organize what to say when I call the hospice nurse. I want to communicate clearly and make sure I ask for what we actually need.",
+    caregiverOnly: true,
+  },
+  {
+    label: "How do I talk to family?",
+    prompt: "I'm struggling to talk to family members about what is happening. Some people are in denial, some are grieving, and I'm in the middle. Can you help me with how to approach these conversations?",
+  },
+  {
+    label: "How do I explain this to a child?",
+    prompt: "I need to explain what is happening — that someone is dying — to a child. Can you help me with honest, age-appropriate language that won't traumatize them?",
+  },
+  {
+    label: "What do I do if death happens now?",
+    prompt: "I want to understand exactly what to do in the first moments and hours after my loved one dies at home. Who do I call, what is the order, and is it okay to take my time?",
+    caregiverOnly: true,
+  },
+  {
+    label: "What happens right after death?",
+    prompt: "Can you walk me through what happens in the hours and days after someone dies at home on hospice? I want to be prepared — the practical steps, the calls, the process.",
+    caregiverOnly: true,
+  },
+  {
+    label: "Is hospice doing enough?",
+    prompt: "I'm not sure if we're getting the level of care we should be. What does good hospice care actually look like? And how do I advocate for better care if something feels wrong?",
+    caregiverOnly: true,
+  },
+  {
+    label: "I'm carrying grief right now",
+    prompt: "I'm carrying a lot of grief, guilt, or fear right now. I don't need clinical advice — I just need to talk through what I'm feeling with someone who understands.",
+  },
+  {
+    label: "No one has explained anything",
+    prompt: "No one from hospice has taken time to explain what is happening or what to expect. I feel completely in the dark. Can you help me understand our situation from the beginning?",
+    caregiverOnly: true,
+  },
+  {
+    label: "How do I document care concerns?",
+    prompt: "I think there have been problems with our hospice care — delayed responses, unanswered calls, or things that weren't handled well. How do I document this and what can I do about it?",
+    caregiverOnly: true,
+  },
+  {
+    label: "What is a good death?",
+    prompt: "I want to understand what a good, peaceful death looks like. What can we do to create the conditions for that? What does comfort-focused care really mean in the final days?",
+  },
+];
+
 const URGENT_TILES = [
   {
     label: "Breathing difficulty",
@@ -133,6 +192,13 @@ export default function HelpScreen() {
     .map((t) => ({
       ...t,
       activePrompt: isPatient && t.patientPrompt ? t.patientPrompt : t.prompt,
+    }));
+
+  const visibleGuidancePrompts = GUIDANCE_PROMPTS
+    .filter((p) => !isPatient || !p.caregiverOnly)
+    .map((p) => ({
+      label: p.label,
+      activePrompt: isPatient && p.patientPrompt ? p.patientPrompt : p.prompt,
     }));
 
   const [conversation, setConversation] = useState<AiConversation | null>(null);
@@ -460,11 +526,13 @@ export default function HelpScreen() {
             proactiveOpener={proactiveOpener}
             symptomAlert={symptomAlert}
             visibleTiles={visibleTiles}
+            guidancePrompts={visibleGuidancePrompts}
             livingProfile={livingProfile}
             knowsExpanded={knowsExpanded}
             personalizationEnabled={ragnaPrivacy.personalizationEnabled}
             onToggleKnowsExpanded={() => setKnowsExpanded((e) => !e)}
             onTilePress={handleTilePress}
+            onGuidancePromptPress={sendMessage}
             onPressProactiveOpener={sendMessage}
             onPressSymptomAlert={sendMessage}
           />

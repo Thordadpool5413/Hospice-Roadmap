@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { conversations, messages } from "@workspace/db/schema";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { HOSPICE_SYSTEM_PROMPT } from "./systemPrompt.js";
+import { buildResponsePlan } from "../../intelligence/hospice/planner.js";
 
 const router: IRouter = Router();
 
@@ -168,9 +169,26 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
         content: m.content,
       }));
 
-    const systemPrompt = patientContext
-      ? `${HOSPICE_SYSTEM_PROMPT}\n\n═══════════════════════════════════════\nPATIENT CONTEXT FOR THIS SESSION\n═══════════════════════════════════════\n${patientContext}`
-      : HOSPICE_SYSTEM_PROMPT;
+    // Build intelligence response plan — deterministic retrieval + planner
+    let responsePlanKnowledge = "";
+    try {
+      const plan = buildResponsePlan(content, patientContext ?? "");
+      responsePlanKnowledge = plan.injectedKnowledge;
+    } catch (planErr) {
+      console.warn("Intelligence planner failed (using base prompt):", planErr);
+    }
+
+    const systemPrompt = [
+      HOSPICE_SYSTEM_PROMPT,
+      patientContext
+        ? `\n\n═══════════════════════════════════════\nPATIENT CONTEXT FOR THIS SESSION\n═══════════════════════════════════════\n${patientContext}`
+        : "",
+      responsePlanKnowledge
+        ? `\n\n═══════════════════════════════════════\nINTELLIGENCE PACKAGE — FOLLOW THIS PLAN\n═══════════════════════════════════════\n${responsePlanKnowledge}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
