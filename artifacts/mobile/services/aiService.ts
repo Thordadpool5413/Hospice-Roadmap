@@ -1,3 +1,5 @@
+import { getClientId } from "./clientIdentity";
+
 function apiBase(): string {
   if (typeof window !== "undefined" && window.location?.hostname) {
     const host = window.location.hostname.replace(".expo.", ".");
@@ -5,6 +7,19 @@ function apiBase(): string {
   }
   const envUrl = process.env["EXPO_PUBLIC_API_URL"];
   return envUrl ?? "http://localhost:8080/api";
+}
+
+async function jsonHeaders(): Promise<Record<string, string>> {
+  const clientId = await getClientId();
+  return {
+    "Content-Type": "application/json",
+    "x_client_id": clientId,
+  };
+}
+
+async function baseHeaders(): Promise<Record<string, string>> {
+  const clientId = await getClientId();
+  return { "x_client_id": clientId };
 }
 
 export interface AiMessage {
@@ -25,7 +40,7 @@ export interface AiConversation {
 export async function createConversation(title: string): Promise<AiConversation> {
   const res = await fetch(`${apiBase()}/anthropic/conversations`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await jsonHeaders(),
     body: JSON.stringify({ title }),
   });
   if (!res.ok) throw new Error("Failed to create conversation");
@@ -33,13 +48,19 @@ export async function createConversation(title: string): Promise<AiConversation>
 }
 
 export async function getConversation(id: number): Promise<AiConversation> {
-  const res = await fetch(`${apiBase()}/anthropic/conversations/${id}`);
+  const res = await fetch(`${apiBase()}/anthropic/conversations/${id}`, {
+    headers: await baseHeaders(),
+  });
   if (!res.ok) throw new Error("Failed to get conversation");
   return res.json() as Promise<AiConversation>;
 }
 
 export async function deleteConversation(id: number): Promise<void> {
-  await fetch(`${apiBase()}/anthropic/conversations/${id}`, { method: "DELETE" });
+  const res = await fetch(`${apiBase()}/anthropic/conversations/${id}`, {
+    method: "DELETE",
+    headers: await baseHeaders(),
+  });
+  if (!res.ok) throw new Error("Failed to delete conversation");
 }
 
 export async function synthesizeProfile(
@@ -56,7 +77,7 @@ export async function synthesizeProfile(
   try {
     const res = await fetch(`${apiBase()}/anthropic/profile-synthesize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await jsonHeaders(),
       body: JSON.stringify({ currentProfile, memory, tileHistory }),
     });
     if (!res.ok) return null;
@@ -78,7 +99,10 @@ export async function generateConversationMemory(
   try {
     const res = await fetch(
       `${apiBase()}/anthropic/conversations/${conversationId}/memory`,
-      { method: "POST" }
+      {
+        method: "POST",
+        headers: await baseHeaders(),
+      }
     );
     if (!res.ok) return null;
     return res.json() as Promise<{
@@ -124,7 +148,7 @@ export async function streamMessage(
       `${apiBase()}/anthropic/conversations/${conversationId}/messages`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await jsonHeaders(),
         body: JSON.stringify({ content, patientContext }),
       }
     );

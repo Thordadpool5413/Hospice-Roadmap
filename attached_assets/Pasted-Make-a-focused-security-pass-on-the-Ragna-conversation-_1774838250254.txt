@@ -1,0 +1,197 @@
+Make a focused security pass on the Ragna conversation system so every conversation is scoped to a single mobile client. Do not build full account login yet. Implement device scoped ownership using a persistent client id stored on the device and sent on every Anthropic request.
+
+Goal
+
+Every conversation must belong to one client only.
+A client must only be able to create, read, list, post to, generate memory for, and delete its own conversations.
+Do not redesign the UI.
+Keep the current product flow intact.
+
+Files to edit
+
+lib/db/src/schema/conversations.ts
+artifacts/api-server/src/routes/anthropic/index.ts
+artifacts/api-server/src/app.ts
+artifacts/mobile/services/aiService.ts
+
+Create these new files if needed
+
+artifacts/mobile/services/clientIdentity.ts
+
+Rules
+
+1. Do not add a full auth provider.
+2. Do not add user login screens.
+3. Do not change the messages table schema.
+4. Do not remove existing functionality.
+5. Do not leave any Anthropic conversation route unscoped.
+6. Use a device level client id that persists locally on the mobile app.
+7. Validate the client id format on the server.
+8. Make deleteConversation throw if the server rejects the delete.
+9. Keep the implementation simple and production minded.
+
+Implementation details
+
+A. Add client ownership to conversations
+
+In lib/db/src/schema/conversations.ts add a new clientId field.
+
+Requirements:
+Use a text column named client_id.
+Make it not null.
+Give it a default value of "legacy_unowned" so drizzle push can add the column safely without breaking old rows.
+Add an index on client_id.
+
+Example structure:
+clientId: text("client_id").notNull().default("legacy_unowned")
+
+Also add the table index using drizzle pgTable callback form.
+
+B. Add a persistent mobile client identity helper
+
+Create artifacts/mobile/services/clientIdentity.ts
+
+Requirements:
+Use AsyncStorage.
+Use a storage key of "ragna_client_id".
+Export one async function named getClientId().
+If the key exists, return it.
+If it does not exist, generate a new id in this format:
+client_<timestamp>_<random>
+Use only lowercase letters, numbers, and underscores in the generated id.
+Persist it and return it.
+
+Do not pull in new packages just for id generation.
+Use Date.now() plus Math.random() based generation.
+
+C. Send the client id on every Anthropic request from mobile
+
+Update artifacts/mobile/services/aiService.ts
+
+Requirements:
+Import getClientId from the new helper.
+Create one shared async helper that returns headers including x_client_id.
+Use x_client_id on every request to these routes:
+POST /anthropic/conversations
+GET /anthropic/conversations/:id
+DELETE /anthropic/conversations/:id
+POST /anthropic/profile-synthesize
+POST /anthropic/conversations/:id/memory
+POST /anthropic/conversations/:id/messages
+
+For JSON requests, include both:
+Content-Type: application/json
+x_client_id: <client id>
+
+For GET and DELETE requests, still include x_client_id.
+
+Also improve deleteConversation:
+Store the fetch response.
+If res.ok is false, throw new Error("Failed to delete conversation").
+
+Do not change the public function signatures in aiService.ts.
+
+D. Enforce client ownership on the server
+
+Update artifacts/api-server/src/routes/anthropic/index.ts
+
+Requirements:
+Import and from drizzle-orm in addition to eq.
+
+Add a helper near the top of the file:
+function requireClientId(req: Request, res: Response): string | null
+
+Behavior:
+Read req.header("x_client_id")
+Trim it
+Validate it with this regex:
+^client_[a-z0-9_]+$
+If missing or invalid, return 401 with:
+{ error: "Missing or invalid client identity" }
+Then return null
+If valid, return the client id string
+
+Use this helper at the start of every route in this file:
+GET /conversations
+POST /conversations
+GET /conversations/:id
+DELETE /conversations/:id
+GET /conversations/:id/messages
+POST /conversations/:id/messages
+POST /profile-synthesize
+POST /conversations/:id/memory
+
+Route behavior changes:
+
+1. GET /conversations
+Return only conversations where conversations.clientId equals the current client id.
+
+2. POST /conversations
+Insert title and clientId.
+
+3. GET /conversations/:id
+Find the conversation using both id and clientId.
+Use:
+and(eq(conversations.id, id), eq(conversations.clientId, clientId))
+If not found, return 404.
+
+4. DELETE /conversations/:id
+Same scoped lookup by id and clientId before delete.
+Delete only that conversation.
+
+5. GET /conversations/:id/messages
+First verify the conversation exists for this client id.
+If not found, return 404.
+Then return messages for that conversation id.
+
+6. POST /conversations/:id/messages
+First verify the conversation exists for this client id.
+If not found, return 404.
+Then proceed exactly as before.
+Do not change the patientContext behavior in this task.
+
+7. POST /profile-synthesize
+Require a valid client id header before continuing.
+No database changes needed in this route.
+
+8. POST /conversations/:id/memory
+First verify the conversation exists for this client id.
+If not found, return 404.
+Then proceed exactly as before.
+
+E. Tighten CORS just enough for this header
+
+Update artifacts/api-server/src/app.ts
+
+Requirements:
+Keep the app working in Replit and Expo.
+Configure cors so x_client_id is allowed in request headers.
+Do not lock origin down yet in this task.
+Just make sure this custom header is explicitly allowed.
+
+Example shape is fine:
+app.use(cors({
+  origin: true,
+  credentials: false,
+  allowedHeaders: ["Content-Type", "x_client_id"],
+}));
+
+F. Do not update generated clients in this task
+
+Do not regenerate the OpenAPI client or zod generated files right now unless type errors force it.
+If type errors do force it, update only what is necessary.
+
+G. Run checks
+
+After code edits:
+1. Run TypeScript checks for the api server and mobile app if available.
+2. Push the drizzle schema change using the existing workspace db push command if safe in this environment.
+3. Report whether the schema push succeeded.
+
+H. Final output
+
+After making the edits, give me:
+1. Files changed
+2. A short summary of what changed
+3. Whether the database schema update succeeded
+4. Any remaining risk or follow up needed before doing full user authentication
