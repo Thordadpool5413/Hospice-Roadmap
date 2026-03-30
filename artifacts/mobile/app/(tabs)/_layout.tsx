@@ -2,15 +2,38 @@ import { Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Image, Platform } from "react-native";
+import { Image, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 
 const ragnaIcon = require("@/assets/images/ragna-icon.png");
 
+function ChatTabIcon({ focused }: { focused: boolean }) {
+  return (
+    <View style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
+      <Image
+        source={ragnaIcon}
+        style={{
+          width: 26, height: 26, borderRadius: 7,
+          opacity: focused ? 1 : 0.72,
+          borderWidth: focused ? 1.5 : 0,
+          borderColor: Colors.tabIconSelected,
+        }}
+      />
+      {/* Green live dot */}
+      <View style={{
+        position: "absolute",
+        bottom: 0, right: 0,
+        width: 8, height: 8, borderRadius: 4,
+        backgroundColor: Colors.chatLiveDot,
+        borderWidth: 1.5, borderColor: Colors.background,
+      }} />
+    </View>
+  );
+}
 
-function ClassicTabLayout() {
+export default function TabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
@@ -24,9 +47,10 @@ function ClassicTabLayout() {
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
+          letterSpacing: 0.1,
         },
         tabBarStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: Colors.tabBarBg,
           borderTopWidth: 1,
           borderTopColor: Colors.divider,
           elevation: 0,
@@ -41,7 +65,7 @@ function ClassicTabLayout() {
           title: "Home",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="house" tintColor={color} size={24} />
+              <SymbolView name="house.fill" tintColor={color} size={22} />
             ) : (
               <Feather name="home" size={22} color={color} />
             ),
@@ -54,10 +78,8 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="help"
         options={{
-          title: "Ragna",
-          tabBarIcon: () => (
-            <Image source={ragnaIcon} style={{ width: 26, height: 26, borderRadius: 7 }} />
-          ),
+          title: "Chat",
+          tabBarIcon: ({ focused }) => <ChatTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -70,7 +92,7 @@ function ClassicTabLayout() {
           title: "More",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="ellipsis" tintColor={color} size={24} />
+              <SymbolView name="ellipsis" tintColor={color} size={22} />
             ) : (
               <Feather name="more-horizontal" size={22} color={color} />
             ),
@@ -78,8 +100,4 @@ function ClassicTabLayout() {
       />
     </Tabs>
   );
-}
-
-export default function TabLayout() {
-  return <ClassicTabLayout />;
 }
