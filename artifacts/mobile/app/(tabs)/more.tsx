@@ -84,6 +84,7 @@ export default function MoreScreen() {
           { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying" } as MenuItem,
           { label: "Pain Assessment Tool", icon: "activity", route: "/painad" } as MenuItem,
         ] : []),
+        { label: "Hospice Interview Scorecard", icon: "check-square", route: "/hospice-interview" },
         { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation" },
         { label: "Resource Library", icon: "book-open", route: "/resources" },
       ],

@@ -363,4 +363,72 @@ ${transcript.slice(0, 12000)}`;
   }
 });
 
+router.post("/score-hospice", async (req: Request, res: Response) => {
+  const { interview } = req.body as { interview: Record<string, unknown> };
+  if (!interview || typeof interview !== "object") {
+    res.status(400).json({ error: "interview data is required" });
+    return;
+  }
+
+  const scoringPrompt = `You are Ragna, a hospice expert with 30 years of clinical and administrative experience. A family has just completed a structured interview with a hospice agency and shared their answers with you. Analyze the interview data carefully and provide an honest, clinical assessment.
+
+INTERVIEW DATA:
+${JSON.stringify(interview, null, 2)}
+
+Analyze this hospice interview data and respond with ONLY valid JSON — no markdown, no code fences, no explanation. Use exactly this format:
+
+{
+  "overallScore": <integer 0-100>,
+  "recommendation": "<one of: Strong Candidate | Maybe | Probably Not | Absolutely Not>",
+  "recommendationReason": "<1-2 sentence plain explanation of why this label fits>",
+  "categoryScores": [
+    {"name": "Communication & Transparency", "score": <1-5>, "color": "<green|yellow|red>", "finding": "<1 sentence specific to their answers>"},
+    {"name": "Routine Care Commitment", "score": <1-5>, "color": "<green|yellow|red>", "finding": "<1 sentence>"},
+    {"name": "Crisis Care Readiness", "score": <1-5>, "color": "<green|yellow|red>", "finding": "<1 sentence>"},
+    {"name": "Honesty About Revocation & Discharge", "score": <1-5>, "color": "<green|yellow|red>", "finding": "<1 sentence>"},
+    {"name": "Financial Transparency", "score": <1-5>, "color": "<green|yellow|red>", "finding": "<1 sentence>"},
+    {"name": "First Impression", "score": <1-5>, "color": "<green|yellow|red>", "finding": "<1 sentence>"}
+  ],
+  "greenFlags": ["<specific green flag from their data>", "<another if present>"],
+  "redFlags": ["<specific red flag from their data>", "<another if present>"],
+  "questionsToAsk": ["<follow-up question the family should ask this hospice>", "<another>", "<another>"],
+  "narrative": "<Ragna's 3-4 sentence honest narrative about this hospice — written warmly but directly, as if speaking to the family. Highlight the most important thing they should know.>"
+}
+
+Scoring rules:
+- Be honest and direct. Families are making one of the most important decisions of their lives.
+- A score of 80+ = Strong Candidate. 60-79 = Maybe. 40-59 = Probably Not. <40 = Absolutely Not.
+- "Dodged the question" or "unclear" answers should lower scores.
+- Named real facilities, named real people, gave examples = raise scores.
+- Using agency staff "often" + vague after-hours = significant red flag.
+- "They almost never do CHC" = serious red flag (they are discouraging a Medicare benefit).
+- Trust scores the family gave in Section 7 should inform but not solely determine your assessment.
+- Output ONLY the JSON object.`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1800,
+      messages: [{ role: "user", content: scoringPrompt }],
+    });
+
+    const raw = response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
+    let result: unknown;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      const match = raw.match(/\{[\s\S]+\}/);
+      if (!match) {
+        res.status(500).json({ error: "Failed to parse scoring result" });
+        return;
+      }
+      result = JSON.parse(match[0]);
+    }
+    res.json(result);
+  } catch (err: unknown) {
+    console.error("Error scoring hospice:", err);
+    res.status(500).json({ error: "Failed to score hospice interview" });
+  }
+});
+
 export default router;
