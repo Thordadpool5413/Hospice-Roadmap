@@ -47,3 +47,21 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# EAS / Expo build artifacts
+.eas
+artifacts/mobile/.expo
+artifacts/mobile/dist
+artifacts/mobile/web-build
+
+# Mockup sandbox build artifacts (design tooling, not shipped)
+artifacts/mockup-sandbox/dist
+artifacts/mockup-sandbox/.vite
+
+# Logs
+*.log
+pnpm-debug.log*
+
+# Local env overrides (never commit secrets)
+.env.local
+.env.*.local

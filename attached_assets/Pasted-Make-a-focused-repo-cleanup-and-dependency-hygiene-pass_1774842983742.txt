@@ -1,0 +1,190 @@
+Make a focused repo cleanup and dependency hygiene pass for the Hospice Roadmap monorepo.
+
+Goal
+
+Reduce repo clutter, remove clearly unused dependencies, tighten ignore rules, and add a small set of workspace scripts that make the app easier to ship and hand off.
+Do not redesign the app.
+Do not change business logic.
+Do not break local Replit development.
+Do not remove prototype tooling unless it is clearly unused and non essential.
+Keep the monorepo structure intact.
+
+Files to inspect and update
+
+package.json
+pnpm-workspace.yaml
+.gitignore
+artifacts/mobile/package.json
+artifacts/api-server/package.json
+artifacts/mockup-sandbox/package.json
+lib/api-client-react/package.json
+lib/api-spec/package.json
+lib/db/package.json
+
+Create this file if it helps
+
+README_REPO_CLEANUP.md
+
+Rules
+
+1. Do not remove workspace packages blindly.
+2. Do not remove anything that is imported or used by a script.
+3. Do not change backend routes.
+4. Do not change mobile runtime behavior.
+5. Do not add new packages for this task.
+6. Keep TypeScript clean.
+7. Favor small safe removals over large speculative cleanup.
+8. Preserve Replit dev scripts.
+9. Keep mockup sandbox available if it is part of the design workflow, but treat it as non shipping tooling.
+10. Report anything suspicious instead of guessing.
+
+Implementation details
+
+A. Build a real dependency usage inventory first
+
+Before changing package manifests, inspect the repo for actual imports and script references.
+
+Check at minimum:
+
+1. Whether @workspace/api-client-react is imported anywhere outside its own package.
+2. Whether lib/api-spec is referenced by active scripts or only used for optional code generation.
+3. Whether artifacts/mockup-sandbox is referenced by active runtime code or only serves as a design sandbox.
+4. Whether any dependencies in artifacts/mobile/package.json are clearly unused by source imports or scripts.
+5. Whether any dependencies in artifacts/api-server/package.json are clearly unused.
+
+Important:
+Only remove dependencies that are clearly unused after inspection.
+Do not remove expo packages just because their import frequency is low.
+Do not remove codegen packages that are still part of a documented workflow.
+
+B. Clean the mobile package manifest safely
+
+Update artifacts/mobile/package.json
+
+Requirements
+
+1. Remove @workspace/api-client-react if it is not actually imported anywhere in the mobile source or used by scripts.
+2. Review whether runtime packages currently placed in devDependencies should remain there or move to dependencies for clarity.
+
+Safe rule:
+Packages used at runtime by the app should live in dependencies where practical.
+Packages used only for build, typecheck, or tooling should live in devDependencies.
+
+Be conservative.
+Do not churn half the file just to chase theoretical purity.
+
+3. Keep existing scripts, including the Replit dev script.
+4. Keep the Expo and iOS scripts added earlier if they already exist.
+5. If you adjust dependency placement, do not change versions unless required.
+
+C. Clean the root workspace package manifest
+
+Update package.json at the repo root.
+
+Requirements
+
+1. Keep the existing build and typecheck scripts.
+2. Add a few clear helper scripts if they do not already exist:
+
+"repo:mobile:typecheck": "pnpm --filter @workspace/mobile run typecheck"
+"repo:api:typecheck": "pnpm --filter @workspace/api-server run typecheck"
+"repo:db:push": "pnpm --filter @workspace/db run push"
+"repo:clean:artifacts": "find . \\( -name .cache -o -name .local -o -name .expo -o -name dist -o -name coverage \\) -type d -prune -exec rm -rf {} +"
+"repo:health": "pnpm run typecheck"
+
+If a script name collision exists, choose the closest clear equivalent.
+
+3. Do not remove the pnpm enforcement preinstall guard.
+4. Keep private true.
+
+D. Tighten ignore rules for shipping hygiene
+
+Update .gitignore
+
+Keep all existing entries.
+Add any missing high value entries that fit this repo and do not conflict with normal workflows.
+
+Review and add as needed:
+
+.eas
+artifacts/mobile/.expo
+artifacts/mobile/dist
+artifacts/mobile/web-build
+artifacts/mockup-sandbox/dist
+artifacts/mockup-sandbox/.vite
+*.log
+pnpm-debug.log*
+.env.local
+.env.*.local
+
+Do not ignore core checked in config files.
+Do not ignore assets or source code.
+Do not add broad patterns that could hide important workspace files.
+
+E. Clarify non shipping workspace packages
+
+Do not delete artifacts/mockup-sandbox in this task unless it is proven unused and explicitly isolated from all active workflows.
+
+Instead, if it is indeed only a design or mockup environment:
+
+1. Leave the package in place.
+2. Add a short note in README_REPO_CLEANUP.md or a similar lightweight repo note that explains:
+   artifacts/mobile is the shipping app
+   artifacts/api-server is the shipping API
+   artifacts/mockup-sandbox is prototype tooling and not part of the production mobile runtime
+
+Keep this document short and practical.
+
+F. Review small workspace packages for dead weight
+
+Inspect lib/api-client-react.
+
+If it is unused across the workspace:
+1. Do not delete the package folder in this task.
+2. Remove it from artifacts/mobile/package.json if unused there.
+3. Add a note in README_REPO_CLEANUP.md that it appears currently unused and can be removed in a later focused pass if the team confirms no future codegen client plans.
+
+Inspect lib/api-spec.
+
+If it is only used for optional codegen workflows:
+leave it in place.
+Do not remove it.
+
+G. Keep pnpm workspace safety intact
+
+Do not change:
+minimumReleaseAge
+autoInstallPeers
+onlyBuiltDependencies
+the platform overrides block
+
+Those are intentional workspace safety and install controls.
+
+H. Sanity check package classifications
+
+For each package.json you touch:
+1. Ensure JSON formatting stays clean.
+2. Ensure no required dependency is removed.
+3. Ensure scripts still point to real files.
+
+I. Validation
+
+After changes run these checks from the repo root if available:
+
+1. pnpm run typecheck
+2. pnpm --filter @workspace/mobile run typecheck
+3. pnpm --filter @workspace/api-server run typecheck
+
+If dependency manifest changes require install state refresh, report that clearly.
+Do not invent successful installs if they were not actually run.
+
+J. Final output
+
+After making the edits, give me:
+1. Files changed
+2. Dependencies removed or reclassified
+3. Scripts added
+4. Ignore rules added
+5. Whether @workspace/api-client-react appears unused
+6. Whether artifacts/mockup-sandbox appears to be non shipping tooling
+7. Any package or folder that still looks suspicious but was left untouched for safety
