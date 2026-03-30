@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -19,11 +19,13 @@ import { Colors } from "@/constants/colors";
 import { useSymptoms } from "@/context/SymptomContext";
 import { SymptomEntry } from "@/types";
 
+// ─── Constants ───────────────────────────────────────────────────────────────
+
 const AGITATION_OPTS = [
-  { value: 0 as const, label: "None", color: Colors.primary },
-  { value: 1 as const, label: "Mild", color: Colors.amber },
+  { value: 0 as const, label: "None",     color: Colors.primary },
+  { value: 1 as const, label: "Mild",     color: Colors.amber },
   { value: 2 as const, label: "Moderate", color: "#E07030" },
-  { value: 3 as const, label: "Severe", color: Colors.error },
+  { value: 3 as const, label: "Severe",   color: Colors.error },
 ];
 const APPETITE_OPTS = [
   { value: 0 as const, label: "None", color: Colors.error },
@@ -32,73 +34,65 @@ const APPETITE_OPTS = [
   { value: 3 as const, label: "Good", color: Colors.primary },
 ];
 
-function scoreColor(score: number, max = 10) {
-  const pct = score / max;
-  if (pct <= 0.3) return Colors.primary;
-  if (pct <= 0.6) return Colors.amber;
-  return Colors.error;
-}
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function todayDate() {
-  return new Date().toISOString().slice(0, 10);
-}
+function todayDate() { return new Date().toISOString().slice(0, 10); }
 function todayTime() {
   const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function scoreColor(score: number, max = 10) {
+  const p = score / max;
+  if (p <= 0) return Colors.divider;
+  if (p <= 0.3) return Colors.primary;
+  if (p <= 0.6) return Colors.amber;
+  return Colors.error;
+}
+function shortDate(dateStr: string) {
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function longDate(dateStr: string) {
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
-function formatDateLabel(dateStr: string) {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
+// ─── SliderRow ────────────────────────────────────────────────────────────────
 
-interface SliderRowProps {
-  label: string;
-  icon: string;
-  value: number;
-  max?: number;
-  onChange: (v: number) => void;
-  color?: string;
-}
-function SliderRow({ label, icon, value, max = 10, onChange, color }: SliderRowProps) {
-  const c = color ?? scoreColor(value, max);
-  const steps = Array.from({ length: max + 1 }, (_, i) => i);
+function SliderRow({ label, icon, value, max = 10, onChange }: {
+  label: string; icon: string; value: number; max?: number; onChange: (v: number) => void;
+}) {
+  const c = scoreColor(value, max);
   return (
-    <View style={sliderStyles.wrap}>
-      <View style={sliderStyles.labelRow}>
-        <View style={[sliderStyles.iconWrap, { backgroundColor: c + "18" }]}>
-          <Feather name={icon as any} size={14} color={c} />
+    <View style={sliderSt.wrap}>
+      <View style={sliderSt.labelRow}>
+        <View style={[sliderSt.iconWrap, { backgroundColor: (value > 0 ? c : Colors.textSubtle) + "20" }]}>
+          <Feather name={icon as any} size={14} color={value > 0 ? c : Colors.textSubtle} />
         </View>
-        <Text style={sliderStyles.label}>{label}</Text>
-        <View style={[sliderStyles.badge, { backgroundColor: c + "20" }]}>
-          <Text style={[sliderStyles.badgeText, { color: c }]}>{value}/{max}</Text>
+        <Text style={sliderSt.label}>{label}</Text>
+        <View style={[sliderSt.badge, { backgroundColor: (value > 0 ? c : Colors.textSubtle) + "18" }]}>
+          <Text style={[sliderSt.badgeText, { color: value > 0 ? c : Colors.textSubtle }]}>{value}/{max}</Text>
         </View>
       </View>
-      <View style={sliderStyles.steps}>
-        {steps.map((s) => (
+      <View style={sliderSt.steps}>
+        {Array.from({ length: max + 1 }, (_, i) => (
           <Pressable
-            key={s}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onChange(s);
-            }}
+            key={i}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onChange(i); }}
             style={[
-              sliderStyles.step,
-              { backgroundColor: s <= value ? scoreColor(s, max) : Colors.divider },
-              s === value && { transform: [{ scaleY: 1.4 }] },
+              sliderSt.step,
+              { backgroundColor: i <= value ? scoreColor(i, max) : Colors.divider },
+              i === value && { transform: [{ scaleY: 1.5 }] },
             ]}
           />
         ))}
       </View>
-      <View style={sliderStyles.rangeRow}>
-        <Text style={sliderStyles.rangeLabel}>0 — None</Text>
-        <Text style={sliderStyles.rangeLabel}>{max} — Severe</Text>
+      <View style={sliderSt.rangeRow}>
+        <Text style={sliderSt.rangeLabel}>0 — None</Text>
+        <Text style={sliderSt.rangeLabel}>{max} — Worst</Text>
       </View>
     </View>
   );
 }
-
-const sliderStyles = StyleSheet.create({
+const sliderSt = StyleSheet.create({
   wrap: { gap: 8 },
   labelRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   iconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
@@ -111,77 +105,445 @@ const sliderStyles = StyleSheet.create({
   rangeLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textSubtle },
 });
 
-interface TrendBarProps { label: string; entries: { date: string; value: number }[]; max?: number; }
-function TrendBar({ label, entries, max = 10 }: TrendBarProps) {
+// ─── CalendarStrip (14 days) ──────────────────────────────────────────────────
+
+function CalendarStrip({ entries, selectedDate, onSelectDate }: {
+  entries: SymptomEntry[];
+  selectedDate: string | null;
+  onSelectDate: (d: string | null) => void;
+}) {
   const days = useMemo(() => {
     const today = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
+    return Array.from({ length: 14 }, (_, i) => {
       const d = new Date(today);
-      d.setDate(d.getDate() - (6 - i));
+      d.setDate(d.getDate() - (13 - i));
       const ds = d.toISOString().slice(0, 10);
-      const match = entries.find((e) => e.date === ds);
-      return { date: ds, value: match ? match.value : null, isToday: i === 6 };
+      const entry = entries.find((e) => e.date === ds);
+      const dow = new Date(ds + "T12:00:00").getDay();
+      const dayLetter = ["S","M","T","W","T","F","S"][dow];
+      const dayNum = d.getDate();
+      const isToday = i === 13;
+      let dotColor = Colors.divider + "50";
+      if (entry) {
+        const maxScore = Math.max(entry.pain, entry.breathlessness, entry.nausea);
+        dotColor = scoreColor(maxScore > 0 ? maxScore : 1, 10);
+      }
+      return { ds, entry, dayLetter, dayNum, isToday, dotColor };
     });
   }, [entries]);
 
   return (
-    <View style={trendStyles.wrap}>
-      <Text style={trendStyles.label}>{label}</Text>
-      <View style={trendStyles.bars}>
-        {days.map((d) => {
-          const h = d.value !== null ? (d.value / max) * 44 : 0;
-          const c = d.value !== null ? scoreColor(d.value, max) : Colors.divider;
-          const dayLabel = new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "narrow" });
+    <View style={calSt.wrap}>
+      <View style={calSt.header}>
+        <Text style={calSt.title}>14-Day Calendar</Text>
+        {selectedDate && (
+          <Pressable onPress={() => onSelectDate(null)} style={calSt.clearBtn}>
+            <Text style={calSt.clearText}>Clear</Text>
+          </Pressable>
+        )}
+      </View>
+      <View style={calSt.strip}>
+        {days.map(({ ds, entry, dayLetter, dayNum, isToday, dotColor }) => {
+          const selected = ds === selectedDate;
           return (
-            <View key={d.date} style={trendStyles.barCol}>
-              <View style={trendStyles.barContainer}>
-                {d.value !== null ? (
-                  <View style={[trendStyles.bar, { height: Math.max(h, 4), backgroundColor: c }]} />
-                ) : (
-                  <View style={[trendStyles.barEmpty]} />
-                )}
-              </View>
-              <Text style={[trendStyles.dayLabel, d.isToday && { color: Colors.primary, fontFamily: "Inter_700Bold" }]}>
-                {d.isToday ? "•" : dayLabel}
+            <Pressable
+              key={ds}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSelectDate(selected ? null : ds);
+              }}
+              style={[
+                calSt.dayCell,
+                isToday && calSt.todayCell,
+                selected && calSt.selectedCell,
+              ]}
+            >
+              <Text style={[calSt.dayLetter, isToday && calSt.todayText, selected && calSt.selectedText]}>
+                {dayLetter}
               </Text>
-            </View>
+              <View style={[calSt.dot, { backgroundColor: dotColor }, !entry && calSt.dotEmpty]} />
+              <Text style={[calSt.dayNum, isToday && calSt.todayText, selected && calSt.selectedText]}>
+                {dayNum}
+              </Text>
+            </Pressable>
           );
         })}
+      </View>
+      <View style={calSt.legend}>
+        {[
+          { color: Colors.primary, label: "Low" },
+          { color: Colors.amber,   label: "Moderate" },
+          { color: Colors.error,   label: "High" },
+          { color: Colors.divider, label: "No entry" },
+        ].map((l) => (
+          <View key={l.label} style={calSt.legendItem}>
+            <View style={[calSt.legendDot, { backgroundColor: l.color }]} />
+            <Text style={calSt.legendLabel}>{l.label}</Text>
+          </View>
+        ))}
       </View>
     </View>
   );
 }
-
-const trendStyles = StyleSheet.create({
-  wrap: { gap: 6 },
-  label: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.4 },
-  bars: { flexDirection: "row", gap: 4, alignItems: "flex-end", height: 52 },
-  barCol: { flex: 1, alignItems: "center", gap: 3 },
-  barContainer: { flex: 1, justifyContent: "flex-end", width: "100%" },
-  bar: { borderRadius: 3, width: "100%", minHeight: 4 },
-  barEmpty: { height: 4, backgroundColor: Colors.divider + "60", borderRadius: 2, width: "100%" },
-  dayLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textSubtle },
+const calSt = StyleSheet.create({
+  wrap: {
+    backgroundColor: Colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: Colors.divider, padding: 16, gap: 12,
+  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  title: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.text },
+  clearBtn: { paddingHorizontal: 8, paddingVertical: 4 },
+  clearText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.primary },
+  strip: { flexDirection: "row", gap: 3 },
+  dayCell: {
+    flex: 1, alignItems: "center", gap: 4,
+    paddingVertical: 8, borderRadius: 10,
+    borderWidth: 1, borderColor: "transparent",
+  },
+  todayCell: { borderColor: Colors.primary + "40", backgroundColor: Colors.primary + "0C" },
+  selectedCell: { borderColor: Colors.primary, backgroundColor: Colors.primary + "20" },
+  dayLetter: { fontSize: 9, fontFamily: "Inter_500Medium", color: Colors.textSubtle },
+  dayNum: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  todayText: { color: Colors.primary },
+  selectedText: { color: Colors.primary, fontFamily: "Inter_700Bold" },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dotEmpty: { opacity: 0.35 },
+  legend: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  legendDot: { width: 7, height: 7, borderRadius: 4 },
+  legendLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textSubtle },
 });
+
+// ─── TrajectoryChart ──────────────────────────────────────────────────────────
+
+function TrajectoryChart({ entries }: { entries: SymptomEntry[] }) {
+  const DAYS = 14;
+  const BAR_H = 60;
+  const today = new Date();
+  const days = useMemo(() => Array.from({ length: DAYS }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (DAYS - 1 - i));
+    const ds = d.toISOString().slice(0, 10);
+    const entry = entries.find((e) => e.date === ds);
+    return { ds, entry, isToday: i === DAYS - 1 };
+  }), [entries]);
+
+  const hasData = entries.length > 0;
+
+  return (
+    <View style={trajSt.wrap}>
+      <View style={trajSt.header}>
+        <Text style={trajSt.title}>Symptom Trajectory</Text>
+        <Text style={trajSt.sub}>Last {DAYS} days</Text>
+      </View>
+      <View style={trajSt.legend}>
+        {[
+          { label: "Pain",     color: Colors.error },
+          { label: "Breath",   color: Colors.amber },
+          { label: "Nausea",   color: Colors.primary },
+        ].map((l) => (
+          <View key={l.label} style={trajSt.legendItem}>
+            <View style={[trajSt.legendDot, { backgroundColor: l.color }]} />
+            <Text style={trajSt.legendLabel}>{l.label}</Text>
+          </View>
+        ))}
+      </View>
+      {!hasData ? (
+        <View style={trajSt.emptyState}>
+          <Feather name="bar-chart-2" size={28} color={Colors.textSubtle} />
+          <Text style={trajSt.emptyText}>No check-ins recorded yet.</Text>
+          <Text style={trajSt.emptyHint}>Log today's symptoms below to start tracking.</Text>
+        </View>
+      ) : (
+        <View style={trajSt.chart}>
+          {days.map(({ ds, entry, isToday }) => {
+            const painH   = entry ? Math.max(3, (entry.pain / 10) * BAR_H) : 0;
+            const breathH = entry ? Math.max(3, (entry.breathlessness / 10) * BAR_H) : 0;
+            const nauseaH = entry ? Math.max(3, (entry.nausea / 10) * BAR_H) : 0;
+            return (
+              <View key={ds} style={trajSt.col}>
+                <View style={[trajSt.barGroup, { height: BAR_H }]}>
+                  {entry ? (
+                    <>
+                      <View style={[trajSt.bar, { height: painH,   backgroundColor: Colors.error   }]} />
+                      <View style={[trajSt.bar, { height: breathH, backgroundColor: Colors.amber   }]} />
+                      <View style={[trajSt.bar, { height: nauseaH, backgroundColor: Colors.primary }]} />
+                    </>
+                  ) : (
+                    <View style={trajSt.barMissing} />
+                  )}
+                </View>
+                <View style={[trajSt.dateTick, isToday && trajSt.todayTick]} />
+              </View>
+            );
+          })}
+        </View>
+      )}
+      {hasData && (
+        <View style={trajSt.axisRow}>
+          <Text style={trajSt.axisLabel}>{shortDate(days[0].ds)}</Text>
+          <Text style={trajSt.axisLabel}>Today</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+const trajSt = StyleSheet.create({
+  wrap: {
+    backgroundColor: Colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: Colors.divider, padding: 16, gap: 12,
+  },
+  header: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  title: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.text },
+  sub: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  legend: { flexDirection: "row", gap: 12 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  emptyState: { alignItems: "center", paddingVertical: 20, gap: 6 },
+  emptyText: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  emptyHint: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSubtle, textAlign: "center" },
+  chart: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
+  col: { flex: 1, alignItems: "center", gap: 3 },
+  barGroup: { flexDirection: "row", alignItems: "flex-end", gap: 2, justifyContent: "center" },
+  bar: { width: 5, borderRadius: 3 },
+  barMissing: { width: 3, height: 3, borderRadius: 2, backgroundColor: Colors.divider },
+  dateTick: { width: 1, height: 4, backgroundColor: Colors.divider },
+  todayTick: { backgroundColor: Colors.primary, width: 2 },
+  axisRow: { flexDirection: "row", justifyContent: "space-between" },
+  axisLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textSubtle },
+});
+
+// ─── SavedPanel ───────────────────────────────────────────────────────────────
+
+function SavedPanel({ entry, onAskRagna, onDismiss }: {
+  entry: { pain: number; breathlessness: number; nausea: number; agitation: number; notes?: string };
+  onAskRagna: () => void;
+  onDismiss: () => void;
+}) {
+  const { pain, breathlessness, nausea, agitation } = entry;
+  const agLabel = AGITATION_OPTS[agitation]?.label ?? "None";
+  const highSeverity = pain >= 7 || breathlessness >= 7 || agitation >= 2;
+
+  return (
+    <View style={savedSt.wrap}>
+      <View style={savedSt.successRow}>
+        <View style={savedSt.checkCircle}>
+          <Feather name="check" size={18} color="#fff" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={savedSt.successTitle}>Entry Saved</Text>
+          <Text style={savedSt.successSub}>Ragna now has today's data</Text>
+        </View>
+        <Pressable onPress={onDismiss} style={savedSt.dismissBtn}>
+          <Feather name="x" size={16} color={Colors.textSubtle} />
+        </Pressable>
+      </View>
+
+      <View style={savedSt.scoreRow}>
+        {[
+          { label: "Pain",    value: pain,           color: scoreColor(pain) },
+          { label: "Breath",  value: breathlessness,  color: scoreColor(breathlessness) },
+          { label: "Nausea",  value: nausea,           color: scoreColor(nausea) },
+        ].map((s) => (
+          <View key={s.label} style={savedSt.scoreCell}>
+            <Text style={[savedSt.scoreNum, { color: s.value > 0 ? s.color : Colors.textSubtle }]}>
+              {s.value}
+            </Text>
+            <Text style={savedSt.scoreLabel}>{s.label}</Text>
+          </View>
+        ))}
+        <View style={savedSt.scoreCell}>
+          <Text style={[savedSt.scoreNum, { color: AGITATION_OPTS[agitation]?.color ?? Colors.textSubtle, fontSize: 12 }]}>
+            {agLabel}
+          </Text>
+          <Text style={savedSt.scoreLabel}>Agitation</Text>
+        </View>
+      </View>
+
+      {highSeverity && (
+        <View style={savedSt.alertRow}>
+          <Feather name="alert-triangle" size={13} color={Colors.amber} />
+          <Text style={savedSt.alertText}>
+            Elevated symptoms detected — Ragna can help you decide whether to call the hospice team.
+          </Text>
+        </View>
+      )}
+
+      <Pressable
+        onPress={onAskRagna}
+        style={({ pressed }) => [savedSt.ragnaBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+      >
+        <Image
+          source={require("@/assets/images/ragna-icon.png")}
+          style={{ width: 34, height: 34, borderRadius: 9 }}
+          resizeMode="cover"
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={savedSt.ragnaBtnTitle}>Get Ragna's Assessment</Text>
+          <Text style={savedSt.ragnaBtnSub}>
+            {highSeverity
+              ? "High severity — Ragna will analyze and advise"
+              : "Ask what today's levels mean for comfort care"}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />
+      </Pressable>
+    </View>
+  );
+}
+const savedSt = StyleSheet.create({
+  wrap: {
+    backgroundColor: Colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: Colors.primary + "40", padding: 16, gap: 14,
+  },
+  successRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  checkCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center",
+  },
+  successTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text },
+  successSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.primary, marginTop: 1 },
+  dismissBtn: { padding: 4 },
+  scoreRow: {
+    flexDirection: "row",
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 12, padding: 12, gap: 4,
+  },
+  scoreCell: { flex: 1, alignItems: "center", gap: 2 },
+  scoreNum: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  scoreLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textSubtle, textTransform: "uppercase" },
+  alertRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    backgroundColor: Colors.amberPale, borderRadius: 10, padding: 10,
+  },
+  alertText: { flex: 1, fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.amber, lineHeight: 18 },
+  ragnaBtn: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: Colors.primary, borderRadius: 14, padding: 14,
+  },
+  ragnaBtnTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" },
+  ragnaBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.82)", marginTop: 2 },
+});
+
+// ─── HistoryCard ──────────────────────────────────────────────────────────────
+
+function HistoryCard({ entry, onDelete }: { entry: SymptomEntry; onDelete: () => void }) {
+  const ag = AGITATION_OPTS[entry.agitation];
+  const ap = APPETITE_OPTS[entry.appetite];
+  const max = Math.max(entry.pain, entry.breathlessness, entry.nausea);
+  const topColor = scoreColor(max > 0 ? max : 1);
+  return (
+    <Pressable
+      onLongPress={onDelete}
+      delayLongPress={600}
+      style={({ pressed }) => [histSt.card, pressed && { opacity: 0.88 }]}
+    >
+      <View style={[histSt.colorBar, { backgroundColor: topColor }]} />
+      <View style={{ flex: 1 }}>
+        <View style={histSt.topRow}>
+          <Text style={histSt.dateText}>{longDate(entry.date)}</Text>
+          <Text style={histSt.timeText}>{entry.time}</Text>
+        </View>
+        <View style={histSt.scoresRow}>
+          {[
+            { label: "Pain",   value: entry.pain,           color: scoreColor(entry.pain) },
+            { label: "Breath", value: entry.breathlessness,  color: scoreColor(entry.breathlessness) },
+            { label: "Nausea", value: entry.nausea,          color: scoreColor(entry.nausea) },
+          ].map((s) => (
+            <View key={s.label} style={histSt.scoreCell}>
+              <Text style={[histSt.scoreNum, { color: s.value > 0 ? s.color : Colors.textSubtle }]}>{s.value}</Text>
+              <Text style={histSt.scoreLabel}>{s.label}</Text>
+            </View>
+          ))}
+          <View style={histSt.scoreCell}>
+            <Text style={[histSt.scoreChip, { color: ag.color, borderColor: ag.color + "50" }]}>
+              {ag.label}
+            </Text>
+            <Text style={histSt.scoreLabel}>Agitation</Text>
+          </View>
+          <View style={histSt.scoreCell}>
+            <Text style={[histSt.scoreChip, { color: ap.color, borderColor: ap.color + "50" }]}>
+              {ap.label}
+            </Text>
+            <Text style={histSt.scoreLabel}>Appetite</Text>
+          </View>
+        </View>
+        {entry.restlessness && (
+          <View style={histSt.tagRow}>
+            <View style={histSt.tag}><Text style={histSt.tagText}>Restless</Text></View>
+          </View>
+        )}
+        {entry.notes ? (
+          <Text style={histSt.notes} numberOfLines={2}>{entry.notes}</Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+const histSt = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.surface, borderRadius: 14,
+    borderWidth: 1, borderColor: Colors.divider,
+    flexDirection: "row", overflow: "hidden",
+  },
+  colorBar: { width: 4, borderTopLeftRadius: 14, borderBottomLeftRadius: 14 },
+  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 12, paddingBottom: 6 },
+  dateText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.text },
+  timeText: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textSubtle },
+  scoresRow: { flexDirection: "row", paddingHorizontal: 12, gap: 10, paddingBottom: 10, flexWrap: "wrap" },
+  scoreCell: { alignItems: "center", gap: 2 },
+  scoreNum: { fontSize: 18, fontFamily: "Inter_700Bold" },
+  scoreChip: {
+    fontSize: 11, fontFamily: "Inter_600SemiBold",
+    borderWidth: 1, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1,
+  },
+  scoreLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textSubtle, textTransform: "uppercase" },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 6, paddingBottom: 8 },
+  tag: {
+    backgroundColor: Colors.amberPale, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  tagText: { fontSize: 10, fontFamily: "Inter_500Medium", color: Colors.amber },
+  notes: {
+    fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted,
+    fontStyle: "italic", paddingHorizontal: 12, paddingBottom: 10, lineHeight: 17,
+  },
+});
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function SymptomTrackerScreen() {
   const insets = useSafeAreaInsets();
-  const { entries, addEntry, updateEntry, deleteEntry, getTodayEntry } = useSymptoms();
+  const { entries, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries } = useSymptoms();
   const today = todayDate();
   const existing = getTodayEntry();
   const isEditing = !!existing;
 
-  const [pain, setPain] = useState(existing?.pain ?? 0);
+  const [pain,          setPain]          = useState(existing?.pain ?? 0);
   const [breathlessness, setBreathlessness] = useState(existing?.breathlessness ?? 0);
-  const [nausea, setNausea] = useState(existing?.nausea ?? 0);
-  const [agitation, setAgitation] = useState<0|1|2|3>(existing?.agitation ?? 0);
-  const [appetite, setAppetite] = useState<0|1|2|3>(existing?.appetite ?? 2);
-  const [restlessness, setRestlessness] = useState(existing?.restlessness ?? false);
-  const [notes, setNotes] = useState(existing?.notes ?? "");
-  const [isSaving, setIsSaving] = useState(false);
+  const [nausea,         setNausea]         = useState(existing?.nausea ?? 0);
+  const [agitation,      setAgitation]      = useState<0|1|2|3>(existing?.agitation ?? 0);
+  const [appetite,       setAppetite]       = useState<0|1|2|3>(existing?.appetite ?? 2);
+  const [restlessness,   setRestlessness]   = useState(existing?.restlessness ?? false);
+  const [notes,          setNotes]          = useState(existing?.notes ?? "");
+  const [isSaving,       setIsSaving]       = useState(false);
+  const [savedEntry,     setSavedEntry]     = useState<typeof existing | null>(null);
+  const [selectedCal,    setSelectedCal]    = useState<string | null>(null);
 
-  const recentEntries = useMemo(() => entries.slice(0, 30), [entries]);
+  const last14 = useMemo(() => getRecentEntries(14), [entries]);
+  const allRecent = useMemo(() => entries.slice(0, 30), [entries]);
 
-  const handleSave = async () => {
+  const highPain   = pain >= 7;
+  const highBreath = breathlessness >= 7;
+  const showAlert  = highPain || highBreath || agitation >= 2;
+
+  // when a calendar day is selected, show that entry's details in a mini-panel
+  const calEntry = useMemo(
+    () => selectedCal ? entries.find((e) => e.date === selectedCal) ?? null : null,
+    [selectedCal, entries]
+  );
+
+  const handleSave = useCallback(async () => {
     if (isSaving) return;
     setIsSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -197,83 +559,155 @@ export default function SymptomTrackerScreen() {
       await addEntry(payload);
     }
     setIsSaving(false);
-    Alert.alert("Saved", "Today's symptoms have been logged.", [{ text: "OK" }]);
-  };
+    setSavedEntry({ ...payload, id: existing?.id ?? "new" } as any);
+  }, [isSaving, today, pain, breathlessness, nausea, agitation, appetite, restlessness, notes, isEditing, existing]);
 
-  const handleDelete = (entry: SymptomEntry) => {
-    Alert.alert("Delete Entry", `Delete the check-in from ${formatDateLabel(entry.date)}?`, [
+  const handleDelete = useCallback((entry: SymptomEntry) => {
+    Alert.alert("Delete Entry", `Delete the check-in from ${shortDate(entry.date)}?`, [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: () => deleteEntry(entry.id) },
     ]);
-  };
+  }, [deleteEntry]);
 
-  const highPain = pain >= 7;
-  const highBreath = breathlessness >= 7;
-  const showAlert = highPain || highBreath || agitation >= 2;
+  const openRagna = useCallback((entry: {
+    pain: number; breathlessness: number; nausea: number; agitation: number; notes?: string;
+  }) => {
+    const parts = [
+      `Pain: ${entry.pain}/10`,
+      `Breathlessness: ${entry.breathlessness}/10`,
+      `Nausea: ${entry.nausea}/10`,
+      `Agitation: ${AGITATION_OPTS[entry.agitation]?.label ?? "None"}`,
+      entry.notes ? `Notes: "${entry.notes}"` : null,
+    ].filter(Boolean).join(", ");
+    const severity = entry.pain >= 7 || entry.breathlessness >= 7 || entry.agitation >= 2;
+    const msg = severity
+      ? `I just logged today's symptoms — ${parts}. Some levels are elevated. Can you help me understand what this means and whether I should call the hospice team?`
+      : `I just logged today's symptoms — ${parts}. What do these levels tell you about how my loved one is doing, and what can I do to keep them comfortable?`;
+    router.push({ pathname: "/(tabs)/help", params: { initialMessage: msg } } as any);
+  }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0) }]}>
-      <View style={styles.header}>
+    <View style={[sc.container, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0) }]}>
+      {/* ── Header ── */}
+      <View style={sc.header}>
         <Pressable
           onPress={() => router.back()}
-          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [sc.backBtn, pressed && { opacity: 0.6 }]}
         >
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Symptom Tracker</Text>
-          <Text style={styles.headerSub}>Daily check-in · {formatDateLabel(today)}</Text>
+        <View style={sc.headerCenter}>
+          <Text style={sc.headerTitle}>Symptom Tracker</Text>
+          <Text style={sc.headerSub}>{allRecent.length} check-in{allRecent.length !== 1 ? "s" : ""} recorded</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+        style={sc.scroll}
+        contentContainerStyle={[sc.content, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Alert banner */}
-        {showAlert && (
-          <View style={styles.alertBanner}>
-            <Feather name="alert-triangle" size={16} color={Colors.amber} />
-            <Text style={styles.alertText}>
-              {highPain && "Pain is high (7+). "}
+
+        {/* ── Calendar Strip ── */}
+        <CalendarStrip entries={last14} selectedDate={selectedCal} onSelectDate={setSelectedCal} />
+
+        {/* ── Calendar Day Detail ── */}
+        {calEntry && (
+          <View style={sc.calDetail}>
+            <View style={sc.calDetailHeader}>
+              <Text style={sc.calDetailTitle}>{longDate(calEntry.date)}</Text>
+              <Text style={sc.calDetailTime}>{calEntry.time}</Text>
+            </View>
+            <View style={sc.calDetailScores}>
+              {[
+                { label: "Pain",   value: calEntry.pain },
+                { label: "Breath", value: calEntry.breathlessness },
+                { label: "Nausea", value: calEntry.nausea },
+              ].map((s) => (
+                <View key={s.label} style={sc.calDetailScore}>
+                  <Text style={[sc.calDetailNum, { color: scoreColor(s.value) }]}>{s.value}</Text>
+                  <Text style={sc.calDetailLabel}>{s.label}</Text>
+                </View>
+              ))}
+              <View style={sc.calDetailScore}>
+                <Text style={[sc.calDetailNum, { color: AGITATION_OPTS[calEntry.agitation]?.color, fontSize: 12 }]}>
+                  {AGITATION_OPTS[calEntry.agitation]?.label}
+                </Text>
+                <Text style={sc.calDetailLabel}>Agitation</Text>
+              </View>
+            </View>
+            {calEntry.notes ? <Text style={sc.calDetailNotes}>{calEntry.notes}</Text> : null}
+            {calEntry.date !== today && (
+              <Pressable
+                onPress={() => openRagna(calEntry)}
+                style={({ pressed }) => [sc.calDetailRagna, pressed && { opacity: 0.8 }]}
+              >
+                <Feather name="message-circle" size={14} color={Colors.primary} />
+                <Text style={sc.calDetailRagnaText}>Ask Ragna about this day</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* ── Trajectory Chart ── */}
+        <TrajectoryChart entries={last14} />
+
+        {/* ── Alert Banner (form-level) ── */}
+        {showAlert && !savedEntry && (
+          <View style={sc.alertBanner}>
+            <Feather name="alert-triangle" size={15} color={Colors.amber} />
+            <Text style={sc.alertText}>
+              {highPain   && "Pain is high (7+). "}
               {highBreath && "Breathlessness is high (7+). "}
-              {agitation >= 2 && "Significant agitation noted. "}
-              Consider calling your hospice nurse.
+              {agitation >= 2 && "Significant agitation. "}
+              Consider contacting your hospice nurse.
             </Text>
           </View>
         )}
 
-        {/* Check-in form */}
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>{isEditing ? "Update Today's Check-in" : "Today's Check-in"}</Text>
-          <Text style={styles.formSub}>Tap each bar to set the score. 0 = none, 10 = worst possible.</Text>
+        {/* ── Saved Panel (post-save) ── */}
+        {savedEntry && (
+          <SavedPanel
+            entry={savedEntry}
+            onAskRagna={() => openRagna(savedEntry)}
+            onDismiss={() => setSavedEntry(null)}
+          />
+        )}
 
-          <View style={styles.sliders}>
-            <SliderRow label="Pain" icon="zap" value={pain} onChange={setPain} />
-            <View style={styles.divider} />
-            <SliderRow label="Breathlessness" icon="wind" value={breathlessness} onChange={setBreathlessness} />
-            <View style={styles.divider} />
-            <SliderRow label="Nausea" icon="activity" value={nausea} onChange={setNausea} />
+        {/* ── Today's Check-in Form ── */}
+        <View style={sc.formCard}>
+          <Text style={sc.formTitle}>
+            {isEditing ? "Update Today's Check-in" : "Today's Check-in"}
+          </Text>
+          <Text style={sc.formSub}>
+            {today === todayDate() ? longDate(today) : ""} · Tap each bar to set the score
+          </Text>
+
+          <View style={sc.sliders}>
+            <SliderRow label="Pain"          icon="zap"      value={pain}          onChange={setPain} />
+            <View style={sc.divider} />
+            <SliderRow label="Breathlessness" icon="wind"     value={breathlessness} onChange={setBreathlessness} />
+            <View style={sc.divider} />
+            <SliderRow label="Nausea"         icon="activity" value={nausea}         onChange={setNausea} />
           </View>
 
           {/* Agitation */}
-          <View style={styles.optSection}>
-            <Text style={styles.optLabel}>Agitation level</Text>
-            <View style={styles.optRow}>
+          <View style={sc.optSection}>
+            <Text style={sc.optLabel}>Agitation level</Text>
+            <View style={sc.optRow}>
               {AGITATION_OPTS.map((o) => (
                 <Pressable
                   key={o.value}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAgitation(o.value); }}
                   style={({ pressed }) => [
-                    styles.optBtn,
+                    sc.optBtn,
                     agitation === o.value && { borderColor: o.color, backgroundColor: o.color + "18" },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  <Text style={[styles.optBtnText, agitation === o.value && { color: o.color, fontFamily: "Inter_700Bold" }]}>
+                  <Text style={[sc.optBtnText, agitation === o.value && { color: o.color, fontFamily: "Inter_700Bold" }]}>
                     {o.label}
                   </Text>
                 </Pressable>
@@ -282,20 +716,20 @@ export default function SymptomTrackerScreen() {
           </View>
 
           {/* Appetite */}
-          <View style={styles.optSection}>
-            <Text style={styles.optLabel}>Appetite</Text>
-            <View style={styles.optRow}>
+          <View style={sc.optSection}>
+            <Text style={sc.optLabel}>Appetite</Text>
+            <View style={sc.optRow}>
               {APPETITE_OPTS.map((o) => (
                 <Pressable
                   key={o.value}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setAppetite(o.value); }}
                   style={({ pressed }) => [
-                    styles.optBtn,
+                    sc.optBtn,
                     appetite === o.value && { borderColor: o.color, backgroundColor: o.color + "18" },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  <Text style={[styles.optBtnText, appetite === o.value && { color: o.color, fontFamily: "Inter_700Bold" }]}>
+                  <Text style={[sc.optBtnText, appetite === o.value && { color: o.color, fontFamily: "Inter_700Bold" }]}>
                     {o.label}
                   </Text>
                 </Pressable>
@@ -303,132 +737,75 @@ export default function SymptomTrackerScreen() {
             </View>
           </View>
 
-          {/* Restlessness toggle */}
+          {/* Restlessness */}
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setRestlessness((v) => !v); }}
-            style={({ pressed }) => [styles.toggleRow, restlessness && styles.toggleRowActive, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [sc.toggleRow, restlessness && sc.toggleActive, pressed && { opacity: 0.85 }]}
           >
-            <View style={[styles.toggleDot, restlessness && { backgroundColor: Colors.amber }]} />
-            <Text style={[styles.toggleLabel, restlessness && { color: Colors.amber, fontFamily: "Inter_600SemiBold" }]}>
-              Restlessness or agitation noted
+            <View style={[sc.toggleDot, restlessness && { backgroundColor: Colors.amber }]} />
+            <Text style={[sc.toggleLabel, restlessness && { color: Colors.amber, fontFamily: "Inter_600SemiBold" }]}>
+              Restlessness or unable to settle
             </Text>
-            <Feather name={restlessness ? "check-square" : "square"} size={18} color={restlessness ? Colors.amber : Colors.textSubtle} />
+            <Feather name={restlessness ? "check-square" : "square"} size={18}
+              color={restlessness ? Colors.amber : Colors.textSubtle} />
           </Pressable>
 
           {/* Notes */}
-          <View style={styles.notesWrap}>
-            <Text style={styles.optLabel}>Notes for hospice team</Text>
+          <View style={sc.notesWrap}>
+            <Text style={sc.optLabel}>Notes for hospice team</Text>
             <TextInput
-              style={styles.notesInput}
+              style={sc.notesInput}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Any observations, questions, or changes to report…"
+              placeholder="Any observations, changes, or questions to report…"
               placeholderTextColor={Colors.textSubtle}
               multiline
               textAlignVertical="top"
-              maxLength={500}
+              maxLength={600}
             />
           </View>
 
           <Pressable
             onPress={handleSave}
-            style={({ pressed }) => [styles.saveBtn, isSaving && { opacity: 0.6 }, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [sc.saveBtn, isSaving && { opacity: 0.6 }, pressed && { opacity: 0.85 }]}
           >
             <Feather name="save" size={17} color="#fff" />
-            <Text style={styles.saveBtnText}>{isSaving ? "Saving…" : isEditing ? "Update Check-in" : "Save Check-in"}</Text>
+            <Text style={sc.saveBtnText}>
+              {isSaving ? "Saving…" : isEditing ? "Update Check-in" : "Save & Send to Ragna"}
+            </Text>
           </Pressable>
         </View>
 
-        {/* Ask Ragna */}
-        {(pain > 0 || breathlessness > 0 || nausea > 0 || agitation > 0) && (
-          <Pressable
-            onPress={() => {
-              const symptoms = [
-                pain > 0 && `pain ${pain}/10`,
-                breathlessness > 0 && `breathlessness ${breathlessness}/10`,
-                nausea > 0 && `nausea ${nausea}/10`,
-                agitation > 0 && `${AGITATION_OPTS[agitation].label.toLowerCase()} agitation`,
-              ].filter(Boolean).join(", ");
-              router.push({
-                pathname: "/(tabs)/help",
-                params: { initialMessage: `I just logged today's symptoms: ${symptoms}. Can you help me understand what these levels mean and what I should do to keep my loved one comfortable?` },
-              } as any);
-            }}
-            style={({ pressed }) => [styles.ragnaBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
-          >
-            <Image
-              source={require("@/assets/images/ragna-icon.png")}
-              style={{ width: 36, height: 36, borderRadius: 9 }}
-              resizeMode="cover"
-            />
-            <View style={styles.ragnaBtnText}>
-              <Text style={styles.ragnaBtnTitle}>Ask Ragna about today's symptoms</Text>
-              <Text style={styles.ragnaBtnSub}>Get personalized guidance on what you're seeing</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.7)" />
-          </Pressable>
-        )}
-
-        {/* 7-day trends */}
-        {recentEntries.length >= 2 && (
-          <View style={styles.trendsCard}>
-            <Text style={styles.trendsTitle}>7-Day Trends</Text>
-            <Text style={styles.trendsSub}>Most recent check-ins</Text>
-            <View style={styles.trendGrid}>
-              <TrendBar label="Pain" entries={recentEntries.map((e) => ({ date: e.date, value: e.pain }))} />
-              <TrendBar label="Breathlessness" entries={recentEntries.map((e) => ({ date: e.date, value: e.breathlessness }))} />
-              <TrendBar label="Nausea" entries={recentEntries.map((e) => ({ date: e.date, value: e.nausea }))} />
-            </View>
+        {/* ── Check-in History ── */}
+        <View style={sc.historySection}>
+          <View style={sc.historyHeader}>
+            <Text style={sc.historyTitle}>Check-in History</Text>
+            <Text style={sc.historyCount}>{allRecent.length} entries</Text>
           </View>
-        )}
-
-        {/* History */}
-        {recentEntries.length > 0 && (
-          <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Check-in History</Text>
-            <View style={styles.historyList}>
-              {recentEntries.slice(0, 10).map((entry) => (
-                <Pressable
-                  key={entry.id}
-                  onLongPress={() => handleDelete(entry)}
-                  delayLongPress={600}
-                  style={({ pressed }) => [styles.historyCard, pressed && { opacity: 0.88 }]}
-                >
-                  <View style={styles.historyCardLeft}>
-                    <Text style={styles.historyDate}>{formatDateLabel(entry.date)}</Text>
-                    <View style={styles.historyScores}>
-                      {[
-                        { label: "Pain", value: entry.pain, icon: "zap" },
-                        { label: "Breath", value: entry.breathlessness, icon: "wind" },
-                        { label: "Nausea", value: entry.nausea, icon: "activity" },
-                      ].map((s) => (
-                        <View key={s.label} style={styles.historyScore}>
-                          <Text style={[styles.historyScoreNum, { color: scoreColor(s.value) }]}>{s.value}</Text>
-                          <Text style={styles.historyScoreLabel}>{s.label}</Text>
-                        </View>
-                      ))}
-                      <View style={styles.historyScore}>
-                        <Text style={[styles.historyScoreNum, { color: AGITATION_OPTS[entry.agitation].color }]}>
-                          {AGITATION_OPTS[entry.agitation].label}
-                        </Text>
-                        <Text style={styles.historyScoreLabel}>Agitation</Text>
-                      </View>
-                    </View>
-                    {entry.notes ? <Text style={styles.historyNotes} numberOfLines={1}>{entry.notes}</Text> : null}
-                  </View>
-                  <Feather name="more-vertical" size={14} color={Colors.textSubtle} />
-                </Pressable>
+          {allRecent.length === 0 ? (
+            <View style={sc.emptyHistory}>
+              <Feather name="clipboard" size={26} color={Colors.textSubtle} />
+              <Text style={sc.emptyHistoryText}>No check-ins yet</Text>
+              <Text style={sc.emptyHistoryHint}>Your entries will appear here after you save your first one.</Text>
+            </View>
+          ) : (
+            <View style={sc.historyList}>
+              {allRecent.map((entry) => (
+                <HistoryCard key={entry.id} entry={entry} onDelete={() => handleDelete(entry)} />
               ))}
+              <Text style={sc.historyHint}>Long-press any entry to delete</Text>
             </View>
-            <Text style={styles.historyHint}>Long-press any entry to delete</Text>
-          </View>
-        )}
+          )}
+        </View>
+
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const sc = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: "row", alignItems: "center",
@@ -446,7 +823,7 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 1 },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 16, gap: 16 },
+  content: { padding: 16, gap: 16 },
 
   alertBanner: {
     flexDirection: "row", alignItems: "flex-start", gap: 10,
@@ -454,6 +831,22 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.amber + "40",
   },
   alertText: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.amber, lineHeight: 19 },
+
+  calDetail: {
+    backgroundColor: Colors.surface, borderRadius: 14,
+    borderWidth: 1, borderColor: Colors.primary + "40",
+    padding: 14, gap: 10,
+  },
+  calDetailHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  calDetailTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.text },
+  calDetailTime: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textSubtle },
+  calDetailScores: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+  calDetailScore: { alignItems: "center", gap: 2 },
+  calDetailNum: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  calDetailLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textSubtle, textTransform: "uppercase" },
+  calDetailNotes: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, fontStyle: "italic", lineHeight: 17 },
+  calDetailRagna: { flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 4 },
+  calDetailRagnaText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.primary },
 
   formCard: {
     backgroundColor: Colors.surface, borderRadius: 16,
@@ -479,7 +872,7 @@ const styles = StyleSheet.create({
     padding: 12, borderRadius: 10, borderWidth: 1.5,
     borderColor: Colors.divider, backgroundColor: Colors.backgroundSecondary,
   },
-  toggleRowActive: { borderColor: Colors.amber, backgroundColor: Colors.amberPale },
+  toggleActive: { borderColor: Colors.amber, backgroundColor: Colors.amberPale },
   toggleDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.divider },
   toggleLabel: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.textSecondary },
 
@@ -497,44 +890,18 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
 
-  ragnaBtn: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.primary, borderRadius: 16, padding: 16,
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22, shadowRadius: 10, elevation: 4,
-  },
-  ragnaBtnIcon: {
-    width: 42, height: 42, borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center", justifyContent: "center",
-  },
-  ragnaBtnText: { flex: 1 },
-  ragnaBtnTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -0.2 },
-  ragnaBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.8)", marginTop: 2 },
-
-  trendsCard: {
-    backgroundColor: Colors.surface, borderRadius: 16,
-    borderWidth: 1, borderColor: Colors.divider, padding: 16, gap: 12,
-  },
-  trendsTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text, letterSpacing: -0.2 },
-  trendsSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: -6 },
-  trendGrid: { gap: 16 },
-
   historySection: { gap: 10 },
+  historyHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   historyTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: Colors.text, letterSpacing: -0.2 },
-  historyList: { gap: 8 },
-  historyCard: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: Colors.surface, borderRadius: 12,
+  historyCount: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  historyList: { gap: 10 },
+  historyHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textSubtle, textAlign: "center", paddingTop: 4 },
+
+  emptyHistory: {
+    backgroundColor: Colors.surface, borderRadius: 14,
     borderWidth: 1, borderColor: Colors.divider,
-    padding: 12, gap: 8,
+    alignItems: "center", padding: 32, gap: 8,
   },
-  historyCardLeft: { flex: 1, gap: 6 },
-  historyDate: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  historyScores: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
-  historyScore: { alignItems: "center", gap: 2 },
-  historyScoreNum: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  historyScoreLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: Colors.textMuted, textTransform: "uppercase" },
-  historyNotes: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted, fontStyle: "italic" },
-  historyHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textSubtle, textAlign: "center" },
+  emptyHistoryText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  emptyHistoryHint: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textSubtle, textAlign: "center" },
 });
