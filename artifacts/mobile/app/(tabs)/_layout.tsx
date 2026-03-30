@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Image, Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Image, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
@@ -11,8 +11,6 @@ const ragnaIcon = require("@/assets/images/ragna-icon.png");
 
 
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
@@ -28,20 +26,13 @@ function ClassicTabLayout() {
           fontWeight: "600",
         },
         tabBarStyle: {
-          position: "absolute",
           backgroundColor: Colors.surface,
           borderTopWidth: 1,
           borderTopColor: Colors.divider,
           elevation: 0,
           paddingBottom: safeAreaInsets.bottom,
-          ...(isWeb ? { height: 84 } : {}),
+          ...(isWeb ? { height: 56 + safeAreaInsets.bottom } : {}),
         },
-        tabBarBackground: () =>
-          isIOS ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface, borderTopWidth: 1, borderTopColor: Colors.divider }]} />
-          ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface }]} />
-          ) : null,
       }}
     >
       <Tabs.Screen
