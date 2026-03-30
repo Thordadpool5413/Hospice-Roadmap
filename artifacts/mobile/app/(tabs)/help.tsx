@@ -124,7 +124,7 @@ function parseSuggestions(raw: string): { text: string; suggestions: string[] } 
 
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
-  const { user, buildPatientContext } = useApp();
+  const { user, buildPatientContext, ragnaPrivacy } = useApp();
   const { entries: symptomEntries, getTodayEntry, getRecentSummary } = useSymptoms();
   const { entries: journalEntries } = useJournal();
   const { memories, addMemory, getMemorySummary, memoryCount, livingProfile, updateLivingProfile, recentTiles, recordTile } = useVeraMemory();
@@ -263,31 +263,55 @@ export default function HelpScreen() {
       setIsStreaming(true);
       scrollToBottom(150);
 
-      const baseContext = buildPatientContext();
-      const symptomSummary = getRecentSummary(7);
-      const memorySummary = getMemorySummary();
+      let patientContext = "";
+      if (ragnaPrivacy.personalizationEnabled) {
+        const baseContext = buildPatientContext();
 
-      const now = new Date();
-      const timeContext = [
-        `Current date/time: ${now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at ${now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
-        now.getHours() < 6 || now.getHours() >= 22 ? "Note: This person is reaching out in the middle of the night — that often signals urgency, fear, or exhaustion." : "",
-      ].filter(Boolean).join("\n");
+        const symptomSummary = ragnaPrivacy.includeRecentSymptoms ? getRecentSummary(7) : "";
 
-      const recentJournal = journalEntries.slice(0, 3);
-      const journalContext = recentJournal.length > 0
-        ? `--- Recent Caregiver Journal Entries ---\n${recentJournal.map((e) => {
-            const dateStr = e.date || new Date(e.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-            return `[${dateStr} · ${e.type}] ${e.title}: ${e.body.slice(0, 200)}${e.body.length > 200 ? "…" : ""}`;
-          }).join("\n")}`
-        : "";
+        const memorySummary = ragnaPrivacy.includeConversationMemory ? getMemorySummary() : "";
 
-      const patientContext = [
-        baseContext,
-        symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
-        journalContext,
-        memorySummary,
-        timeContext,
-      ].filter(Boolean).join("\n\n");
+        const now = new Date();
+        const timeContext = ragnaPrivacy.includeTimeContext
+          ? [
+              `Current date/time: ${now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at ${now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
+              now.getHours() < 6 || now.getHours() >= 22
+                ? "Note: This person is reaching out in the middle of the night — that often signals urgency, fear, or exhaustion."
+                : "",
+            ]
+              .filter(Boolean)
+              .join("\n")
+          : "";
+
+        const journalContext = ragnaPrivacy.includeRecentJournal
+          ? (() => {
+              const recentJournal = journalEntries.slice(0, 3);
+              return recentJournal.length > 0
+                ? `--- Recent Caregiver Journal Entries ---\n${recentJournal
+                    .map((e) => {
+                      const dateStr =
+                        e.date ||
+                        new Date(e.timestamp).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        });
+                      return `[${dateStr} · ${e.type}] ${e.title}: ${e.body.slice(0, 200)}${e.body.length > 200 ? "…" : ""}`;
+                    })
+                    .join("\n")}`
+                : "";
+            })()
+          : "";
+
+        patientContext = [
+          baseContext,
+          symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
+          journalContext,
+          memorySummary,
+          timeContext,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+      }
 
       await streamMessage(
         activeConv.id,
@@ -348,43 +372,45 @@ export default function HelpScreen() {
       {
         text: "Start Fresh",
         onPress: async () => {
-          let newMemory: {
-            summary: string;
-            keyFacts: string[];
-            emotionalTone: string;
-            mainTopics: string[];
-            date: string;
-          } | null = null;
-          try {
-            const memory = await generateConversationMemory(conversation.id);
-            if (memory && memory.summary) {
-              newMemory = {
-                summary: memory.summary,
-                keyFacts: memory.keyFacts ?? [],
-                emotionalTone: memory.emotionalTone ?? "calm",
-                mainTopics: memory.mainTopics ?? [],
-                date: new Date().toISOString(),
-              };
-              await addMemory({
-                id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                date: newMemory.date,
-                conversationId: conversation.id,
-                summary: newMemory.summary,
-                keyFacts: newMemory.keyFacts,
-                emotionalTone: (newMemory.emotionalTone as VeraEmotionalTone) ?? "calm",
-                mainTopics: newMemory.mainTopics,
-              });
-              const updatedProfile = await synthesizeProfile(
-                livingProfile,
-                newMemory,
-                recentTiles
-              );
-              if (updatedProfile) {
-                await updateLivingProfile(updatedProfile);
+          if (ragnaPrivacy.includeConversationMemory) {
+            let newMemory: {
+              summary: string;
+              keyFacts: string[];
+              emotionalTone: string;
+              mainTopics: string[];
+              date: string;
+            } | null = null;
+            try {
+              const memory = await generateConversationMemory(conversation.id);
+              if (memory && memory.summary) {
+                newMemory = {
+                  summary: memory.summary,
+                  keyFacts: memory.keyFacts ?? [],
+                  emotionalTone: memory.emotionalTone ?? "calm",
+                  mainTopics: memory.mainTopics ?? [],
+                  date: new Date().toISOString(),
+                };
+                await addMemory({
+                  id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                  date: newMemory.date,
+                  conversationId: conversation.id,
+                  summary: newMemory.summary,
+                  keyFacts: newMemory.keyFacts,
+                  emotionalTone: (newMemory.emotionalTone as VeraEmotionalTone) ?? "calm",
+                  mainTopics: newMemory.mainTopics,
+                });
+                const updatedProfile = await synthesizeProfile(
+                  livingProfile,
+                  newMemory,
+                  recentTiles
+                );
+                if (updatedProfile) {
+                  await updateLivingProfile(updatedProfile);
+                }
               }
+            } catch {
+              // memory + profile generation is best-effort — still clear the conversation
             }
-          } catch {
-            // memory + profile generation is best-effort — still clear the conversation
           }
           try {
             await deleteConversation(conversation.id);
@@ -395,7 +421,7 @@ export default function HelpScreen() {
         },
       },
     ]);
-  }, [conversation, startNewConversation, addMemory, livingProfile, updateLivingProfile, recentTiles]);
+  }, [conversation, ragnaPrivacy.includeConversationMemory, startNewConversation, addMemory, livingProfile, updateLivingProfile, recentTiles]);
 
   const handleShareMessage = useCallback((content: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -542,6 +568,15 @@ export default function HelpScreen() {
               ))}
             </View>
 
+            {!ragnaPrivacy.personalizationEnabled && (
+              <View style={styles.chatOnlyBanner}>
+                <Feather name="eye-off" size={13} color={Colors.textMuted} />
+                <Text style={styles.chatOnlyBannerText}>
+                  Ragna is currently in chat-only mode. Saved profile details are not being included with your messages.
+                </Text>
+              </View>
+            )}
+
             {livingProfile ? (
               <Pressable
                 onPress={() => setKnowsExpanded((e) => !e)}
@@ -552,7 +587,13 @@ export default function HelpScreen() {
               >
                 <View style={styles.knowsHeader}>
                   <Feather name="zap" size={13} color={Colors.accent} />
-                  <Text style={styles.knowsTitle}>What Ragna knows about you</Text>
+                  <Text style={styles.knowsTitle}>What Ragna may use</Text>
+                  <Pressable
+                    onPress={(e) => { e.stopPropagation(); router.push("/ragna-privacy" as any); }}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.knowsManageLink}>Manage</Text>
+                  </Pressable>
                   <Feather
                     name={knowsExpanded ? "chevron-up" : "chevron-down"}
                     size={14}
@@ -576,6 +617,20 @@ export default function HelpScreen() {
                   Patient Profile
                 </Text>{" "}
                 and Ragna's responses will be tailored to your specific situation.
+              </Text>
+            </View>
+
+            <View style={styles.profileNudge}>
+              <Feather name="shield" size={14} color={Colors.textSubtle} />
+              <Text style={styles.profileNudgeText}>
+                You can review or{" "}
+                <Text
+                  style={styles.profileNudgeLink}
+                  onPress={() => router.push("/ragna-privacy" as any)}
+                >
+                  change what Ragna uses
+                </Text>{" "}
+                anytime.
               </Text>
             </View>
           </>
@@ -1304,11 +1359,33 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     letterSpacing: 0.1,
   },
+  knowsManageLink: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+  },
   knowsBody: {
     marginTop: 10,
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: Colors.text,
     lineHeight: 20,
+  },
+  chatOnlyBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  chatOnlyBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 19,
   },
 });
