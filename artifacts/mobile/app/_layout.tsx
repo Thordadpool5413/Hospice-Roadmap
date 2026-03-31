@@ -170,6 +170,10 @@ function RootLayoutNav() {
         name="hospice-interview"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="legal"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
