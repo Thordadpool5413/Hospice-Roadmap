@@ -46,8 +46,8 @@ export function CosmicBackground() {
           style={[
             s.star,
             {
-              top:          st.top,
-              left:         st.left,
+              top:          st.top as any,
+              left:         st.left as any,
               width:        st.size,
               height:       st.size,
               borderRadius: st.size / 2,
