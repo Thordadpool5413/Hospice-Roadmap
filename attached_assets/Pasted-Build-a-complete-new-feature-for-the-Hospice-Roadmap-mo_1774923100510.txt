@@ -1,0 +1,771 @@
+Build a complete new feature for the Hospice Roadmap mobile app called Legal Documents and State Forms.
+
+Goal
+
+Create a full state based legal document center inside the app where a patient, caregiver, or support person can:
+
+1. open the feature from the app
+2. select any U.S. state or Washington DC
+3. view the legal and medical planning documents relevant to that state
+4. learn what each document means
+5. understand who should use it
+6. understand who signs it
+7. understand witness and notary requirements
+8. understand whether it is a medical order, planning document, decision maker form, or court process
+9. understand whether EMS or facilities generally honor it
+10. understand whether out of state recognition may vary
+11. open official form links
+12. open official state information links
+13. save documents for later
+14. bookmark states for later
+15. search by state and document name
+16. clearly see whether content is reviewed or pending review
+
+Critical truth rules
+
+1. Build the entire feature in one implementation pass.
+2. Include all 50 states plus Washington DC in the registry immediately.
+3. Do not fake legal certainty.
+4. If content is not fully verified from official sources yet, still include that state and those document categories, but visibly label the content with a review status such as Pending Review or Official Links Only.
+5. Do not present unverified text as final legal truth.
+6. Do not present this feature as legal advice.
+7. Do not claim one state’s rules apply to another state.
+8. Do not collapse POLST, MOLST, DNR, DNI, Advance Directive, Health Care Proxy, guardianship, and conservatorship into one concept.
+9. Keep the rest of the app intact.
+10. Match the current dark premium Hospice Roadmap visual language.
+
+Feature name
+
+Legal Documents and State Forms
+
+Navigation entry point
+
+Add a new entry point in the app under More or Resources.
+
+Use this exact label:
+Legal Documents and State Forms
+
+Use an appropriate icon such as:
+file text
+shield
+folder
+bookmark
+
+Do not break existing navigation.
+Do not redesign unrelated tabs.
+Do not change the current bottom nav structure.
+
+Use the existing app router conventions.
+If the app uses Expo Router, keep everything aligned with current route patterns.
+
+Recommended route structure
+
+legal/index
+legal/state/[code]
+legal/document/[id]
+legal/info
+
+Files and folders to create
+
+Create a dedicated content and UI structure.
+
+Recommended content files
+
+mobile/content/legal/types.ts
+mobile/content/legal/stateDirectory.ts
+mobile/content/legal/helpers.ts
+mobile/content/legal/registry.ts
+mobile/content/legal/index.ts
+
+Create reviewed override files
+
+mobile/content/legal/reviewed/florida.ts
+mobile/content/legal/reviewed/massachusetts.ts
+mobile/content/legal/reviewed/california.ts
+
+Create a legal feature component folder
+
+mobile/components/legal/LegalFeatureHeader.tsx
+mobile/components/legal/LegalSearchBar.tsx
+mobile/components/legal/LegalFilterChips.tsx
+mobile/components/legal/StateRowCard.tsx
+mobile/components/legal/StateOverviewCard.tsx
+mobile/components/legal/LegalDocumentCard.tsx
+mobile/components/legal/LegalInfoSection.tsx
+mobile/components/legal/LegalRequirementsCard.tsx
+mobile/components/legal/LegalMetadataCard.tsx
+mobile/components/legal/LegalDisclaimerCard.tsx
+mobile/components/legal/ReviewBadge.tsx
+mobile/components/legal/CategoryChip.tsx
+mobile/components/legal/EmptyStateCard.tsx
+mobile/components/legal/SavedItemButton.tsx
+mobile/components/legal/OfficialLinkButton.tsx
+
+Create screens
+
+mobile/app/legal/index.tsx
+mobile/app/legal/state/[code].tsx
+mobile/app/legal/document/[id].tsx
+mobile/app/legal/info.tsx
+
+If the app already has shared shells or common screen wrappers, reuse them instead of rebuilding them.
+
+Data architecture requirements
+
+Create a dedicated legal content system with a normalized registry.
+
+In types.ts create these exact types and interfaces.
+
+StateCode
+Include all 50 state abbreviations plus DC.
+
+LegalDocumentCategory
+Use these exact values:
+medical_order
+advance_directive
+healthcare_proxy
+medical_power_of_attorney
+decision_maker
+living_will
+dnr
+dni
+polst_family
+guardianship
+conservatorship
+registry
+other
+
+StateSectionKey
+Use these exact values:
+medical_orders
+decision_makers
+planning_documents
+court_based_authority
+registries
+other
+
+ReviewStatus
+Use these exact values:
+reviewed
+pending_review
+source_only
+needs_update
+
+SourceType
+Use these exact values:
+official_state_source
+official_health_source
+official_court_source
+official_attorney_general_source
+official_legislative_source
+national_reference
+internal_editorial
+
+Create these interfaces
+
+LegalRequirement
+required: boolean | "varies" | "unknown"
+details: string
+
+LegalSourceLink
+label: string
+url: string
+sourceType: SourceType
+isOfficial: boolean
+
+LegalReviewMeta
+reviewOwner: string
+reviewStatus: ReviewStatus
+lastLegalReviewed: string | null
+sourceType: SourceType
+sourceNotes: string[]
+
+LegalDocumentEntry
+id: string
+stateCode: StateCode
+title: string
+commonNames: string[]
+category: LegalDocumentCategory
+section: StateSectionKey
+summary: string
+whatItDoes: string
+whoItsFor: string
+whoSigns: string[]
+witnessRequirement: LegalRequirement
+notaryRequirement: LegalRequirement
+specialRequirements: string[]
+honoredBy: string[]
+honoredBySummary: string
+outOfStateRecognition: string
+howToCompleteSteps: string[]
+storageGuidance: string[]
+officialFormUrl: string | null
+officialInfoUrl: string | null
+additionalOfficialUrls: LegalSourceLink[]
+educationContent: {
+  whyItMatters: string
+  whenToUseIt: string
+  commonMistakes: string[]
+  questionsToAsk: string[]
+}
+review: LegalReviewMeta
+
+StateOverview
+summary: string
+commonlyUsedDocuments: string[]
+namingNotes: string[]
+planningNotes: string[]
+importantWarnings: string[]
+
+StateRegistryInfo
+hasKnownRegistry: boolean | "unknown"
+registryName: string | null
+registrySummary: string
+registryLinks: LegalSourceLink[]
+
+StateLegalRegistry
+stateCode: StateCode
+stateName: string
+overview: StateOverview
+documents: LegalDocumentEntry[]
+registryInfo: StateRegistryInfo
+officialResources: LegalSourceLink[]
+review: LegalReviewMeta
+
+State directory
+
+In stateDirectory.ts create a full STATE_DIRECTORY array with all 50 states plus DC using:
+code
+name
+
+Scaffold helper requirements
+
+In helpers.ts create these functions:
+
+1. createReviewMeta
+2. createDocumentId
+3. createPendingDocument
+4. createEmptyStateRegistry
+
+createReviewMeta should create a LegalReviewMeta object with sane defaults.
+
+createDocumentId should generate a state based document id such as:
+fl_dnr
+ca_advance_health_care_directive
+
+createPendingDocument should create a safe placeholder LegalDocumentEntry with:
+
+1. summary saying state specific guidance is being reviewed
+2. unknown witness and notary requirements
+3. empty official links
+4. review status pending_review
+5. educational only wording
+6. category and section passed in as arguments
+
+createEmptyStateRegistry should create a placeholder state entry with these default document entries:
+1. Advance Directive
+2. Health Care Decision Maker Form
+3. POLST or Similar Medical Order
+4. DNR or EMS DNR
+5. Guardianship Information
+
+This ensures every state has complete structure immediately.
+
+Registry generation
+
+In registry.ts:
+
+1. generate all 50 states plus DC from STATE_DIRECTORY using createEmptyStateRegistry
+2. export LEGAL_REGISTRY_MAP
+3. export LEGAL_REGISTRIES
+
+Then override the scaffolded states with reviewed state objects:
+Florida
+Massachusetts
+California
+
+Create comments in code explaining that reviewed state overrides replace the scaffolded state records cleanly and that all future reviewed states should follow that same override pattern.
+
+Reviewed state override requirements
+
+Create detailed reviewed state content for:
+
+1. Florida
+2. Massachusetts
+3. California
+
+Florida reviewed content
+
+Include:
+Advance Directive
+Designation of Health Care Surrogate
+Living Will
+Florida DNRO
+
+Florida notes to include:
+Florida DNRO must be printed on yellow paper
+Florida DNRO is different from general planning documents
+Florida DNRO is intended for EMS recognition in respiratory or cardiac arrest situations
+
+Massachusetts reviewed content
+
+Include:
+Health Care Proxy
+MOLST
+
+Massachusetts notes to include:
+Massachusetts is transitioning from MOLST to POLST
+MOLST remains valid according to current state guidance until further notice
+Health Care Proxy and MOLST are different documents
+
+California reviewed content
+
+Include:
+Advance Health Care Directive
+
+California notes to include:
+California uses Advance Health Care Directive terminology
+California allows use of a different form if legal requirements are met
+California execution requires two qualified witnesses or notary acknowledgment
+
+For each reviewed state document include:
+summary
+what it does
+who it is for
+who signs it
+witness requirement
+notary requirement
+special requirements
+honored by
+out of state recognition note
+how to complete steps
+storage guidance
+official links
+review metadata
+
+All remaining states plus DC
+
+For every other state and DC:
+1. include the full state record
+2. include placeholder overview
+3. include the default pending documents
+4. include registry section scaffold
+5. include official resources array even if empty
+6. show review status as pending_review or source_only
+7. keep the app display clean and useful, not broken or empty
+
+Search behavior
+
+Create helper functions to search across:
+1. stateName
+2. stateCode
+3. title
+4. commonNames
+5. category
+6. summary
+7. whatItDoes
+
+Support search terms such as:
+Florida
+California
+Massachusetts
+POLST
+MOLST
+DNR
+DNI
+proxy
+advance directive
+guardianship
+
+Search should work on the feature home screen and help users discover states or document types.
+
+Bookmarking and saving
+
+If the app already has a save or bookmark pattern, reuse it.
+If not, create a local persistence pattern consistent with the app.
+
+Support:
+1. saving a state
+2. saving a document
+
+Saved states and saved documents should be accessible from the feature home screen if reasonably possible.
+
+Review badge logic
+
+Create visible review badges using these exact labels:
+Reviewed
+Pending Review
+Official Links Only
+Needs Update
+
+Use them on:
+1. state rows
+2. state detail header
+3. document cards
+4. document detail screen metadata section
+
+Category chip system
+
+Create chips for:
+Medical Order
+Planning Document
+Decision Maker
+Court Process
+Registry
+
+Map them from the actual document categories in a sensible way.
+
+UI and screen requirements
+
+Build all screens in the current premium dark app style.
+
+Global visual requirements
+
+1. dark navy background
+2. subtle depth and glow
+3. rounded cards
+4. soft border highlight
+5. calm spacing
+6. readable typography
+7. no white legal website styling
+8. no generic bland list styling
+9. no visual drift from the approved app style
+
+Use this color system and stay close to it.
+
+Background
+Primary dark navy: #091734
+Secondary dark navy: #10214A
+Deep panel blue: #14295A
+Soft overlay blue: #1A3470
+
+Text
+Primary text: #F3F6FF
+Secondary text: #B6C0DA
+Muted text: #8F9AB8
+
+Borders and glow
+Soft blue border: #355E9F
+Glow accent: #63C8FF
+Card edge highlight: rgba(130, 190, 255, 0.18)
+
+Card fills
+Standard legal card fill: rgba(20, 40, 88, 0.78)
+Secondary card fill: rgba(22, 39, 84, 0.84)
+Metadata card fill: rgba(21, 40, 86, 0.88)
+
+Action accents
+Primary action blue: #67B7FF
+Secondary violet: #B97DFF
+Teal accent: #59D0D5
+Amber accent: #D59A32
+Coral accent: #F09A7A
+
+Review badge accents
+Reviewed: #58B6FF
+Pending Review: #D59A32
+Official Links Only: #8A8DFF
+Needs Update: #F09A7A
+
+Typography rules
+
+1. screen title should be bold and prominent
+2. section titles medium bold
+3. card titles medium semibold
+4. body copy readable and calm
+5. helper copy smaller but still legible
+6. legal explanatory text must not be tiny or too faint
+
+Spacing rules
+
+1. generous horizontal padding
+2. consistent vertical rhythm
+3. large enough tap targets
+4. consistent content width
+5. break long content into sections and cards
+6. no giant walls of text
+
+Screen 1: LegalDocumentsHomeScreen
+
+Build the feature landing screen with this layout order.
+
+A. Header area
+Title:
+Legal Documents and State Forms
+
+Subtitle:
+Find state specific forms, rules, and plain language guidance for end of life planning and medical decision making.
+
+Optional small icon button on the right if it fits the app:
+bookmark
+info
+or settings style icon
+
+B. Intro card
+Title:
+What this section covers
+
+Body:
+Use this section to explore state specific medical orders, advance directives, decision maker forms, guardianship related information, and official resources.
+
+Small note:
+Educational only. Not legal advice.
+
+C. Search bar
+Placeholder:
+Search by state, POLST, DNR, proxy, advance directive, guardianship
+
+D. Quick chips row
+Horizontally scrollable quick chips:
+All States
+Reviewed
+Pending Review
+Medical Orders
+Decision Makers
+Planning Documents
+Court Process
+
+E. States list
+Show all 50 states plus DC in an alphabetized list.
+Each state row should be a premium card row, not plain text.
+
+Each state row must include:
+state name
+state abbreviation
+one line summary if available
+review badge
+chevron
+optional bookmark action
+
+F. Recently viewed section if possible
+
+G. Saved states or saved documents section if possible
+
+H. Disclaimer card at bottom
+Text:
+This information is educational and not legal advice. State laws, forms, and acceptance rules can change. Use official state forms and consider legal, clinical, or state specific guidance when needed.
+
+Screen 2: StateLegalDetailScreen
+
+This screen opens after tapping a state.
+
+Header area
+Show:
+state name
+state abbreviation
+review badge
+optional bookmark icon for saving the state
+
+Below header show a compact State Overview card with:
+summary
+commonly used document names
+naming notes
+important warnings
+
+Below overview add filter chips:
+All
+Medical Orders
+Decision Makers
+Planning
+Court Process
+Registries
+
+Section order on state detail
+
+1. Medical Orders
+2. Decision Maker Documents
+3. Planning Documents
+4. Court Based Authority
+5. Registry and Storage
+6. Official State Resources
+7. Important Notes
+
+Each document should render as a LegalDocumentCard with:
+1. title
+2. common names if any
+3. category chip
+4. short summary
+5. review badge
+6. helper line such as Medical Order or Planning Document if useful
+7. action row with buttons:
+Learn More
+Official Form
+Official State Page
+8. optional save icon
+
+If official URLs are missing, show elegant disabled buttons or fallback labels such as:
+Form Not Linked Yet
+State Page Not Linked Yet
+
+Screen 3: LegalDocumentDetailScreen
+
+Layout order
+
+A. Hero header
+Document title
+Common names beneath title
+Category chip
+Review badge
+Optional save icon
+
+B. Summary card
+
+C. What it does section
+
+D. Who it is for section
+
+E. Who signs it section
+
+F. Requirements card
+Witness requirements
+Notary requirements
+Special requirements
+
+G. When it is honored section
+
+H. Out of state recognition section
+
+I. How to complete it section
+Render as numbered steps
+
+J. Storage and sharing guidance section
+Render as easy to scan stacked items
+
+K. Official links section
+Official Form
+Official State Page
+Additional Official Resources
+
+L. Source and review metadata card
+Review Status
+Review Owner
+Last Legal Reviewed
+Source Type
+
+M. Bottom disclaimer card
+Text:
+This information is educational and not legal advice. State laws, forms, and acceptance rules can change. Use official state forms and consider legal, clinical, or state specific guidance when needed.
+
+Screen 4: Optional understanding screen
+
+If helpful, create legal/info screen with plain language explanations that:
+1. state document names vary
+2. POLST and MOLST are not the same as an advance directive
+3. DNR and DNI are not the same as naming a proxy
+4. guardianship is usually a court process
+5. official forms and requirements vary by state
+
+Reusable component requirements
+
+Create reusable components so this feature stays maintainable.
+
+Recommended components
+
+1. LegalFeatureHeader
+2. LegalSearchBar
+3. LegalFilterChips
+4. StateRowCard
+5. StateOverviewCard
+6. LegalDocumentCard
+7. LegalInfoSection
+8. LegalRequirementsCard
+9. LegalMetadataCard
+10. LegalDisclaimerCard
+11. ReviewBadge
+12. CategoryChip
+13. EmptyStateCard
+14. SavedItemButton
+15. OfficialLinkButton
+
+If useful, also create:
+LegalScreenShell
+SectionHeader
+RecentStatesRow
+SavedDocumentsRow
+
+Use shared styling where possible.
+Do not duplicate large style blocks across screens.
+
+Search and filter UX
+
+The search experience should feel fast and forgiving.
+
+Support:
+1. search by state name
+2. search by abbreviation
+3. search by document names
+4. search by common terms
+
+Use premium empty states for no results.
+
+Example empty state text:
+No matching states or documents found.
+Try another state name or legal document term.
+
+Bookmarking UX
+
+If there is no current save pattern, add local persistence consistent with the app’s current storage model.
+
+Support:
+1. save a state
+2. save a document
+
+Saved items should be easy to reach from the feature home screen.
+
+Content presentation rules
+
+Every document detail page must help the user understand:
+1. what the document actually does
+2. who it is for
+3. whether it is a planning document or a medical order
+4. who signs it
+5. whether witnesses or notary are needed
+6. how to complete it
+7. where to store it
+8. who should receive copies
+9. where the official form or official state information lives
+
+Do not use dense legal tables.
+Do not create giant text walls.
+Break content into readable sections.
+
+Legal disclaimer rules
+
+Add code comments explaining:
+1. this feature requires ongoing legal review
+2. state rules can change
+3. reviewed content must include official source URLs
+4. pending review content must never be silently promoted to reviewed
+5. legal summaries are educational, not legal advice
+
+Do not do these things
+
+1. do not redesign the app into a legal website
+2. do not switch to light theme
+3. do not use white backgrounds
+4. do not create generic plain list styling
+5. do not shrink legal text too much
+6. do not change unrelated screens
+7. do not break existing navigation
+8. do not claim verified legal truth for pending content
+9. do not collapse different document types into one
+10. do not remove the app’s premium hospice feel
+
+Final output required
+
+After building the full feature, return:
+1. files created and changed
+2. screens created
+3. shared components created
+4. route structure used
+5. navigation entry point added
+6. data model used
+7. confirmation that all 50 states plus DC exist in the registry
+8. which states are fully reviewed
+9. which states are scaffolded and pending review
+10. how search works
+11. how filter chips work
+12. how bookmarking works
+13. where styling lives
+14. where official links are stored
+15. any exact areas still needing human legal review before public release
