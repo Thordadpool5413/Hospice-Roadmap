@@ -889,12 +889,12 @@ const STEPS = [
   { title: "Trust Score", subtitle: "Your gut rating — 1 to 5 per category" },
 ];
 
-type View = "landing" | "interview" | "results";
+type ScreenMode = "landing" | "interview" | "results";
 
 export default function HospiceInterviewScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
-  const [view, setView] = useState<View>("landing");
+  const [view, setView] = useState<ScreenMode>("landing");
   const [step, setStep] = useState(0);
   const [data, setData] = useState<InterviewData>({ ...DEFAULT });
   const [isScoring, setIsScoring] = useState(false);
