@@ -87,6 +87,38 @@ export async function synthesizeProfile(
   }
 }
 
+// Synthesizes the living profile from non-chat app activity (symptom check-ins,
+// journal entries, GoC updates, etc.) using the same profile-synthesize endpoint.
+// Frames the observations as a synthetic "memory" so the existing endpoint works
+// without needing a new API route.
+export async function synthesizeFromActivity(
+  currentProfile: string,
+  observations: Array<{ summary: string; type: string; date: string }>
+): Promise<string | null> {
+  if (observations.length === 0) return null;
+  const topicMap: Record<string, string> = {
+    symptom_checkin: "symptom management",
+    symptom_high: "pain / urgent symptoms",
+    journal_entry: "journaling / emotional processing",
+    goals_updated: "goals of care",
+    profile_updated: "care planning",
+    medication_added: "medication management",
+  };
+  const topics = [...new Set(observations.map((o) => topicMap[o.type] ?? "care planning"))];
+  const summary = `App activity since last conversation (${observations.length} events): ${observations.map((o) => o.summary).join("; ")}`;
+  return synthesizeProfile(
+    currentProfile,
+    {
+      summary,
+      keyFacts: observations.slice(0, 6).map((o) => o.summary),
+      emotionalTone: "engaged with the app",
+      mainTopics: topics,
+      date: new Date().toISOString(),
+    },
+    []
+  );
+}
+
 export async function generateConversationMemory(
   conversationId: number
 ): Promise<{

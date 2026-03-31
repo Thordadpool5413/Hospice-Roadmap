@@ -101,18 +101,22 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     if (entries.length === 0) return "";
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    const recent = entries.filter((e) => new Date(e.date) >= cutoff);
+    const recent = entries
+      .filter((e) => new Date(e.date) >= cutoff)
+      .sort((a, b) => b.date.localeCompare(a.date)); // newest first
     if (recent.length === 0) return "";
 
     const AGITATION_LABELS = ["none", "mild", "moderate", "severe"];
     const APPETITE_LABELS = ["none", "poor", "fair", "good"];
 
     const avg = (arr: number[]) =>
-      arr.length ? (arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(1) : "—";
+      arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
+    const fmtAvg = (n: number | null) => (n !== null ? n.toFixed(1) : "—");
 
-    const avgPain = avg(recent.map((e) => e.pain));
+    const avgPain   = avg(recent.map((e) => e.pain));
     const avgBreath = avg(recent.map((e) => e.breathlessness));
     const avgNausea = avg(recent.map((e) => e.nausea));
+
     const agitationCounts = recent.map((e) => e.agitation as number);
     const avgAgitation = agitationCounts.length
       ? AGITATION_LABELS[Math.round(agitationCounts.reduce((s, v) => s + v, 0) / agitationCounts.length)]
@@ -122,20 +126,49 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
       ? APPETITE_LABELS[Math.round(appetiteCounts.reduce((s, v) => s + v, 0) / appetiteCounts.length)]
       : "—";
 
-    const high = recent.filter((e) => e.pain >= 7 || e.breathlessness >= 7);
-    const highNote = high.length > 0
-      ? ` High scores (7+) recorded on ${high.length} of ${recent.length} days.`
+    // Trend direction — compare newer half vs older half for pain
+    let trendNote = "";
+    if (recent.length >= 4) {
+      const mid = Math.floor(recent.length / 2);
+      const newer = recent.slice(0, mid);
+      const older = recent.slice(mid);
+      const newerAvgPain = avg(newer.map((e) => e.pain));
+      const olderAvgPain = avg(older.map((e) => e.pain));
+      if (newerAvgPain !== null && olderAvgPain !== null) {
+        const diff = newerAvgPain - olderAvgPain;
+        if (diff >= 1.5) trendNote = "Pain is trending upward over this period.";
+        else if (diff <= -1.5) trendNote = "Pain appears to be improving recently.";
+        else trendNote = "Pain levels are relatively stable across this period.";
+      }
+    }
+
+    // Escalation alert — consecutive high-pain days at the end of the window
+    const last3 = recent.slice(0, 3);
+    const allHighPain = last3.length === 3 && last3.every((e) => e.pain >= 7);
+    const escalationNote = allHighPain
+      ? "ALERT: Pain has been 7 or above for 3 consecutive check-ins — this is clinically significant."
       : "";
 
+    // High score note
+    const high = recent.filter((e) => e.pain >= 7 || e.breathlessness >= 7);
+    const highNote = high.length > 0
+      ? `High scores (7+) recorded on ${high.length} of ${recent.length} check-ins.`
+      : "";
+
+    // Most recent entry full detail
     const latest = recent[0];
-    const latestDate = latest ? latest.date : "";
+    const latestNote = latest
+      ? `Most recent check-in (${latest.date}): pain ${latest.pain}/10, breathlessness ${latest.breathlessness}/10, nausea ${latest.nausea}/10, agitation ${AGITATION_LABELS[latest.agitation as number] ?? latest.agitation}${latest.notes ? `, caregiver note: "${latest.notes}"` : ""}`
+      : "";
 
     return [
       `Recent symptom trends (last ${recent.length} check-ins over ${days} days):`,
-      `Pain: avg ${avgPain}/10 | Breathlessness: avg ${avgBreath}/10 | Nausea: avg ${avgNausea}/10`,
+      `Pain: avg ${fmtAvg(avgPain)}/10 | Breathlessness: avg ${fmtAvg(avgBreath)}/10 | Nausea: avg ${fmtAvg(avgNausea)}/10`,
       `Agitation: avg ${avgAgitation} | Appetite: avg ${avgAppetite}`,
+      trendNote,
+      escalationNote,
       highNote,
-      latestDate ? `Most recent check-in: ${latestDate}` : "",
+      latestNote,
     ].filter(Boolean).join("\n");
   }, [entries]);
 

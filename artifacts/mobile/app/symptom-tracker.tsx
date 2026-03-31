@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
+import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { SymptomEntry } from "@/types";
 
@@ -516,6 +517,7 @@ const histSt = StyleSheet.create({
 export default function SymptomTrackerScreen() {
   const insets = useSafeAreaInsets();
   const { entries, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries } = useSymptoms();
+  const { addObservation } = useRagnaLearning();
   const today = todayDate();
   const existing = getTodayEntry();
   const isEditing = !!existing;
@@ -561,7 +563,18 @@ export default function SymptomTrackerScreen() {
     }
     setIsSaving(false);
     setSavedEntry({ ...payload, id: existing?.id ?? "new" } as any);
-  }, [isSaving, today, pain, breathlessness, nausea, agitation, appetite, restlessness, notes, isEditing, existing]);
+
+    // Tell Ragna about this check-in
+    const isHighAlert = pain >= 7 || breathlessness >= 7;
+    const detail = `pain ${pain}/10, breathlessness ${breathlessness}/10, nausea ${nausea}/10${notes.trim() ? `, note: "${notes.trim().slice(0, 80)}"` : ""}`;
+    await addObservation(
+      isHighAlert ? "symptom_high" : "symptom_checkin",
+      isHighAlert
+        ? `High symptom check-in: pain ${pain}/10${breathlessness >= 7 ? `, breathlessness ${breathlessness}/10` : ""}`
+        : `Symptom check-in logged`,
+      { detail, significant: isHighAlert }
+    );
+  }, [isSaving, today, pain, breathlessness, nausea, agitation, appetite, restlessness, notes, isEditing, existing, addObservation]);
 
   const handleDelete = useCallback((entry: SymptomEntry) => {
     Alert.alert("Delete Entry", `Delete the check-in from ${shortDate(entry.date)}?`, [

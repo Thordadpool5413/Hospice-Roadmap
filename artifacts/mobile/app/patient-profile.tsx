@@ -20,6 +20,7 @@ import { MedicationPicker } from "@/components/MedicationPicker";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { MedicationEntry, PatientProfile } from "@/types";
 
 interface FieldConfig {
@@ -91,6 +92,7 @@ const FIELDS: FieldConfig[] = [
 export default function PatientProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, updatePatientProfile, clearPatientProfile } = useApp();
+  const { addObservation } = useRagnaLearning();
   const [profile, setProfile] = useState<PatientProfile>(
     user?.patientProfile ?? {}
   );
@@ -109,6 +111,20 @@ export default function PatientProfileScreen() {
         ? medications.map((m) => (m.doseNote ? `${m.name} ${m.doseNote}` : m.name)).join(", ")
         : undefined;
     updatePatientProfile({ ...profile, medications, comfortKitMedications });
+
+    // Tell Ragna about the profile update
+    const hadProfile = !!(user?.patientProfile?.patientName || user?.patientProfile?.diagnosis);
+    const detail = [
+      profile.patientName ? `patient: ${profile.patientName}` : "",
+      profile.diagnosis ? `diagnosis: ${profile.diagnosis}` : "",
+      medications.length > 0 ? `${medications.length} medication(s) listed` : "",
+    ].filter(Boolean).join(", ");
+    addObservation(
+      "profile_updated",
+      hadProfile ? "Patient profile updated" : "Patient profile set up for the first time",
+      { detail: detail || undefined, significant: !hadProfile }
+    ).catch(() => {});
+
     Alert.alert(
       "Profile Saved",
       "This information can now be used to personalize Ragna. It is stored on this device and may be included when you chat with Ragna.",

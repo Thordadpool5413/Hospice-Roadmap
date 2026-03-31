@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { JOURNAL_TYPE_META, useJournal } from "@/context/JournalContext";
+import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { JournalEntryType } from "@/types";
 
 function todayIsoDate(): string {
@@ -40,6 +41,7 @@ export default function JournalEntryScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { entries, addEntry, updateEntry, deleteEntry } = useJournal();
+  const { addObservation } = useRagnaLearning();
 
   const existing = id ? entries.find((e) => e.id === id) : null;
 
@@ -78,6 +80,20 @@ export default function JournalEntryScreen() {
     } else {
       await addEntry({ type, title: title.trim(), body: body.trim(), date: todayIsoDate(), ...moodData, ...tagData });
     }
+
+    // Tell Ragna about this journal entry (new entries only — edits are minor)
+    if (!isEditing) {
+      const bodySnippet = body.trim().slice(0, 100);
+      await addObservation(
+        "journal_entry",
+        `Journal entry written: "${title.trim().slice(0, 60)}"`,
+        {
+          detail: bodySnippet ? `${bodySnippet}${body.trim().length > 100 ? "…" : ""}` : undefined,
+          significant: true,
+        }
+      );
+    }
+
     setIsSaving(false);
     router.back();
   };

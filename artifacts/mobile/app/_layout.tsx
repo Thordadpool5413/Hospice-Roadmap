@@ -8,7 +8,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -18,13 +18,44 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AppProvider } from "@/context/AppContext";
 import { JournalProvider } from "@/context/JournalContext";
+import { RagnaLearningProvider, useRagnaLearning } from "@/context/RagnaLearningContext";
 import { RemindersProvider } from "@/context/RemindersContext";
 import { SymptomProvider } from "@/context/SymptomContext";
-import { VeraMemoryProvider } from "@/context/VeraMemoryContext";
+import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
+import { synthesizeFromActivity } from "@/services/aiService";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+// LearningSync bridges RagnaLearningContext and VeraMemoryContext.
+// It silently synthesizes the living profile from app-activity observations
+// whenever 3+ significant events have accumulated and 2 hours have passed
+// since the last synthesis — no user action required.
+function LearningSync() {
+  const { observations, significantCount, lastSignificantAt } = useRagnaLearning();
+  const { livingProfile, updateLivingProfile } = useVeraMemory();
+  const lastSynthesisAt = useRef<number>(0);
+
+  useEffect(() => {
+    if (significantCount < 3) return;
+    if (!lastSignificantAt) return;
+    const twoHours = 2 * 60 * 60 * 1000;
+    if (Date.now() - lastSynthesisAt.current < twoHours) return;
+    lastSynthesisAt.current = Date.now();
+    const sigObs = observations
+      .filter((o) => o.significant)
+      .slice(0, 8)
+      .map((o) => ({ summary: o.summary, type: o.type, date: o.date }));
+    synthesizeFromActivity(livingProfile, sigObs)
+      .then((profile) => {
+        if (profile) updateLivingProfile(profile);
+      })
+      .catch(() => {});
+  }, [lastSignificantAt, significantCount]);
+
+  return null;
+}
 
 function RootLayoutNav() {
   return (
@@ -223,14 +254,17 @@ export default function RootLayout() {
           <RemindersProvider>
           <SymptomProvider>
           <VeraMemoryProvider>
+          <RagnaLearningProvider>
           <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <View style={{ flex: 1 }}>
+                <LearningSync />
                 <RootLayoutNav />
                 <OfflineBanner />
               </View>
             </GestureHandlerRootView>
           </QueryClientProvider>
+          </RagnaLearningProvider>
           </VeraMemoryProvider>
           </SymptomProvider>
           </RemindersProvider>

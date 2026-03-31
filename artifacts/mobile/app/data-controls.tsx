@@ -16,6 +16,7 @@ import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
+import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
@@ -71,6 +72,7 @@ export default function DataControlsScreen() {
   const { entries: symptomEntries, clearEntries: clearSymptoms } = useSymptoms();
   const { reminders, clearReminders } = useReminders();
   const { memories, livingProfile, recentTiles, clearMemories } = useVeraMemory();
+  const { observations, clearObservations } = useRagnaLearning();
 
   // Derived statuses
   const profileStatus = derivePatientProfileStatus(user);
@@ -87,7 +89,7 @@ export default function DataControlsScreen() {
     journal: journalEntries.length === 0,
     symptoms: symptomEntries.length === 0,
     reminders: reminders.length === 0,
-    ragna: ragnaStatus === "Empty",
+    ragna: ragnaStatus === "Empty" && observations.length === 0,
   };
 
   const confirm = (
@@ -211,14 +213,19 @@ export default function DataControlsScreen() {
     },
     {
       title: "Ragna Memory",
-      description: "Saved local memory, living profile, and recent topic history",
-      status: ragnaStatus,
+      description: "Saved conversations, living profile, topic history, and app-activity observations",
+      status: observations.length > 0
+        ? `${ragnaStatus}${ragnaStatus !== "Empty" ? " · " : ""}${observations.length} app observation${observations.length === 1 ? "" : "s"}`
+        : ragnaStatus,
       empty: isEmpty.ragna,
       onClear: () =>
         confirm(
           "Clear Ragna Memory",
-          "Clear Ragna's saved local memory, living profile, and recent topic history on this device? This does not automatically delete a conversation currently open on the server.",
-          clearMemories
+          "Clear Ragna's saved local memory, living profile, topic history, and app-activity observations on this device? This does not automatically delete a conversation currently open on the server.",
+          async () => {
+            await clearMemories();
+            await clearObservations();
+          }
         ),
     },
   ];

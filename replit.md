@@ -49,13 +49,14 @@ An Expo React Native application ("Hospice Roadmap") providing:
     - **Structured Guidance**: Detailed 6-section guidance for 60 scenarios with inline tips/cautions.
     - **Symptom Tracker**: Daily check-ins for symptoms with 7-day trend analysis, integrated into AI context.
     - **Goals of Care**: Form to define patient's priorities, integrated into AI context.
-    - **Ragna AI companion**: A streaming Claude AI chat with cross-session memory, smart follow-up suggestions, and markdown rendering. It incorporates symptom data, goals of care, and patient profile for personalized guidance.
+    - **Ragna AI companion**: A streaming Claude AI chat with cross-session memory, smart follow-up suggestions, and markdown rendering. It incorporates symptom data, goals of care, patient profile, caregiver journal, and real-time app-activity observations for deeply personalized guidance.
     - **Offline Access**: Critical features like guidance scenarios, journey, and emergency card are fully functional offline. An `OfflineBanner` indicates connectivity status.
     - **Accessibility**: Configurable font scale and high-contrast mode, persisted via AsyncStorage.
     - **Caregiver Journal**: Allows tracking various entry types with AsyncStorage persistence.
     - **Reminders**: Medication and appointment reminders with local push notification support.
     - **Onboarding**: A 4-step onboarding process covering role selection, journey stage, and an app tour.
-- **Context Providers**: Manages application state for user/patient profiles, symptoms, journal, reminders, AI memory, and accessibility.
+- **Context Providers**: Manages application state for user/patient profiles, symptoms, journal, reminders, AI memory, app-activity learning observations, and accessibility.
+  - `RagnaLearningContext` (`context/RagnaLearningContext.tsx`): Tracks all meaningful app events (symptom check-ins, journal writes, GoC saves, profile updates) as rolling observations passed to Ragna on every message. Persisted at `@ragna_learning_v1`. The `LearningSync` component in `_layout.tsx` silently synthesizes the living profile from these observations after 3+ significant events and a 2-hour cooldown.
 
 ### `lib/db` (`@workspace/db`)
 
