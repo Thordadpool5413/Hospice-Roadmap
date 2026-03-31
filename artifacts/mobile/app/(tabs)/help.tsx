@@ -16,6 +16,7 @@ import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
+import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
@@ -181,6 +182,7 @@ export default function HelpScreen() {
   const { entries: symptomEntries, getTodayEntry, getRecentSummary } = useSymptoms();
   const { entries: journalEntries } = useJournal();
   const { memories, addMemory, getMemorySummary, memoryCount, livingProfile, updateLivingProfile, recentTiles, recordTile } = useVeraMemory();
+  const { getObservationContext } = useRagnaLearning();
   const { isOnline } = useAppNetwork();
   const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
   const lastInitialRef = useRef("");
@@ -362,10 +364,13 @@ export default function HelpScreen() {
             })()
           : "";
 
+        const observationContext = getObservationContext();
+
         patientContext = [
           baseContext,
           symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
           journalContext,
+          observationContext,
           memorySummary,
           timeContext,
         ]

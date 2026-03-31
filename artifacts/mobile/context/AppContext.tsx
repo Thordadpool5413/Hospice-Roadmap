@@ -16,7 +16,7 @@ export const DEFAULT_RAGNA_PRIVACY: RagnaPrivacySettings = {
   includeCareContacts: false,
   includeGoalsOfCare: true,
   includeRecentSymptoms: true,
-  includeRecentJournal: false,
+  includeRecentJournal: true,
   includeConversationMemory: true,
   includeTimeContext: true,
 };

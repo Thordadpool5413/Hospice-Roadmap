@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { GoalsOfCare } from "@/types";
 
 const DNR_OPTIONS: { value: GoalsOfCare["dnrStatus"]; label: string; desc: string; color: string }[] = [
@@ -76,6 +77,7 @@ function QuestionField({ label, hint, icon, value, onChange, placeholder, why }:
 export default function GoalsOfCareScreen() {
   const insets = useSafeAreaInsets();
   const { user, updatePatientProfile } = useApp();
+  const { addObservation } = useRagnaLearning();
   const existing = user?.patientProfile?.goalsOfCare;
 
   const [whatMattersMost, setWhatMattersMost] = useState(existing?.whatMattersMost ?? "");
@@ -101,6 +103,22 @@ export default function GoalsOfCareScreen() {
     };
     await updatePatientProfile({ ...user?.patientProfile, goalsOfCare: goals });
     setIsSaving(false);
+
+    // Tell Ragna about this Goals of Care update
+    const isFirstTime = !existing?.whatMattersMost && !!goals.whatMattersMost;
+    await addObservation(
+      "goals_updated",
+      isFirstTime
+        ? "Goals of Care filled in for the first time"
+        : "Goals of Care updated",
+      {
+        detail: goals.whatMattersMost
+          ? `What matters most: "${goals.whatMattersMost.slice(0, 100)}"`
+          : undefined,
+        significant: true,
+      }
+    );
+
     Alert.alert(
       "Goals Saved",
       "This information is stored on your device and may be used to personalize Ragna when you chat with her.",
