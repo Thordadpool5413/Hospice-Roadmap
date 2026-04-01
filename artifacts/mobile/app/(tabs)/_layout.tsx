@@ -51,7 +51,10 @@ export default function TabLayout() {
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
 
-  const tabBarHeight = isWeb ? 56 : 58;
+  const WEB_TAB_HEIGHT = 68;
+  const NATIVE_TAB_HEIGHT = 60;
+  const tabBarHeight = isWeb ? WEB_TAB_HEIGHT : NATIVE_TAB_HEIGHT;
+  const bottomPad = isWeb ? 10 : safeAreaInsets.bottom;
 
   return (
     <Tabs
@@ -70,12 +73,12 @@ export default function TabLayout() {
           borderTopWidth: 0.5,
           borderTopColor: "rgba(60, 100, 180, 0.35)",
           elevation: 0,
-          paddingBottom: isWeb ? 0 : safeAreaInsets.bottom,
+          paddingBottom: bottomPad,
           height: tabBarHeight + (isWeb ? 0 : safeAreaInsets.bottom),
         },
         tabBarItemStyle: {
           paddingTop: 6,
-          paddingBottom: 4,
+          paddingBottom: isWeb ? 6 : 4,
         },
       }}
     >
