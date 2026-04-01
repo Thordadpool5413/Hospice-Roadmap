@@ -67,3 +67,50 @@ export function getDocumentById(id: string): { doc: import("./types").LegalDocum
 export const PENDING_STATE_CODES: StateCode[] = SCAFFOLDED
   .map((s) => s.stateCode)
   .filter((code) => !OVERRIDE_MAP.has(code));
+
+// ─── Aliases required by legal feature screens ────────────────────────────────
+export const FULL_STATE_LEGAL_REGISTRY: StateLegalRegistry[] = LEGAL_REGISTRIES;
+
+// ─── Full-text search across states and document names ───────────────────────
+export function searchStatesAndDocuments(query: string): StateLegalRegistry[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return LEGAL_REGISTRIES;
+  return LEGAL_REGISTRIES.filter((r) =>
+    r.stateName.toLowerCase().includes(q) ||
+    r.stateCode.toLowerCase().includes(q) ||
+    r.overview.summary.toLowerCase().includes(q) ||
+    r.documents.some(
+      (d) =>
+        d.title.toLowerCase().includes(q) ||
+        d.commonNames.some((n) => n.toLowerCase().includes(q)) ||
+        d.summary.toLowerCase().includes(q),
+    ) ||
+    r.overview.commonlyUsedDocuments.some((d) => d.toLowerCase().includes(q)),
+  );
+}
+
+// ─── Look up a single document by stateCode + documentId ─────────────────────
+export function getLegalDocument(
+  stateCode: StateCode,
+  documentId: string,
+): import("./types").LegalDocumentEntry | undefined {
+  const registry = LEGAL_REGISTRY_MAP.get(stateCode);
+  if (!registry) return undefined;
+  return registry.documents.find((d) => d.id === documentId);
+}
+
+// ─── Source banner helper (state detail screen) ───────────────────────────────
+export function getStateSourceBanner(status: string): string {
+  switch (status) {
+    case "reviewed":
+      return "Reviewed state sources available";
+    case "source_only":
+      return "Mixed official and reference sources";
+    case "pending_review":
+      return "Reference links only while review is in progress";
+    case "needs_update":
+      return "This state content needs review updates";
+    default:
+      return "";
+  }
+}
