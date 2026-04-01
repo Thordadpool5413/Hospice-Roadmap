@@ -97,8 +97,8 @@ export default function LegalHomeScreen() {
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </Pressable>
         <View style={s.headerCenter}>
-          <Text style={s.headerTitle}>Legal Documents</Text>
-          <Text style={s.headerSub}>State Forms & Advance Directives</Text>
+          <Text style={s.headerTitle}>Advance Directives</Text>
+          <Text style={s.headerSub}>Living Wills, POLST & State Forms</Text>
         </View>
         <Pressable
           onPress={() => router.push("/legal/info" as any)}
