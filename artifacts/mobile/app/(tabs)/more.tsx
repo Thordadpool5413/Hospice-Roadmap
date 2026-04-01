@@ -86,7 +86,7 @@ export default function MoreScreen() {
         ] : []),
         { label: "Hospice Interview Scorecard", icon: "check-square", route: "/hospice-interview" },
         { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation" },
-        { label: "Legal Documents & State Forms", icon: "file-text", route: "/legal" },
+        { label: "Advance Directives & State Forms", icon: "file-text", route: "/legal" },
         { label: "Resource Library", icon: "book-open", route: "/resources" },
       ],
     },

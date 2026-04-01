@@ -1,0 +1,215 @@
+Use the already completed researched legal registry file and perform the full integration in one pass.
+
+Important
+
+Do not rebuild the legal research.
+Do not recreate placeholder state data.
+Do not generate a new scaffold registry.
+Use the existing completed file named legalRegistry.ts as the source of truth.
+
+Goal
+
+Integrate the completed Legal Documents and State Forms registry into the current app so the feature is fully wired and usable.
+
+Tasks
+
+1. Create or replace this file:
+mobile/content/legal/legalRegistry.ts
+
+Use the full contents of the existing completed researched legalRegistry.ts file I am providing.
+
+2. Create or replace this file:
+mobile/content/legal/index.ts
+
+Use exactly this code:
+
+export * from "./legalRegistry";
+
+3. Find the current Legal Documents and State Forms feature screens and replace any placeholder state registry, scaffold data, demo data, or empty arrays with the real exports from legalRegistry.ts.
+
+4. Update the legal feature home screen so it imports and uses:
+
+FULL_STATE_LEGAL_REGISTRY
+searchStatesAndDocuments
+
+5. Update the state detail screen so it imports and uses:
+
+getStateRegistry
+
+6. Update the document detail screen so it imports and uses:
+
+getLegalDocument
+
+7. Keep the current route structure intact if it already exists. If it does not exist yet, use:
+
+legal/index
+legal/state/[code]
+legal/document/[id]
+
+8. Keep the current dark premium design language intact.
+Do not redesign unrelated screens.
+Do not change the bottom navigation structure.
+Do not change the visual theme of the rest of the app.
+
+9. Update the legal feature home screen so it does all of the following:
+
+A. Render all states from FULL_STATE_LEGAL_REGISTRY
+B. Show search results using searchStatesAndDocuments(query)
+C. Show each state card with:
+state name
+state abbreviation
+overview summary if available
+review status
+navigation into the state detail screen
+
+10. Update the state detail screen so it does all of the following:
+
+A. Load the state using getStateRegistry(code)
+B. Show:
+state name
+state abbreviation
+review status
+overview summary
+documents for that state
+official resources
+registry information if present
+
+C. Render each document card with:
+title
+common names if present
+summary
+review status
+button for Learn More
+button for Official Form
+button for Official State Page
+
+D. Route Learn More into the document detail screen using the document id and state code
+
+11. Update the document detail screen so it does all of the following:
+
+A. Load the document using getLegalDocument(stateCode, documentId)
+B. Show:
+title
+common names
+summary
+what it does
+who it is for
+who signs it
+witness requirements
+notary requirements
+special requirements
+honored by
+out of state recognition
+how to complete
+storage guidance
+review metadata
+
+C. Render all official links cleanly:
+officialFormUrl
+officialInfoUrl
+additionalOfficialUrls
+
+D. If additionalOfficialUrls exist, show them under a section titled:
+Additional Official Resources
+
+12. Fix dead button behavior everywhere in the legal feature.
+
+Use this rule:
+
+const hasOfficialForm = !!document.officialFormUrl;
+const hasOfficialInfo = !!document.officialInfoUrl;
+
+Then:
+
+If hasOfficialForm is true, the Official Form button is active.
+If false, show a disabled elegant button labeled:
+Form Not Linked Yet
+
+If hasOfficialInfo is true, the Official State Page button is active.
+If false, show a disabled elegant button labeled:
+State Page Not Linked Yet
+
+Never leave an active button with a null URL.
+
+13. Add visible review status in all three levels:
+
+A. state list cards
+B. state detail header
+C. document cards
+D. document detail metadata
+
+Use the review status already present in the registry.
+
+14. Add a small state source banner on the state detail screen using this logic:
+
+function getStateSourceBanner(status: string) {
+  switch (status) {
+    case "reviewed":
+      return "Reviewed state sources available";
+    case "source_only":
+      return "Mixed official and reference sources";
+    case "pending_review":
+      return "Reference links only while review is in progress";
+    case "needs_update":
+      return "This state content needs review updates";
+    default:
+      return "";
+  }
+}
+
+Show that banner near the top of the state detail screen.
+
+15. Keep the legal disclaimer visible on the legal screens where appropriate.
+
+Use this exact text where needed:
+
+This information is educational and not legal advice. State laws, forms, and acceptance rules can change. Use official state forms and consider legal, clinical, or state specific guidance when needed.
+
+16. If the current feature already has bookmark or save support, reuse it.
+If not, leave save behavior alone for now and do not block the integration.
+
+17. Do not change the researched content inside legalRegistry.ts unless an import or type fix is absolutely necessary.
+
+18. Do not remove any of the researched state sources.
+Do not replace them with generic placeholders.
+
+19. Make imports clean and correct.
+If the app uses an alias like @/content/legal, use that.
+If not, use the correct relative imports for the project.
+
+20. After integration, run through the legal feature and make sure:
+all 50 states plus DC render
+reviewed states still show reviewed data
+state detail pages load correctly
+document detail pages load correctly
+official links open correctly
+dead buttons are disabled properly
+no placeholder legal registry remains in use
+
+Use these exact import targets where appropriate
+
+For the legal home screen:
+
+import {
+  FULL_STATE_LEGAL_REGISTRY,
+  searchStatesAndDocuments,
+} from "@/content/legal";
+
+For the state detail screen:
+
+import { getStateRegistry } from "@/content/legal";
+
+For the document detail screen:
+
+import { getLegalDocument } from "@/content/legal";
+
+Final output required
+
+After making the changes, return:
+
+1. files changed
+2. imports changed
+3. routes touched
+4. any leftover placeholders still found
+5. whether all legal screens now use the real legalRegistry.ts file
+6. any type or import issues that needed adjustment
