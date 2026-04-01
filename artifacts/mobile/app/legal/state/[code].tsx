@@ -20,7 +20,7 @@ import { ReviewBadge } from "@/components/legal/ReviewBadge";
 import { SavedItemButton } from "@/components/legal/SavedItemButton";
 import { StateOverviewCard } from "@/components/legal/StateOverviewCard";
 import { Colors } from "@/constants/colors";
-import { getStateRegistry } from "@/content/legal";
+import { getStateRegistry, getStateSourceBanner } from "@/content/legal";
 import { useLegalBookmarks } from "@/hooks/useLegalBookmarks";
 import { StateLegalRegistry, StateCode } from "@/content/legal/types";
 
@@ -49,6 +49,7 @@ export default function StateLegalDetailScreen() {
   }
 
   const isPending = registry.review.reviewStatus === "pending_review";
+  const sourceBanner = getStateSourceBanner(registry.review.reviewStatus);
 
   return (
     <View style={s.container}>
@@ -85,6 +86,14 @@ export default function StateLegalDetailScreen() {
           </View>
           <ReviewBadge status={registry.review.reviewStatus} />
         </View>
+
+        {/* Source banner */}
+        {sourceBanner.length > 0 && (
+          <View style={s.sourceBanner}>
+            <Feather name="info" size={12} color="#8F9AB8" />
+            <Text style={s.sourceBannerText}>{sourceBanner}</Text>
+          </View>
+        )}
 
         {/* Pending state notice */}
         {isPending && (
@@ -214,6 +223,13 @@ const s = StyleSheet.create({
     borderColor: "rgba(103,183,255,0.30)",
   },
   stateCodeText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#67B7FF" },
+  sourceBanner: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(143,154,184,0.08)",
+    borderWidth: 1, borderColor: "rgba(143,154,184,0.20)",
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  sourceBannerText: { flex: 1, fontSize: 11, fontFamily: "Inter_400Regular", color: "#8F9AB8" },
   pendingNotice: {
     flexDirection: "row", alignItems: "flex-start", gap: 8,
     backgroundColor: "rgba(213,154,50,0.08)",

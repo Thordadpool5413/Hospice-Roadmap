@@ -20,9 +20,9 @@ import { OfficialLinkButton } from "@/components/legal/OfficialLinkButton";
 import { ReviewBadge } from "@/components/legal/ReviewBadge";
 import { SavedItemButton } from "@/components/legal/SavedItemButton";
 import { Colors } from "@/constants/colors";
-import { getDocumentById } from "@/content/legal";
+import { getLegalDocument, getStateRegistry } from "@/content/legal";
+import { LegalDocumentEntry, StateCode } from "@/content/legal/types";
 import { useLegalBookmarks } from "@/hooks/useLegalBookmarks";
-import { LegalDocumentEntry } from "@/content/legal/types";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -76,9 +76,10 @@ export default function LegalDocumentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { toggleDoc, isDocSaved } = useLegalBookmarks();
 
-  const result = id ? getDocumentById(id) : undefined;
-  const doc: LegalDocumentEntry | undefined = result?.doc;
-  const stateName = result?.state.stateName;
+  const stateCode = id ? (id.slice(0, 2).toUpperCase() as StateCode) : undefined;
+  const doc: LegalDocumentEntry | undefined =
+    stateCode && id ? getLegalDocument(stateCode, id) : undefined;
+  const stateName = doc ? getStateRegistry(doc.stateCode)?.stateName : undefined;
 
   if (!doc) {
     return (
@@ -208,23 +209,26 @@ export default function LegalDocumentDetailScreen() {
               icon="file-text"
             />
             <OfficialLinkButton
-              label="State Info Page"
+              label="State Page"
               url={doc.officialInfoUrl}
               icon="globe"
               variant="secondary"
             />
           </View>
           {doc.additionalOfficialUrls.length > 0 && (
-            <View style={ds.linksRow}>
-              {doc.additionalOfficialUrls.map((link, i) => (
-                <OfficialLinkButton
-                  key={i}
-                  label={link.label}
-                  url={link.url}
-                  icon="external-link"
-                  variant="secondary"
-                />
-              ))}
+            <View style={ds.additionalLinksSection}>
+              <Text style={ds.additionalLinksTitle}>Additional Official Resources</Text>
+              <View style={ds.linksRow}>
+                {doc.additionalOfficialUrls.map((link, i) => (
+                  <OfficialLinkButton
+                    key={i}
+                    label={link.label}
+                    url={link.url}
+                    icon="external-link"
+                    variant="secondary"
+                  />
+                ))}
+              </View>
             </View>
           )}
         </SectionCard>
@@ -320,6 +324,11 @@ const ds = StyleSheet.create({
   stepNumText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#67B7FF" },
   stepText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: "#B6C0DA", lineHeight: 19 },
   linksRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  additionalLinksSection: { gap: 8, marginTop: 4 },
+  additionalLinksTitle: {
+    fontSize: 11, fontFamily: "Inter_600SemiBold",
+    color: "#8F9AB8", textTransform: "uppercase", letterSpacing: 0.5,
+  },
   expandWrap: {
     backgroundColor: "rgba(20,40,88,0.65)",
     borderWidth: 1, borderColor: "rgba(53,94,159,0.30)",

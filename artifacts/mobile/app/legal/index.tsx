@@ -20,9 +20,10 @@ import { ReviewBadge } from "@/components/legal/ReviewBadge";
 import { StateRowCard } from "@/components/legal/StateRowCard";
 import { Colors } from "@/constants/colors";
 import {
-  LEGAL_REGISTRIES,
+  FULL_STATE_LEGAL_REGISTRY,
   REVIEWED_STATE_CODES,
   STATE_DIRECTORY,
+  searchStatesAndDocuments,
 } from "@/content/legal";
 import { useLegalBookmarks } from "@/hooks/useLegalBookmarks";
 import { StateLegalRegistry } from "@/content/legal/types";
@@ -64,23 +65,14 @@ export default function LegalHomeScreen() {
   const [filter, setFilter] = useState("all");
 
   const filtered = useMemo<StateLegalRegistry[]>(() => {
-    let list = LEGAL_REGISTRIES;
+    let list = query.trim().length > 0
+      ? searchStatesAndDocuments(query)
+      : FULL_STATE_LEGAL_REGISTRY;
+
     if (filter === "reviewed") list = list.filter((r) => r.review.reviewStatus === "reviewed");
     else if (filter === "pending") list = list.filter((r) => r.review.reviewStatus === "pending_review");
     else if (filter === "saved") list = list.filter((r) => savedStates.includes(r.stateCode));
 
-    if (query.trim().length > 0) {
-      const q = query.toLowerCase().trim();
-      list = list.filter((r) =>
-        r.stateName.toLowerCase().includes(q) ||
-        r.stateCode.toLowerCase().includes(q) ||
-        r.documents.some((d) =>
-          d.title.toLowerCase().includes(q) ||
-          d.commonNames.some((n) => n.toLowerCase().includes(q))
-        ) ||
-        r.overview.commonlyUsedDocuments.some((d) => d.toLowerCase().includes(q))
-      );
-    }
     return list;
   }, [query, filter, savedStates]);
 
