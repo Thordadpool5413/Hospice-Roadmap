@@ -154,7 +154,7 @@ function SignCard({ item, index }: SignCardProps) {
         <Feather
           name={expanded ? "chevron-up" : "chevron-down"}
           size={16}
-          color={Colors.textSubtle}
+          color="#3A5080"
         />
       </View>
       {expanded && (
@@ -271,7 +271,7 @@ export default function ActiveDyingScreen() {
         </View>
 
         {/* After death */}
-        <View style={[styles.afterCard, { backgroundColor: Colors.backgroundSecondary }]}>
+        <View style={[styles.afterCard, { backgroundColor: "rgba(14, 22, 55, 0.90)", borderWidth: 1, borderColor: "rgba(55, 85, 170, 0.22)" }]}>
           <Text style={styles.afterTitle}>After death occurs</Text>
           <Text style={styles.afterBody}>
             You do not need to call 911. Call your hospice nurse first — they will guide you through next steps. There is no rush. You have time to sit with your loved one, say what you need to say, and be together as a family.
@@ -306,29 +306,30 @@ export default function ActiveDyingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: "#030A18" },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-    backgroundColor: Colors.background,
+    borderBottomColor: "rgba(40, 65, 140, 0.40)",
+    backgroundColor: "rgba(3, 10, 24, 0.97)",
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: "rgba(14, 22, 55, 0.90)",
+    borderWidth: 1, borderColor: "rgba(60, 90, 170, 0.25)",
     alignItems: "center", justifyContent: "center",
   },
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: {
     fontSize: 17, fontFamily: "Inter_700Bold",
-    color: Colors.text, letterSpacing: -0.3,
+    color: "#EEF4FF", letterSpacing: -0.4,
   },
   headerSub: {
     fontSize: 11, fontFamily: "Inter_400Regular",
-    color: Colors.textMuted, marginTop: 1,
+    color: "#4A6090", marginTop: 1,
   },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20, gap: 24 },
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
   },
   introBody: {
     fontSize: 14, fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary, textAlign: "center", lineHeight: 22,
+    color: "#7A90B8", textAlign: "center", lineHeight: 22,
   },
   introNote: {
     fontSize: 12, fontFamily: "Inter_500Medium",
@@ -365,49 +366,54 @@ const styles = StyleSheet.create({
   section: { gap: 10 },
   sectionTitle: {
     fontSize: 18, fontFamily: "Inter_700Bold",
-    color: Colors.text, letterSpacing: -0.3,
+    color: "#DDE8FF", letterSpacing: -0.3,
   },
   sectionSub: {
     fontSize: 13, fontFamily: "Inter_400Regular",
-    color: Colors.textMuted, marginTop: -4,
+    color: "#5A78A8", marginTop: -4,
   },
   signList: { gap: 8 },
 
   signCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
+    backgroundColor: "rgba(12, 20, 55, 0.90)",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55, 85, 170, 0.22)",
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.20,
+    shadowRadius: 8,
+    elevation: 3,
   },
   signCardHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 14,
+    padding: 15,
   },
   signIconWrap: {
-    width: 36, height: 36, borderRadius: 10,
+    width: 38, height: 38, borderRadius: 11,
     backgroundColor: TWILIGHT_PALE,
     alignItems: "center", justifyContent: "center",
   },
   signCardMeta: { flex: 1 },
   signTiming: {
-    fontSize: 10, fontFamily: "Inter_600SemiBold",
-    color: TWILIGHT, textTransform: "uppercase", letterSpacing: 0.4,
+    fontSize: 10, fontFamily: "Inter_700Bold",
+    color: TWILIGHT, textTransform: "uppercase", letterSpacing: 0.8,
   },
   signTitle: {
-    fontSize: 15, fontFamily: "Inter_600SemiBold",
-    color: Colors.text, letterSpacing: -0.2, marginTop: 1,
+    fontSize: 15, fontFamily: "Inter_700Bold",
+    color: "#DDE8FF", letterSpacing: -0.25, marginTop: 2,
   },
   signCardBody: {
-    paddingHorizontal: 14, paddingBottom: 14, gap: 10,
-    borderTopWidth: 1, borderTopColor: Colors.divider,
-    paddingTop: 12,
+    paddingHorizontal: 15, paddingBottom: 15, gap: 12,
+    borderTopWidth: 1, borderTopColor: "rgba(55, 85, 170, 0.22)",
+    paddingTop: 13,
   },
   signWhat: {
     fontSize: 13, fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary, lineHeight: 20,
+    color: "#7A90B8", lineHeight: 20,
   },
   signBlock: {
     flexDirection: "row",
@@ -427,7 +433,7 @@ const styles = StyleSheet.create({
   },
   signBlockBody: {
     fontSize: 13, fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary, lineHeight: 19,
+    color: "#7A90B8", lineHeight: 19,
   },
 
   meaningCard: {
@@ -440,29 +446,32 @@ const styles = StyleSheet.create({
   },
   meaningBody: {
     fontSize: 14, fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary, lineHeight: 22,
+    color: "#7A90B8", lineHeight: 22,
   },
 
   sayList: { gap: 8 },
   sayCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: Colors.divider,
-    gap: 4,
+    backgroundColor: "rgba(12, 20, 55, 0.90)",
+    borderRadius: 14, padding: 15,
+    borderWidth: 1, borderColor: "rgba(55, 85, 170, 0.22)",
+    gap: 5,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: 6, elevation: 2,
   },
   sayQuote: {
     fontSize: 15, fontFamily: "Inter_600SemiBold",
-    color: Colors.text, letterSpacing: -0.1,
+    color: "#DDE8FF", letterSpacing: -0.15,
   },
   sayDesc: {
     fontSize: 12, fontFamily: "Inter_400Regular",
-    color: Colors.textMuted, lineHeight: 18,
+    color: "#5A78A8", lineHeight: 18,
   },
 
   callCard: {
-    backgroundColor: Colors.amberPale,
+    backgroundColor: "rgba(80, 52, 5, 0.55)",
     borderRadius: 14, padding: 16, gap: 8,
     borderLeftWidth: 4,
+    borderWidth: 1, borderColor: "rgba(200, 140, 30, 0.30)",
   },
   callHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   callTitle: {
@@ -470,13 +479,13 @@ const styles = StyleSheet.create({
   },
   callNote: {
     fontSize: 13, fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary, lineHeight: 19,
+    color: "#C8A870", lineHeight: 19,
   },
   callRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   callDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6 },
   callText: {
     flex: 1, fontSize: 13, fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary, lineHeight: 20,
+    color: "#C8A870", lineHeight: 20,
   },
 
   afterCard: {
@@ -484,11 +493,11 @@ const styles = StyleSheet.create({
   },
   afterTitle: {
     fontSize: 14, fontFamily: "Inter_700Bold",
-    color: Colors.text, letterSpacing: -0.2,
+    color: "#DDE8FF", letterSpacing: -0.2,
   },
   afterBody: {
     fontSize: 13, fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary, lineHeight: 20,
+    color: "#7A90B8", lineHeight: 20,
   },
 
   ragnaBtn: {

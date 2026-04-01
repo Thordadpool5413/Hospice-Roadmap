@@ -32,17 +32,32 @@ const stageLabels: Record<JourneyStage, string> = {
   after: "After Hospice",
 };
 
+const stageColors: Record<JourneyStage, string> = {
+  before: Colors.journeyBefore,
+  during: Colors.journeyDuring,
+  after: Colors.journeyAfter,
+};
+
 interface MenuItem {
   label: string;
   icon: string;
   route?: string;
   onPress?: () => void;
   destructive?: boolean;
+  color?: string;
+}
+
+interface MenuSection {
+  title: string;
+  subtitle?: string;
+  accent: string;
+  icon: string;
+  items: MenuItem[];
 }
 
 const FONT_SCALE_OPTIONS: { label: string; value: FontScale; display: string }[] = [
-  { label: "Normal", value: 1, display: "A" },
-  { label: "Large", value: 1.2, display: "A+" },
+  { label: "Normal",  value: 1,   display: "A"   },
+  { label: "Large",   value: 1.2, display: "A+"  },
   { label: "X-Large", value: 1.4, display: "A++" },
 ];
 
@@ -53,53 +68,61 @@ export default function MoreScreen() {
 
   const isPatient = user?.role === "patient";
 
-  const menuSections: { title: string; subtitle?: string; items: MenuItem[] }[] = [
+  const menuSections: MenuSection[] = [
     {
       title: "Your Profile",
-      subtitle: "Personalizes Ragna's guidance for your situation",
+      subtitle: "Personalizes Ragna for your situation",
+      accent: Colors.accentGoals,
+      icon: "user",
       items: [
-        { label: isPatient ? "My Profile" : "Patient Profile", icon: "user", route: "/patient-profile" },
-        { label: "Goals of Care", icon: "star", route: "/goals-of-care" },
-        { label: "Ragna Privacy Controls", icon: "shield", route: "/ragna-privacy" },
+        { label: isPatient ? "My Profile" : "Patient Profile", icon: "user", route: "/patient-profile", color: Colors.primary },
+        { label: "Goals of Care", icon: "heart", route: "/goals-of-care", color: Colors.accentGoals },
+        { label: "Ragna Privacy Controls", icon: "shield", route: "/ragna-privacy", color: Colors.accentReminders },
       ],
     },
     {
       title: "Daily Care",
-      subtitle: isPatient
-        ? "Tools for your daily care and wellbeing"
-        : "Tools to help with everyday caregiving",
+      subtitle: isPatient ? "Tools for your daily wellbeing" : "Tools for everyday caregiving",
+      accent: Colors.accentSymptom,
+      icon: "activity",
       items: [
-        { label: isPatient ? "Journal" : "Caregiver Journal", icon: "edit-3", route: "/journal" },
-        { label: "Reminders", icon: "bell", route: "/reminders" },
-        { label: "Symptom Tracker", icon: "bar-chart-2", route: "/symptom-tracker" },
+        { label: isPatient ? "Journal" : "Caregiver Journal", icon: "edit-3", route: "/journal", color: Colors.accentJournal },
+        { label: "Reminders", icon: "bell", route: "/reminders", color: Colors.accentReminders },
+        { label: "Symptom Tracker", icon: "activity", route: "/symptom-tracker", color: Colors.accentSymptom },
       ],
     },
     {
       title: "Clinical Reference",
-      subtitle: "Guidance tools for specific care situations",
+      subtitle: "Tools for specific care situations",
+      accent: Colors.accentSituation,
+      icon: "clipboard",
       items: [
-        { label: "Situation Finder", icon: "alert-circle", route: "/situation-finder" },
-        { label: "Medication Lookup", icon: "package", route: "/medication-lookup" },
+        { label: "Situation Finder", icon: "compass", route: "/situation-finder", color: Colors.accentSituation },
+        { label: "Medication Lookup", icon: "package", route: "/medication-lookup", color: Colors.primary },
         ...(!isPatient ? [
-          { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying" } as MenuItem,
-          { label: "Pain Assessment Tool", icon: "activity", route: "/painad" } as MenuItem,
+          { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying", color: Colors.journeyDuring } as MenuItem,
+          { label: "Pain Assessment Tool (PAINAD)", icon: "activity", route: "/painad", color: Colors.amber } as MenuItem,
         ] : []),
-        { label: "Hospice Interview Scorecard", icon: "check-square", route: "/hospice-interview" },
-        { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation" },
-        { label: "Advance Directives & State Forms", icon: "file-text", route: "/legal" },
-        { label: "Resource Library", icon: "book-open", route: "/resources" },
+        { label: "Hospice Interview Scorecard", icon: "check-square", route: "/hospice-interview", color: Colors.accentGoals },
+        { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation", color: Colors.accentCareWishes },
+        { label: "Advance Directives & State Forms", icon: "file-text", route: "/legal", color: Colors.accentJourney },
+        { label: "Resource Library", icon: "book-open", route: "/resources", color: Colors.textMuted },
       ],
     },
     {
       title: "Help & Support",
+      subtitle: "App settings and information",
+      accent: Colors.textMuted,
+      icon: "info",
       items: [
-        { label: "Manage Saved Data", icon: "database", route: "/data-controls" },
-        { label: "Contact Support", icon: "message-circle", route: "/support" },
-        { label: "Privacy Policy", icon: "shield", route: "/privacy" },
-        { label: "Terms of Use", icon: "file-text", route: "/terms" },
+        { label: "Manage Saved Data", icon: "database", route: "/data-controls", color: Colors.textMuted },
+        { label: "Contact Support", icon: "message-circle", route: "/support", color: Colors.primary },
+        { label: "Privacy Policy", icon: "shield", route: "/privacy", color: Colors.textMuted },
+        { label: "Terms of Use", icon: "file-text", route: "/terms", color: Colors.textMuted },
         {
           label: "About Hospice Roadmap",
           icon: "info",
+          color: Colors.textMuted,
           onPress: () =>
             Alert.alert(
               "About Hospice Roadmap",
@@ -109,6 +132,7 @@ export default function MoreScreen() {
         {
           label: "Medical Disclaimer",
           icon: "alert-circle",
+          color: Colors.error,
           onPress: () =>
             Alert.alert(
               "Medical Disclaimer",
@@ -128,523 +152,435 @@ export default function MoreScreen() {
     }
   };
 
+  const currentStage = user?.journeyStage ?? "during";
+
   return (
-    <View style={styles.container}>
-    <CosmicBackground />
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20),
-          paddingBottom: insets.bottom + 100,
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.title}>Your Tools</Text>
-
-      {/* Emergency Card Banner */}
-      <Pressable
-        onPress={() => router.push("/emergency-card" as any)}
-        style={({ pressed }) => [
-          styles.emergencyCard,
-          pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+    <View style={s.container}>
+      <CosmicBackground />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[
+          s.content,
+          {
+            paddingTop: insets.top + (Platform.OS === "web" ? 72 : 22),
+            paddingBottom: insets.bottom + 110,
+          },
         ]}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.emergencyCardIcon}>
-          <Feather name="credit-card" size={22} color="#fff" />
+        {/* ── Page title ── */}
+        <View style={s.pageHeader}>
+          <Text style={s.pageTitle}>Your Tools</Text>
+          <Text style={s.pageSubtitle}>Everything you need, in one place</Text>
         </View>
-        <View style={styles.emergencyCardText}>
-          <Text style={styles.emergencyCardTitle}>Emergency Information Card</Text>
-          <Text style={styles.emergencyCardSubtitle}>
-            Hospice contacts, medications & equipment — tap to call
-          </Text>
-        </View>
-        <Feather name="chevron-right" size={18} color={Colors.textMuted} />
-      </Pressable>
 
-      {/* Profile Card */}
-      {user && (
-        <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            <Feather name="user" size={24} color={Colors.text} />
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileRole}>
-              {roleLabels[user.role] ?? "User"}
-            </Text>
-            <Text style={styles.profileStage}>
-              {stageLabels[user.journeyStage]}
-            </Text>
-          </View>
-          <View style={styles.profileStageTag}>
-            <View
-              style={[
-                styles.stageDot,
-                {
-                  backgroundColor:
-                    user.journeyStage === "before"
-                      ? Colors.journeyBefore
-                      : user.journeyStage === "during"
-                      ? Colors.journeyDuring
-                      : Colors.journeyAfter,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Journey Stage Switcher */}
-      <View style={styles.stageSection}>
-        <Text style={styles.stageSectionTitle}>Journey Stage</Text>
-        <View style={styles.stageRow}>
-          {(["before", "during", "after"] as JourneyStage[]).map((stage) => (
-            <Pressable
-              key={stage}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                updateJourneyStage(stage);
-              }}
-              style={({ pressed }) => [
-                styles.stageBtn,
-                user?.journeyStage === stage && styles.stageBtnActive,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.stageBtnText,
-                  user?.journeyStage === stage && styles.stageBtnTextActive,
-                ]}
-              >
-                {stage === "before"
-                  ? "Before"
-                  : stage === "during"
-                  ? "During"
-                  : "After"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      {/* Role Switcher */}
-      <View style={styles.stageSection}>
-        <Text style={styles.stageSectionTitle}>I am a</Text>
-        <View style={styles.stageRow}>
-          {(["patient", "caregiver", "other"] as UserRole[]).map((role) => (
-            <Pressable
-              key={role}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                updateRole(role);
-              }}
-              style={({ pressed }) => [
-                styles.stageBtn,
-                user?.role === role && styles.stageBtnActive,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.stageBtnText,
-                  user?.role === role && styles.stageBtnTextActive,
-                ]}
-              >
-                {roleLabels[role]}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      {/* Accessibility */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Accessibility</Text>
-        <View style={styles.sectionList}>
-          {/* Text Size */}
-          <View style={[styles.menuItem, styles.a11yRow]}>
-            <View style={styles.menuIcon}>
-              <Feather name="type" size={18} color={Colors.primary} />
+        {/* ── Emergency Card Banner ── */}
+        <Pressable
+          onPress={() => router.push("/emergency-card" as any)}
+          style={({ pressed }) => [
+            s.emergencyCard,
+            pressed && { opacity: 0.87, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={s.emergencyLeft}>
+            <View style={s.emergencyIconWrap}>
+              <Feather name="phone-call" size={20} color="#FF6B6B" />
             </View>
-            <View style={styles.a11yLabelCol}>
-              <Text style={styles.menuLabel}>Text Size</Text>
-              <Text style={styles.a11ySubLabel}>Affects guidance content</Text>
+            <View style={s.emergencyText}>
+              <Text style={s.emergencyTitle}>Emergency Information Card</Text>
+              <Text style={s.emergencySub}>Hospice contacts, medications & equipment</Text>
             </View>
-            <View style={styles.fontSizeGroup}>
-              {FONT_SCALE_OPTIONS.map((opt) => (
+          </View>
+          <View style={s.emergencyChevron}>
+            <Feather name="chevron-right" size={17} color="rgba(255,107,107,0.70)" />
+          </View>
+        </Pressable>
+
+        {/* ── Profile Card ── */}
+        {user && (
+          <View style={s.profileCard}>
+            <View style={[s.profileAvatar, { backgroundColor: Colors.primary + "28" }]}>
+              <Feather name="user" size={22} color={Colors.primary} />
+            </View>
+            <View style={s.profileInfo}>
+              <Text style={s.profileRole}>{roleLabels[user.role] ?? "User"}</Text>
+              <Text style={s.profileStage}>{stageLabels[user.journeyStage]}</Text>
+            </View>
+            <View style={[s.stageIndicator, { backgroundColor: stageColors[user.journeyStage] + "22", borderColor: stageColors[user.journeyStage] + "50" }]}>
+              <View style={[s.stageDot, { backgroundColor: stageColors[user.journeyStage] }]} />
+              <Text style={[s.stageIndicatorText, { color: stageColors[user.journeyStage] }]}>
+                {user.journeyStage.charAt(0).toUpperCase() + user.journeyStage.slice(1)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* ── Journey Stage ── */}
+        <View style={s.switchSection}>
+          <Text style={s.switchLabel}>Journey Stage</Text>
+          <View style={s.switchRow}>
+            {(["before", "during", "after"] as JourneyStage[]).map((stage) => {
+              const active = user?.journeyStage === stage;
+              const color = stageColors[stage];
+              return (
                 <Pressable
-                  key={opt.value}
+                  key={stage}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setFontScale(opt.value);
+                    updateJourneyStage(stage);
                   }}
-                  style={[
-                    styles.fontSizeBtn,
-                    fontScale === opt.value && styles.fontSizeBtnActive,
+                  style={({ pressed }) => [
+                    s.switchBtn,
+                    active && { borderColor: color, backgroundColor: color + "18" },
+                    pressed && { opacity: 0.80 },
                   ]}
-                  accessibilityLabel={opt.label}
                 >
+                  <View style={[s.switchDot, { backgroundColor: active ? color : "transparent" }]} />
+                  <Text style={[s.switchBtnText, active && { color }]}>
+                    {stage === "before" ? "Before" : stage === "during" ? "During" : "After"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── Role Switcher ── */}
+        <View style={s.switchSection}>
+          <Text style={s.switchLabel}>I am a</Text>
+          <View style={s.switchRow}>
+            {(["patient", "caregiver", "other"] as UserRole[]).map((role) => {
+              const active = user?.role === role;
+              return (
+                <Pressable
+                  key={role}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    updateRole(role);
+                  }}
+                  style={({ pressed }) => [
+                    s.switchBtn,
+                    active && { borderColor: Colors.primary, backgroundColor: Colors.primary + "18" },
+                    pressed && { opacity: 0.80 },
+                  ]}
+                >
+                  <Text style={[s.switchBtnText, active && { color: Colors.primary }]}>
+                    {roleLabels[role]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── Accessibility ── */}
+        <View style={s.menuSection}>
+          <View style={s.sectionHeaderRow}>
+            <View style={[s.sectionIcon, { backgroundColor: Colors.primary + "20" }]}>
+              <Feather name="eye" size={14} color={Colors.primary} />
+            </View>
+            <Text style={s.sectionTitle}>Accessibility</Text>
+          </View>
+          <View style={s.menuCard}>
+            {/* Text Size */}
+            <View style={[s.menuRow, s.menuRowBorder]}>
+              <View style={[s.menuIconWrap, { backgroundColor: Colors.primary + "20" }]}>
+                <Feather name="type" size={16} color={Colors.primary} />
+              </View>
+              <View style={s.menuTextWrap}>
+                <Text style={s.menuLabel}>Text Size</Text>
+                <Text style={s.menuHint}>Affects guidance content</Text>
+              </View>
+              <View style={s.fontBtnGroup}>
+                {FONT_SCALE_OPTIONS.map((opt) => (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setFontScale(opt.value);
+                    }}
+                    style={[
+                      s.fontBtn,
+                      fontScale === opt.value && { backgroundColor: Colors.primary + "25", borderColor: Colors.primary },
+                    ]}
+                    accessibilityLabel={opt.label}
+                  >
+                    <Text style={[
+                      s.fontBtnText,
+                      fontScale === opt.value && { color: Colors.primary },
+                    ]}>{opt.display}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            {/* High Contrast */}
+            <View style={s.menuRow}>
+              <View style={[s.menuIconWrap, { backgroundColor: Colors.amber + "20" }]}>
+                <Feather name="sun" size={16} color={Colors.amber} />
+              </View>
+              <View style={s.menuTextWrap}>
+                <Text style={s.menuLabel}>High Contrast</Text>
+                <Text style={s.menuHint}>Stronger text and borders</Text>
+              </View>
+              <Switch
+                value={highContrast}
+                onValueChange={(val) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setHighContrast(val);
+                }}
+                trackColor={{ false: Colors.divider, true: Colors.primary + "80" }}
+                thumbColor={highContrast ? Colors.primary : "#AAB8D0"}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* ── Menu Sections ── */}
+        {menuSections.map((section) => (
+          <View key={section.title} style={s.menuSection}>
+            <View style={s.sectionHeaderRow}>
+              <View style={[s.sectionIcon, { backgroundColor: section.accent + "20" }]}>
+                <Feather name={section.icon as any} size={14} color={section.accent} />
+              </View>
+              <View style={s.sectionTitleWrap}>
+                <Text style={s.sectionTitle}>{section.title}</Text>
+                {section.subtitle && <Text style={s.sectionSubtitle}>{section.subtitle}</Text>}
+              </View>
+            </View>
+            <View style={s.menuCard}>
+              {section.items.map((item, idx) => (
+                <Pressable
+                  key={item.label}
+                  onPress={() => handleMenuPress(item)}
+                  style={({ pressed }) => [
+                    s.menuRow,
+                    idx < section.items.length - 1 && s.menuRowBorder,
+                    pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
+                  ]}
+                >
+                  <View style={[s.menuIconWrap, { backgroundColor: (item.color || Colors.primary) + "20" }]}>
+                    <Feather
+                      name={item.icon as any}
+                      size={16}
+                      color={item.destructive ? Colors.error : (item.color || Colors.primary)}
+                    />
+                  </View>
                   <Text
                     style={[
-                      styles.fontSizeBtnText,
-                      fontScale === opt.value && styles.fontSizeBtnTextActive,
+                      s.menuLabel,
+                      { flex: 1 },
+                      item.destructive && { color: Colors.error },
                     ]}
                   >
-                    {opt.display}
+                    {item.label}
                   </Text>
+                  <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
                 </Pressable>
               ))}
             </View>
           </View>
+        ))}
 
-          {/* Divider */}
-          <View style={styles.menuItemBorder} />
-
-          {/* High Contrast */}
-          <View style={styles.menuItem}>
-            <View style={styles.menuIcon}>
-              <Feather name="circle" size={18} color={Colors.primary} />
-            </View>
-            <View style={styles.a11yLabelCol}>
-              <Text style={styles.menuLabel}>High Contrast</Text>
-              <Text style={styles.a11ySubLabel}>Stronger text and borders</Text>
-            </View>
-            <Switch
-              value={highContrast}
-              onValueChange={(val) => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setHighContrast(val);
-              }}
-              trackColor={{ false: Colors.divider, true: Colors.primary }}
-              thumbColor="#fff"
-            />
+        {/* ── Stats ── */}
+        <View style={s.statsCard}>
+          <View style={s.statItem}>
+            <Text style={s.statNum}>{user?.savedResources.length ?? 0}</Text>
+            <Text style={s.statLabel}>Saved Articles</Text>
+          </View>
+          <View style={s.statDivider} />
+          <View style={s.statItem}>
+            <Text style={s.statNum}>{user?.savedProviders.length ?? 0}</Text>
+            <Text style={s.statLabel}>Saved Providers</Text>
           </View>
         </View>
-      </View>
 
-      {/* Menu Sections */}
-      {menuSections.map((section) => (
-        <View key={section.title} style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            {section.subtitle && (
-              <Text style={styles.sectionSubtitle}>{section.subtitle}</Text>
-            )}
-          </View>
-          <View style={styles.sectionList}>
-            {section.items.map((item, idx) => (
-              <Pressable
-                key={item.label}
-                onPress={() => handleMenuPress(item)}
-                style={({ pressed }) => [
-                  styles.menuItem,
-                  idx < section.items.length - 1 && styles.menuItemBorder,
-                  pressed && { backgroundColor: Colors.backgroundSecondary },
-                ]}
-              >
-                <View style={styles.menuIcon}>
-                  <Feather
-                    name={item.icon as any}
-                    size={18}
-                    color={item.destructive ? Colors.error : Colors.primary}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.menuLabel,
-                    item.destructive && styles.menuLabelDestructive,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-                <Feather name="chevron-right" size={16} color={Colors.textSubtle} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      ))}
-
-      {/* Saved Count */}
-      <View style={styles.savedSection}>
-        <View style={styles.savedRow}>
-          <View style={styles.savedItem}>
-            <Text style={styles.savedCount}>{user?.savedResources.length ?? 0}</Text>
-            <Text style={styles.savedLabel}>Saved Articles</Text>
-          </View>
-          <View style={styles.savedDivider} />
-          <View style={styles.savedItem}>
-            <Text style={styles.savedCount}>{user?.savedProviders.length ?? 0}</Text>
-            <Text style={styles.savedLabel}>Saved Providers</Text>
-          </View>
-        </View>
-      </View>
-
-      <Text style={styles.versionText}>Hospice Roadmap v1.0.0</Text>
-    </ScrollView>
+        <Text style={s.versionText}>Hospice Roadmap v1.0.0</Text>
+      </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingHorizontal: 20,
-    gap: 20,
-  },
-  title: {
-    fontSize: 28,
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#030A18" },
+  content: { paddingHorizontal: 18, gap: 18 },
+
+  pageHeader: { gap: 4 },
+  pageTitle: {
+    fontSize: 30,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.6,
+    color: "#EEF4FF",
+    letterSpacing: -0.8,
   },
+  pageSubtitle: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: "#5A78A8",
+    lineHeight: 20,
+  },
+
+  emergencyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(80, 10, 10, 0.55)",
+    borderRadius: 17,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: "rgba(220, 60, 60, 0.35)",
+    borderLeftWidth: 3,
+    borderLeftColor: "#C03040",
+    gap: 12,
+  },
+  emergencyLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
+  emergencyIconWrap: {
+    width: 42, height: 42, borderRadius: 12,
+    backgroundColor: "rgba(255, 107, 107, 0.18)",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  emergencyText: { flex: 1, gap: 2 },
+  emergencyTitle: {
+    fontSize: 14, fontFamily: "Inter_700Bold", color: "#F0F4FF", letterSpacing: -0.2,
+  },
+  emergencySub: {
+    fontSize: 11, fontFamily: "Inter_400Regular", color: "#AA8890", lineHeight: 16,
+  },
+  emergencyChevron: {
+    width: 28, height: 28, borderRadius: 8,
+    backgroundColor: "rgba(255, 107, 107, 0.12)",
+    alignItems: "center", justifyContent: "center",
+  },
+
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 16,
+    backgroundColor: "rgba(14, 22, 58, 0.90)",
+    borderRadius: 17,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: "rgba(70, 110, 200, 0.22)",
   },
-  avatarContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+  profileAvatar: {
+    width: 50, height: 50, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
-  profileInfo: {
-    flex: 1,
-    gap: 3,
-  },
+  profileInfo: { flex: 1, gap: 3 },
   profileRole: {
-    fontSize: 17,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.3,
+    fontSize: 17, fontFamily: "Inter_700Bold",
+    color: "#EEF4FF", letterSpacing: -0.3,
   },
   profileStage: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    fontSize: 13, fontFamily: "Inter_400Regular", color: "#6A85AE",
   },
-  profileStageTag: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stageDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  stageSection: {
-    gap: 10,
-  },
-  stageSectionTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  stageRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  stageBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceMid,
-    alignItems: "center",
+  stageIndicator: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
   },
-  stageBtnActive: {
-    backgroundColor: Colors.surfaceLight,
-    borderColor: Colors.primary,
+  stageDot: { width: 6, height: 6, borderRadius: 3 },
+  stageIndicatorText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+
+  switchSection: { gap: 8 },
+  switchLabel: {
+    fontSize: 11, fontFamily: "Inter_700Bold",
+    color: "#4A6090", textTransform: "uppercase", letterSpacing: 1.1,
+    paddingLeft: 2,
   },
-  stageBtnText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
+  switchRow: { flexDirection: "row", gap: 8 },
+  switchBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 11, borderRadius: 13,
+    backgroundColor: "rgba(14, 22, 58, 0.88)",
+    borderWidth: 1, borderColor: "rgba(60, 90, 170, 0.28)",
   },
-  stageBtnTextActive: {
-    color: Colors.primary,
+  switchDot: { width: 6, height: 6, borderRadius: 3 },
+  switchBtnText: {
+    fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#6A85AE",
   },
-  section: {
-    gap: 8,
+
+  menuSection: { gap: 10 },
+  sectionHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  sectionIcon: {
+    width: 26, height: 26, borderRadius: 8,
+    alignItems: "center", justifyContent: "center",
   },
-  sectionHeader: {
-    gap: 2,
-  },
+  sectionTitleWrap: { gap: 1 },
   sectionTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontSize: 13, fontFamily: "Inter_700Bold",
+    color: "#B0C0E0", letterSpacing: -0.1,
   },
   sectionSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    fontSize: 11, fontFamily: "Inter_400Regular", color: "#4A6090",
   },
-  sectionList: {
-    backgroundColor: Colors.surfaceMid,
+
+  menuCard: {
+    backgroundColor: "rgba(12, 20, 55, 0.90)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: "rgba(60, 90, 170, 0.22)",
     overflow: "hidden",
   },
-  menuItem: {
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    padding: 16,
+    gap: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  menuItemBorder: {
+  menuRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
+    borderBottomColor: "rgba(40, 60, 130, 0.35)",
   },
-  menuIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: "center",
-    justifyContent: "center",
+  menuIconWrap: {
+    width: 34, height: 34, borderRadius: 9,
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
+  menuTextWrap: { flex: 1, gap: 1 },
   menuLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: Colors.text,
+    fontSize: 14, fontFamily: "Inter_500Medium", color: "#D8E4FF", letterSpacing: -0.1,
   },
-  menuLabelDestructive: {
-    color: Colors.error,
+  menuHint: {
+    fontSize: 11, fontFamily: "Inter_400Regular", color: "#4A6090",
   },
-  savedSection: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.divider,
-    padding: 16,
+
+  fontBtnGroup: { flexDirection: "row", gap: 5 },
+  fontBtn: {
+    minWidth: 38, height: 34, borderRadius: 9,
+    backgroundColor: "rgba(20, 32, 80, 0.90)",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(60, 90, 170, 0.30)",
+    paddingHorizontal: 8,
   },
-  savedRow: {
+  fontBtnText: {
+    fontSize: 12, fontFamily: "Inter_700Bold", color: "#6A85AE",
+  },
+
+  statsCard: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(12, 20, 55, 0.88)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(60, 90, 170, 0.22)",
+    padding: 18,
   },
-  savedItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
+  statItem: { flex: 1, alignItems: "center", gap: 4 },
+  statNum: {
+    fontSize: 28, fontFamily: "Inter_700Bold",
+    color: Colors.primary, letterSpacing: -0.5,
   },
-  savedCount: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: Colors.primary,
-    letterSpacing: -0.5,
+  statLabel: {
+    fontSize: 12, fontFamily: "Inter_400Regular", color: "#4A6090",
   },
-  savedLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+  statDivider: {
+    width: 1, height: 44, backgroundColor: "rgba(60, 90, 170, 0.30)",
+    marginHorizontal: 12,
   },
-  savedDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: Colors.divider,
-  },
+
   versionText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
-    textAlign: "center",
-    paddingBottom: 8,
-  },
-  a11yRow: {
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  a11yLabelCol: {
-    flex: 1,
-    gap: 2,
-  },
-  a11ySubLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  fontSizeGroup: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  fontSizeBtn: {
-    minWidth: 40,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.divider,
-    paddingHorizontal: 10,
-  },
-  fontSizeBtnActive: {
-    backgroundColor: Colors.primaryPale,
-    borderColor: Colors.primary,
-  },
-  fontSizeBtnText: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: Colors.textSecondary,
-  },
-  fontSizeBtnTextActive: {
-    color: Colors.primaryDark,
-  },
-  emergencyCard: {
-    backgroundColor: Colors.errorPale,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderWidth: 1,
-    borderColor: Colors.error + "40",
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.error,
-  },
-  emergencyCardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.error + "28",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emergencyCardText: {
-    flex: 1,
-  },
-  emergencyCardTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-    letterSpacing: -0.2,
-  },
-  emergencyCardSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    marginTop: 2,
-    lineHeight: 17,
+    fontSize: 11, fontFamily: "Inter_400Regular",
+    color: "#2A3A60", textAlign: "center", paddingBottom: 8,
   },
 });
