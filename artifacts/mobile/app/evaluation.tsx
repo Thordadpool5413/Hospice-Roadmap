@@ -177,7 +177,7 @@ export default function EvaluationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: "#030A18",
   },
   content: {
     paddingHorizontal: 20,

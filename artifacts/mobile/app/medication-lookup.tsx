@@ -405,7 +405,7 @@ export default function MedicationLookupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: "#030A18",
   },
   header: {
     flexDirection: "row",
@@ -414,14 +414,16 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-    backgroundColor: Colors.background,
+    borderBottomColor: "rgba(40,65,140,0.40)",
+    backgroundColor: "rgba(3,10,24,0.97)",
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: "rgba(14,22,55,0.90)",
+    borderWidth: 1,
+    borderColor: "rgba(60,90,170,0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -432,13 +434,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    color: "#EEF4FF",
     letterSpacing: -0.4,
   },
   headerSub: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: "#5A78A8",
   },
   scroll: { flex: 1 },
   scrollContent: {
@@ -447,10 +449,10 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   searchCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(12,20,55,0.90)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55,85,170,0.22)",
     overflow: "hidden",
   },
   searchRow: {
@@ -466,14 +468,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontFamily: "Inter_400Regular",
-    color: Colors.text,
+    color: "#EEF4FF",
     paddingVertical: Platform.OS === "ios" ? 14 : 12,
     paddingRight: 4,
   },
   searchHint: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     paddingHorizontal: 14,
     paddingBottom: 12,
     lineHeight: 16,
@@ -489,13 +491,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
+    color: "#7A90B8",
     letterSpacing: 0.1,
   },
   sectionSub: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: "#5A78A8",
     marginTop: -4,
   },
   commonGrid: {
@@ -507,17 +509,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(12,20,55,0.90)",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55,85,170,0.22)",
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   commonChipText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: Colors.text,
+    color: "#EEF4FF",
   },
   categoryGrid: {
     flexDirection: "row",
@@ -528,7 +530,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: Colors.surfaceLight,
+    backgroundColor: "rgba(14,22,55,0.80)",
     borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 10,
@@ -539,10 +541,10 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
   },
   resultCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(12,20,55,0.90)",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55,85,170,0.22)",
     padding: 14,
     gap: 0,
   },
@@ -559,7 +561,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+    color: "#EEF4FF",
     letterSpacing: -0.2,
   },
   hospiceBadge: {
@@ -581,7 +583,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   ttyPill: {
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: "rgba(60,120,255,0.12)",
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -594,14 +596,14 @@ const styles = StyleSheet.create({
   rxcuiText: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     flex: 1,
   },
   hospiceDetail: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: Colors.divider,
+    borderTopColor: "rgba(55,85,170,0.15)",
     gap: 8,
   },
   hospiceUseRow: {
@@ -610,7 +612,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   useChip: {
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: "rgba(8,16,45,0.95)",
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -618,12 +620,12 @@ const styles = StyleSheet.create({
   useChipText: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
+    color: "#7A90B8",
   },
   hospiceNote: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
+    color: "#7A90B8",
     lineHeight: 20,
   },
   noResults: {
@@ -634,12 +636,12 @@ const styles = StyleSheet.create({
   noResultsTitle: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.textMuted,
+    color: "#5A78A8",
   },
   noResultsSub: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     textAlign: "center",
     lineHeight: 19,
     maxWidth: 280,
@@ -648,17 +650,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     alignItems: "flex-start",
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(12,20,55,0.90)",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55,85,170,0.22)",
   },
   disclaimerText: {
     flex: 1,
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     lineHeight: 16,
   },
 });

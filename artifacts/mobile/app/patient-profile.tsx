@@ -254,7 +254,7 @@ export default function PatientProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: "#030A18",
   },
   header: {
     flexDirection: "row",
@@ -263,7 +263,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
+    borderBottomColor: "rgba(40,65,140,0.40)",
+    backgroundColor: "rgba(3,10,24,0.97)",
   },
   backBtn: {
     width: 40,
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    color: "#EEF4FF",
     letterSpacing: -0.3,
   },
   saveBtn: {
@@ -300,17 +301,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: "rgba(60,120,255,0.10)",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: Colors.primary + "30",
+    borderColor: "rgba(60,120,255,0.22)",
   },
   bannerIcon: {
     width: 38,
     height: 38,
     borderRadius: 11,
-    backgroundColor: Colors.primary + "20",
+    backgroundColor: "rgba(60,120,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -322,12 +323,12 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    color: "#EEF4FF",
   },
   bannerBody: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
+    color: "#7A90B8",
     lineHeight: 19,
   },
   fieldGroup: {
@@ -336,19 +337,19 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+    color: "#EEF4FF",
     letterSpacing: -0.1,
   },
   fieldInput: {
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(8,16,45,0.95)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(50,75,160,0.30)",
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
-    color: Colors.text,
+    color: "#EEF4FF",
     minHeight: 48,
   },
   fieldInputMulti: {
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   fieldHint: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: "#5A78A8",
     lineHeight: 17,
   },
   clearBtn: {
@@ -373,6 +374,6 @@ const styles = StyleSheet.create({
   clearBtnText: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: "#5A78A8",
   },
 });

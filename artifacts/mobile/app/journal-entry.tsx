@@ -332,7 +332,7 @@ export default function JournalEntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: "#030A18",
   },
   topBar: {
     flexDirection: "row",
@@ -341,14 +341,16 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-    backgroundColor: Colors.background,
+    borderBottomColor: "rgba(40,65,140,0.40)",
+    backgroundColor: "rgba(3,10,24,0.97)",
   },
   headerBtn: {
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: "rgba(14,22,55,0.90)",
+    borderWidth: 1,
+    borderColor: "rgba(60,90,170,0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -356,7 +358,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    color: "#EEF4FF",
     letterSpacing: -0.3,
   },
   headerRight: {
@@ -371,7 +373,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   saveBtnDisabled: {
-    backgroundColor: Colors.divider,
+    backgroundColor: "rgba(55,85,170,0.25)",
   },
   saveBtnText: {
     fontSize: 14,
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   saveBtnTextDisabled: {
-    color: Colors.textSubtle,
+    color: "#3A5080",
   },
   scroll: { flex: 1 },
   scrollContent: {
@@ -389,7 +391,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.textMuted,
+    color: "#5A78A8",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -406,42 +408,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: "rgba(8,16,45,0.95)",
     borderWidth: 1.5,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55,85,170,0.22)",
   },
   typeChipText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
+    color: "#5A78A8",
   },
   field: { gap: 8 },
   titleInput: {
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(8,16,45,0.95)",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(50,75,160,0.30)",
     padding: 14,
     fontSize: 16,
     fontFamily: "Inter_500Medium",
-    color: Colors.text,
+    color: "#EEF4FF",
   },
   bodyInput: {
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(8,16,45,0.95)",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(50,75,160,0.30)",
     padding: 14,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
-    color: Colors.text,
+    color: "#EEF4FF",
     minHeight: 160,
     lineHeight: 22,
   },
   charCount: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     textAlign: "right",
   },
   // ── Tag picker ──
@@ -454,7 +456,7 @@ const styles = StyleSheet.create({
   tagHint: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: "#5A78A8",
     marginTop: -4,
   },
   tagClearText: {
@@ -474,18 +476,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(12,20,55,0.90)",
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55,85,170,0.22)",
   },
   tagChipActive: {
     borderColor: Colors.primary,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: "rgba(60,120,255,0.12)",
   },
   tagChipText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
+    color: "#5A78A8",
   },
   tagChipTextActive: {
     color: Colors.primary,
@@ -496,27 +498,27 @@ const styles = StyleSheet.create({
   moodRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   moodBtn: {
     flex: 1, minWidth: 56, alignItems: "center", paddingVertical: 10,
-    borderRadius: 12, borderWidth: 1.5, borderColor: Colors.divider,
-    backgroundColor: Colors.surface, gap: 4,
+    borderRadius: 12, borderWidth: 1.5, borderColor: "rgba(55,85,170,0.22)",
+    backgroundColor: "rgba(12,20,55,0.90)", gap: 4,
   },
   moodEmoji: { fontSize: 24 },
   moodLabel: {
     fontSize: 10, fontFamily: "Inter_500Medium",
-    color: Colors.textMuted, textAlign: "center",
+    color: "#5A78A8", textAlign: "center",
   },
   // ── Tips ──
   tipsBox: {
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: "rgba(60,120,255,0.08)",
     borderRadius: 14,
     padding: 14,
     gap: 8,
     borderWidth: 1,
-    borderColor: Colors.primary + "25",
+    borderColor: "rgba(60,120,255,0.20)",
   },
   tipsTitle: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.primaryDark,
+    color: "#A0C0FF",
     marginBottom: 2,
   },
   tipRow: {
@@ -527,7 +529,7 @@ const styles = StyleSheet.create({
   tipText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
+    color: "#7A90B8",
     lineHeight: 18,
     flex: 1,
   },
