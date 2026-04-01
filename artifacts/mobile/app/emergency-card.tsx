@@ -291,7 +291,7 @@ export default function EmergencyCardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: "#030A18",
   },
   header: {
     flexDirection: "row",
@@ -300,14 +300,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-    backgroundColor: Colors.surface,
+    borderBottomColor: "rgba(40,65,140,0.40)",
+    backgroundColor: "rgba(3,10,24,0.97)",
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: "rgba(14,22,55,0.90)",
+    borderWidth: 1,
+    borderColor: "rgba(60,90,170,0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -315,7 +317,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: "rgba(60,120,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -326,13 +328,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontFamily: "Inter_700Bold",
-    color: Colors.text,
+    color: "#EEF4FF",
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
+    color: "#5A78A8",
     marginTop: 1,
   },
   scroll: {
@@ -346,7 +348,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    backgroundColor: Colors.amberPale,
+    backgroundColor: "rgba(200,150,50,0.10)",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
@@ -364,7 +366,7 @@ const styles = StyleSheet.create({
   setupBannerBody: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
+    color: "#7A90B8",
     lineHeight: 18,
   },
   section: {
@@ -382,16 +384,16 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   card: {
-    backgroundColor: Colors.surface,
+    backgroundColor: "rgba(12,20,55,0.90)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(55,85,170,0.22)",
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
   },
   contactRow: {
     flexDirection: "row",
@@ -413,25 +415,25 @@ const styles = StyleSheet.create({
   contactLabel: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
+    color: "#5A78A8",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
   contactValue: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
+    color: "#EEF4FF",
   },
   contactValueEmpty: {
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     fontSize: 13,
   },
   callChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: Colors.errorPale,
+    backgroundColor: "rgba(235,80,80,0.12)",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -443,7 +445,7 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: 1,
-    backgroundColor: Colors.divider,
+    backgroundColor: "rgba(55,85,170,0.15)",
     marginHorizontal: 14,
   },
   infoRow: {
@@ -466,18 +468,18 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 11,
     fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
+    color: "#5A78A8",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
   infoValue: {
     fontSize: 15,
     fontFamily: "Inter_500Medium",
-    color: Colors.text,
+    color: "#EEF4FF",
   },
   infoValueEmpty: {
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     fontSize: 13,
   },
   textBlock: {
@@ -486,7 +488,7 @@ const styles = StyleSheet.create({
   textBlockContent: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
+    color: "#7A90B8",
     lineHeight: 21,
   },
   emptyBlock: {
@@ -496,7 +498,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     fontStyle: "italic",
   },
   guidanceLink: {
@@ -508,7 +510,7 @@ const styles = StyleSheet.create({
   guidanceLinkText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
-    color: Colors.text,
+    color: "#EEF4FF",
   },
   privacyNote: {
     flexDirection: "row",
@@ -520,7 +522,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: Colors.textSubtle,
+    color: "#3A5080",
     lineHeight: 16,
   },
 });
