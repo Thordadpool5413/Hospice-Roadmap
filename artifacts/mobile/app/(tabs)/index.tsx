@@ -14,191 +14,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-
-// ─── Star field data ──────────────────────────────────────────────────────────
-
-const STARS: Array<{ top: string; left: string; size: number; opacity: number }> = [
-  // Upper sky — dense
-  { top: "2%",  left: "5%",  size: 1.5, opacity: 0.80 },
-  { top: "1%",  left: "18%", size: 1,   opacity: 0.55 },
-  { top: "4%",  left: "32%", size: 2,   opacity: 0.85 },
-  { top: "2%",  left: "48%", size: 1,   opacity: 0.50 },
-  { top: "3%",  left: "62%", size: 1.5, opacity: 0.65 },
-  { top: "1%",  left: "78%", size: 2,   opacity: 0.90 },
-  { top: "5%",  left: "90%", size: 1,   opacity: 0.45 },
-  { top: "7%",  left: "12%", size: 1,   opacity: 0.60 },
-  { top: "8%",  left: "27%", size: 1.5, opacity: 0.75 },
-  { top: "6%",  left: "55%", size: 1,   opacity: 0.50 },
-  { top: "9%",  left: "70%", size: 2,   opacity: 0.70 },
-  { top: "7%",  left: "85%", size: 1.5, opacity: 0.60 },
-  // Upper-mid
-  { top: "12%", left: "3%",  size: 1.5, opacity: 0.65 },
-  { top: "11%", left: "22%", size: 1,   opacity: 0.45 },
-  { top: "14%", left: "42%", size: 2,   opacity: 0.80 },
-  { top: "10%", left: "60%", size: 1,   opacity: 0.55 },
-  { top: "13%", left: "75%", size: 1.5, opacity: 0.85 },
-  { top: "15%", left: "92%", size: 1,   opacity: 0.40 },
-  { top: "18%", left: "8%",  size: 1,   opacity: 0.60 },
-  { top: "17%", left: "30%", size: 1.5, opacity: 0.50 },
-  { top: "19%", left: "50%", size: 2,   opacity: 0.75 },
-  { top: "16%", left: "68%", size: 1,   opacity: 0.85 },
-  { top: "20%", left: "83%", size: 1.5, opacity: 0.45 },
-  // Around golden streak — sparser (it's bright there)
-  { top: "24%", left: "14%", size: 1,   opacity: 0.35 },
-  { top: "22%", left: "38%", size: 1.5, opacity: 0.45 },
-  { top: "26%", left: "58%", size: 1,   opacity: 0.30 },
-  { top: "23%", left: "79%", size: 2,   opacity: 0.40 },
-  // Below mid — moderate density
-  { top: "32%", left: "6%",  size: 1.5, opacity: 0.55 },
-  { top: "30%", left: "25%", size: 1,   opacity: 0.45 },
-  { top: "35%", left: "47%", size: 2,   opacity: 0.65 },
-  { top: "31%", left: "66%", size: 1,   opacity: 0.70 },
-  { top: "34%", left: "88%", size: 1.5, opacity: 0.50 },
-  { top: "38%", left: "15%", size: 1,   opacity: 0.55 },
-  { top: "40%", left: "40%", size: 1.5, opacity: 0.60 },
-  { top: "37%", left: "62%", size: 1,   opacity: 0.45 },
-  { top: "42%", left: "80%", size: 2,   opacity: 0.65 },
-  // Lower
-  { top: "46%", left: "4%",  size: 1,   opacity: 0.50 },
-  { top: "48%", left: "28%", size: 1.5, opacity: 0.55 },
-  { top: "50%", left: "52%", size: 1,   opacity: 0.70 },
-  { top: "47%", left: "74%", size: 2,   opacity: 0.60 },
-  { top: "54%", left: "16%", size: 1.5, opacity: 0.45 },
-  { top: "56%", left: "42%", size: 1,   opacity: 0.65 },
-  { top: "58%", left: "70%", size: 1.5, opacity: 0.55 },
-  { top: "62%", left: "8%",  size: 1,   opacity: 0.40 },
-  { top: "65%", left: "48%", size: 2,   opacity: 0.50 },
-  { top: "68%", left: "84%", size: 1,   opacity: 0.45 },
-];
-
-// ─── Cosmic Background ────────────────────────────────────────────────────────
-
-function CosmicBackground() {
-  return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-
-      {/* ── 1. Deep space base ── */}
-      <LinearGradient
-        colors={["#060010", "#080018", "#070A22", "#060C1E"]}
-        locations={[0, 0.25, 0.60, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
-
-      {/* ── 2. Blue-violet upper nebula (large, centered upper area) ── */}
-      <View style={bg.nebulaCenterTop} />
-
-      {/* ── 3. Blue glow - upper left spread ── */}
-      <View style={bg.nebulaLeftBlue} />
-
-      {/* ── 4. Golden point source - upper right ── */}
-      <View style={bg.goldenPoint} />
-      <View style={bg.goldenPointCore} />
-
-      {/* ── 5. GOLDEN HORIZONTAL STREAK — key visual element ── */}
-      {/* Wide soft glow band — vertical gradient makes it a diffuse horizontal bar */}
-      <LinearGradient
-        colors={["transparent", "rgba(210, 125, 18, 0.30)", "rgba(235, 155, 25, 0.26)", "rgba(210, 125, 18, 0.30)", "transparent"]}
-        locations={[0, 0.3, 0.5, 0.7, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={bg.goldenStreakV}
-      />
-      {/* Sharp bright centre line */}
-      <LinearGradient
-        colors={["transparent", "rgba(255, 165, 30, 0.55)", "rgba(255, 180, 40, 0.65)", "rgba(255, 165, 30, 0.55)", "transparent"]}
-        locations={[0, 0.20, 0.50, 0.80, 1]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={bg.goldenStreakH}
-      />
-
-      {/* ── 6. Stars ── */}
-      {STARS.map((s, i) => (
-        <View
-          key={i}
-          style={{
-            position: "absolute",
-            top: s.top as any,
-            left: s.left as any,
-            width: s.size,
-            height: s.size,
-            borderRadius: s.size / 2,
-            backgroundColor: "#FFFFFF",
-            opacity: s.opacity,
-          }}
-        />
-      ))}
-
-      {/* ── 7. Bottom fade for legibility ── */}
-      <LinearGradient
-        colors={["transparent", "rgba(5, 6, 18, 0.55)"]}
-        style={bg.bottomFade}
-      />
-    </View>
-  );
-}
-
-const bg = StyleSheet.create({
-  // Large centered blue-violet nebula cloud (upper 40% of screen)
-  nebulaCenterTop: {
-    position: "absolute",
-    top: -160, left: -100,
-    width: 500, height: 500,
-    borderRadius: 250,
-    backgroundColor: "rgba(25, 55, 210, 0.20)",
-    transform: [{ scaleX: 1.4 }, { scaleY: 0.9 }],
-  },
-  // Blue spread from upper left
-  nebulaLeftBlue: {
-    position: "absolute",
-    top: 30, left: -60,
-    width: 280, height: 280,
-    borderRadius: 140,
-    backgroundColor: "rgba(30, 65, 195, 0.14)",
-  },
-  // Golden point light source — upper right quadrant (warm, diffuse)
-  goldenPoint: {
-    position: "absolute",
-    top: -60, right: -80,
-    width: 380, height: 380,
-    borderRadius: 190,
-    backgroundColor: "rgba(215, 130, 20, 0.11)",
-    transform: [{ scaleX: 1.3 }, { scaleY: 0.85 }],
-  },
-  goldenPointCore: {
-    position: "absolute",
-    top: 15, right: 15,
-    width: 160, height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(250, 165, 35, 0.10)",
-  },
-  // The golden horizontal streak — positioned just below hero card (~37% from top)
-  goldenStreakH: {
-    position: "absolute",
-    top: "36%",
-    left: 0, right: 0,
-    height: 2,
-  },
-  goldenStreakV: {
-    position: "absolute",
-    top: "30%",
-    left: 0, right: 0,
-    height: 140,
-  },
-  bottomFade: {
-    position: "absolute",
-    bottom: 0, left: 0, right: 0,
-    height: 250,
-  },
-});
 
 // ─── Role config ──────────────────────────────────────────────────────────────
 
 type ActionItem = {
   label: string; icon: string; route: string;
-  color: string; tint?: boolean;
+  color: string; accent?: string;
 };
 type ResourceItem = {
   label: string; sub: string; icon: string; route: string; color: string;
@@ -217,169 +41,185 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
     title: "Caregiver Home",
     contextLine: (n) => n ? `Supporting ${n} today` : "Supporting your loved one today",
     heroTitle: "What is happening right now?",
-    heroSubtitle: "Get step-by-step help for what is happening right now",
+    heroSubtitle: "Get step-by-step help for any situation",
     keyActions: [
-      { label: "Symptom Log",   icon: "plus-square", route: "/symptom-tracker", color: Colors.accentSymptom,   tint: false },
-      { label: "Journal",       icon: "book-open",   route: "/journal",          color: Colors.accentJournal,   tint: true  },
-      { label: "Goals of Care", icon: "heart",       route: "/goals-of-care",    color: Colors.accentGoals,     tint: false },
-      { label: "Reminders",     icon: "bell",        route: "/reminders",        color: Colors.accentReminders, tint: false },
+      { label: "Symptom Log",   icon: "activity",  route: "/symptom-tracker", color: Colors.accentSymptom },
+      { label: "Journal",       icon: "edit-3",     route: "/journal",          color: Colors.accentJournal },
+      { label: "Goals of Care", icon: "heart",      route: "/goals-of-care",    color: Colors.accentGoals },
+      { label: "Reminders",     icon: "bell",       route: "/reminders",        color: Colors.accentReminders },
     ],
     resources: [
-      { label: "Situation Guide", sub: "What do I do now?",            icon: "book-open", route: "/situation-finder", color: Colors.accentSituation  },
-      { label: "Care Wishes",     sub: "Review & document care wishes", icon: "heart",     route: "/goals-of-care",    color: Colors.accentCareWishes },
+      { label: "Situation Guide", sub: "What do I do now?",            icon: "compass",   route: "/situation-finder", color: Colors.accentSituation  },
+      { label: "Care Wishes",     sub: "Review & document care wishes", icon: "star",      route: "/goals-of-care",    color: Colors.accentCareWishes },
     ],
   },
   patient: {
-    title: "Patient Home",
+    title: "Your Care Today",
     contextLine: () => "Your care and comfort today",
     heroTitle: "How are you feeling right now?",
-    heroSubtitle: "Get step-by-step help for symptoms, comfort, and next steps",
+    heroSubtitle: "Get help, answers, and next steps",
     keyActions: [
-      { label: "Symptom Log",  icon: "plus-square", route: "/symptom-tracker", color: Colors.accentSymptom,    tint: false },
-      { label: "Journal",      icon: "book-open",   route: "/journal",          color: Colors.accentJournal,    tint: true  },
-      { label: "Care Wishes",  icon: "heart",       route: "/goals-of-care",    color: Colors.accentCareWishes, tint: false },
-      { label: "Reminders",    icon: "bell",        route: "/reminders",        color: Colors.accentReminders,  tint: false },
+      { label: "Symptom Log",  icon: "activity",  route: "/symptom-tracker", color: Colors.accentSymptom },
+      { label: "Journal",      icon: "edit-3",     route: "/journal",          color: Colors.accentJournal },
+      { label: "Care Wishes",  icon: "heart",      route: "/goals-of-care",    color: Colors.accentCareWishes },
+      { label: "Reminders",    icon: "bell",       route: "/reminders",        color: Colors.accentReminders },
     ],
     resources: [
-      { label: "Situation Guide", sub: "What do I do now?",      icon: "book-open", route: "/situation-finder", color: Colors.accentSituation },
-      { label: "Goals of Care",   sub: "Review what matters most", icon: "star",    route: "/goals-of-care",    color: Colors.accentGoals     },
+      { label: "Situation Guide", sub: "What do I do now?",      icon: "compass", route: "/situation-finder", color: Colors.accentSituation },
+      { label: "Goals of Care",   sub: "Review what matters most", icon: "star",  route: "/goals-of-care",    color: Colors.accentGoals     },
     ],
   },
   other: {
-    title: "Support Home",
+    title: "Hospice Support",
     contextLine: () => "Helping someone through hospice",
     heroTitle: "What do you need help with today?",
-    heroSubtitle: "Get step-by-step help, guidance, and next steps",
+    heroSubtitle: "Guidance, answers, and next steps",
     keyActions: [
-      { label: "Journal",         icon: "book-open",  route: "/journal",          color: Colors.accentJournal,   tint: true  },
-      { label: "Goals of Care",   icon: "heart",      route: "/goals-of-care",    color: Colors.accentGoals,     tint: false },
-      { label: "Reminders",       icon: "bell",       route: "/reminders",        color: Colors.accentReminders, tint: false },
-      { label: "Situation Guide", icon: "book-open",  route: "/situation-finder", color: Colors.accentSituation, tint: false },
+      { label: "Journal",         icon: "edit-3",    route: "/journal",          color: Colors.accentJournal },
+      { label: "Goals of Care",   icon: "heart",     route: "/goals-of-care",    color: Colors.accentGoals },
+      { label: "Reminders",       icon: "bell",      route: "/reminders",        color: Colors.accentReminders },
+      { label: "Situation Guide", icon: "compass",   route: "/situation-finder", color: Colors.accentSituation },
     ],
     resources: [
-      { label: "Care Wishes",  sub: "Review & document care wishes", icon: "heart",       route: "/goals-of-care",   color: Colors.accentCareWishes },
-      { label: "Symptom Log",  sub: "Track important changes",       icon: "bar-chart-2", route: "/symptom-tracker", color: Colors.accentSymptom    },
+      { label: "Care Wishes",  sub: "Review & document care wishes", icon: "heart",     route: "/goals-of-care",   color: Colors.accentCareWishes },
+      { label: "Symptom Log",  sub: "Track important changes",       icon: "activity",  route: "/symptom-tracker", color: Colors.accentSymptom    },
     ],
   },
 };
 
-// ─── Action card (horizontal row) ─────────────────────────────────────────────
+// ─── Quick Action Card ────────────────────────────────────────────────────────
 
-function ActionCard({ item, hasChevron, onPress }: {
-  item: ActionItem; hasChevron: boolean; onPress: () => void;
-}) {
-  const cardBg = item.tint
-    ? "rgba(65, 40, 8, 0.82)"   // amber/warm tint for Journal
-    : "rgba(16, 30, 70, 0.80)"; // standard dark blue
-
-  const cardBorder = item.tint
-    ? `rgba(180, 120, 20, 0.35)` // amber border
-    : "rgba(80, 120, 200, 0.22)"; // blue border
-
+function ActionCard({ item, onPress }: { item: ActionItem; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         ac.card,
-        { backgroundColor: cardBg, borderColor: cardBorder },
-        pressed && { opacity: 0.82, transform: [{ scale: 0.96 }] },
+        pressed && { opacity: 0.80, transform: [{ scale: 0.94 }] },
       ]}
     >
-      <View style={[ac.iconWrap, { backgroundColor: item.color + "28" }]}>
-        <Feather name={item.icon as any} size={18} color={item.color} />
+      <LinearGradient
+        colors={[item.color + "22", item.color + "08"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={ac.gradient}
+      />
+      <View style={[ac.iconWrap, { backgroundColor: item.color + "30" }]}>
+        <Feather name={item.icon as any} size={19} color={item.color} />
       </View>
-      <Text style={[ac.label, item.tint && { color: "#F0C060" }]} numberOfLines={1}>{item.label}</Text>
-      {hasChevron && (
-        <Feather name="chevron-right" size={16} color={item.tint ? "rgba(200,150,50,0.7)" : "rgba(130,170,255,0.55)"} />
-      )}
+      <Text style={ac.label} numberOfLines={1}>{item.label}</Text>
+      <Feather name="chevron-right" size={13} color={item.color + "90"} style={{ marginTop: 2 }} />
     </Pressable>
   );
 }
 const ac = StyleSheet.create({
   card: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 13,
+    borderColor: "rgba(80, 120, 210, 0.18)",
+    padding: 13,
+    gap: 9,
+    overflow: "hidden",
+    backgroundColor: "rgba(14, 24, 62, 0.85)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.30,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 16,
   },
   iconWrap: {
-    width: 34, height: 34, borderRadius: 9,
+    width: 38, height: 38, borderRadius: 11,
     alignItems: "center", justifyContent: "center",
-    flexShrink: 0,
   },
   label: {
     flex: 1,
     fontSize: 13,
     fontFamily: "Inter_700Bold",
-    color: "#E8EEFF",
-    letterSpacing: -0.1,
+    color: "#E8F0FF",
+    letterSpacing: -0.15,
+    lineHeight: 18,
   },
 });
 
-// ─── Resource card ─────────────────────────────────────────────────────────────
+// ─── Resource Card ─────────────────────────────────────────────────────────────
 
 function ResourceCard({ item, onPress }: { item: ResourceItem; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        resc.card,
-        pressed && { opacity: 0.84, transform: [{ scale: 0.97 }] },
+        rc.card,
+        pressed && { opacity: 0.82, transform: [{ scale: 0.97 }] },
       ]}
     >
-      <View style={[resc.iconWrap, { backgroundColor: item.color + "22" }]}>
-        <Feather name={item.icon as any} size={17} color={item.color} />
+      <View style={[rc.iconWrap, { backgroundColor: item.color + "25" }]}>
+        <Feather name={item.icon as any} size={18} color={item.color} />
       </View>
-      <Text style={resc.label}>{item.label}</Text>
-      <Text style={resc.sub} numberOfLines={2}>{item.sub}</Text>
+      <View style={rc.textWrap}>
+        <Text style={rc.label}>{item.label}</Text>
+        <Text style={rc.sub} numberOfLines={2}>{item.sub}</Text>
+      </View>
+      <Feather name="arrow-right" size={16} color={item.color + "80"} />
     </Pressable>
   );
 }
-const resc = StyleSheet.create({
+const rc = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: "rgba(16, 28, 70, 0.82)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "rgba(14, 22, 58, 0.85)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(80, 120, 200, 0.22)",
-    padding: 14,
-    gap: 7,
+    borderColor: "rgba(70, 110, 210, 0.20)",
+    paddingHorizontal: 14,
+    paddingVertical: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.30,
-    shadowRadius: 7,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     elevation: 4,
   },
-  iconWrap: { width: 34, height: 34, borderRadius: 9, alignItems: "center", justifyContent: "center" },
-  label: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#E8EEFF", letterSpacing: -0.2 },
-  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#8F9AB8", lineHeight: 17 },
+  iconWrap: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  textWrap: { flex: 1, gap: 2 },
+  label: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#E8F0FF", letterSpacing: -0.2 },
+  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#7A8EB8", lineHeight: 17 },
 });
 
-// ─── Journey card ─────────────────────────────────────────────────────────────
+// ─── Journey Card ─────────────────────────────────────────────────────────────
 
 function JourneyCard({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [jc.card, pressed && { opacity: 0.86 }]}
+      style={({ pressed }) => [jc.card, pressed && { opacity: 0.84, transform: [{ scale: 0.98 }] }]}
     >
-      <View style={jc.iconWrap}>
-        <Feather name="navigation" size={20} color={Colors.accentJourney} />
+      <LinearGradient
+        colors={["rgba(88, 182, 255, 0.12)", "rgba(88, 182, 255, 0.04)"]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={jc.left}>
+        <View style={jc.iconWrap}>
+          <Feather name="map" size={20} color={Colors.accentJourney} />
+        </View>
+        <View style={jc.textWrap}>
+          <Text style={jc.label}>During Hospice</Text>
+          <Text style={jc.sub}>Journey Guide & Stage Planner</Text>
+        </View>
       </View>
-      <View style={jc.textWrap}>
-        <Text style={jc.title}>During Hospice</Text>
-        <Text style={jc.sub}>Journey Guide →</Text>
+      <View style={jc.chevronWrap}>
+        <Feather name="chevron-right" size={18} color={Colors.accentJourney} />
       </View>
-      <Feather name="chevron-right" size={18} color="rgba(130,170,255,0.55)" />
     </Pressable>
   );
 }
@@ -388,29 +228,37 @@ const jc = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: "rgba(15, 26, 68, 0.85)",
-    borderRadius: 16,
+    backgroundColor: "rgba(12, 22, 62, 0.88)",
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(90, 140, 230, 0.28)",
+    borderColor: "rgba(88, 182, 255, 0.22)",
     paddingHorizontal: 16,
-    paddingVertical: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.30,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingVertical: 16,
+    overflow: "hidden",
+    shadowColor: "#2060C0",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.20,
+    shadowRadius: 12,
+    elevation: 5,
   },
+  left: { flex: 1, flexDirection: "row", alignItems: "center", gap: 14 },
   iconWrap: {
-    width: 42, height: 42, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 13,
     backgroundColor: Colors.accentJourney + "20",
     alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
-  textWrap: { flex: 1, gap: 2 },
-  title: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#E8EEFF", letterSpacing: -0.2 },
-  sub: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.accentJourney },
+  textWrap: { flex: 1, gap: 3 },
+  label: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#E8F0FF", letterSpacing: -0.25 },
+  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.accentJourney + "CC", lineHeight: 17 },
+  chevronWrap: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: Colors.accentJourney + "18",
+    alignItems: "center", justifyContent: "center",
+  },
 });
 
-// ─── Hero Ragna card ──────────────────────────────────────────────────────────
+// ─── Hero Ragna Card ──────────────────────────────────────────────────────────
 
 function HeroRagnaCard({ title, subtitle, onPress }: {
   title: string; subtitle: string; onPress: () => void;
@@ -418,16 +266,23 @@ function HeroRagnaCard({ title, subtitle, onPress }: {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [pressed && { opacity: 0.93, transform: [{ scale: 0.988 }] }]}
+      style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] }]}
     >
-      {/* Glow ring */}
+      {/* Outer glow ring */}
       <View style={hero.glowRing} />
       <View style={hero.card}>
+        {/* Background gradient */}
+        <LinearGradient
+          colors={["rgba(16, 28, 80, 0.96)", "rgba(12, 20, 68, 0.98)"]}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Title */}
         <Text style={hero.question}>{title}</Text>
 
-        {/* Ask Ragna CTA — gradient row */}
+        {/* Ask Ragna CTA */}
         <LinearGradient
-          colors={["#1A2E6A", "#232060", "#2A1A6A"]}
+          colors={["rgba(28, 48, 110, 0.95)", "rgba(22, 36, 95, 0.98)", "rgba(34, 24, 90, 0.95)"]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           style={hero.ctaRow}
         >
@@ -436,12 +291,16 @@ function HeroRagnaCard({ title, subtitle, onPress }: {
             style={hero.avatar}
             resizeMode="cover"
           />
-          <Text style={hero.ctaText}>Ask Ragna</Text>
-          <View style={hero.chevronBubble}>
-            <Feather name="chevron-right" size={16} color="#A0C8FF" />
+          <View style={hero.ctaTextWrap}>
+            <Text style={hero.ctaLabel}>Ask Ragna</Text>
+            <Text style={hero.ctaHint}>AI guide · always here</Text>
+          </View>
+          <View style={hero.ctaArrow}>
+            <Feather name="arrow-right" size={16} color="#A0C8FF" />
           </View>
         </LinearGradient>
 
+        {/* Subtitle */}
         <Text style={hero.subtitle}>{subtitle}</Text>
       </View>
     </Pressable>
@@ -450,54 +309,98 @@ function HeroRagnaCard({ title, subtitle, onPress }: {
 const hero = StyleSheet.create({
   glowRing: {
     position: "absolute",
-    inset: -1.5,
-    borderRadius: 19,
-    borderWidth: 1.5,
-    borderColor: "#4AACF0",
-    shadowColor: "#58C8FF",
+    inset: -1,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(70, 180, 255, 0.50)",
+    shadowColor: "#50C0FF",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
+    shadowOpacity: 0.50,
+    shadowRadius: 16,
     elevation: 0,
   },
   card: {
-    backgroundColor: "rgba(12, 24, 70, 0.86)",
-    borderRadius: 17,
-    padding: 18,
-    gap: 14,
+    borderRadius: 20,
+    padding: 20,
+    gap: 16,
     borderWidth: 1,
-    borderColor: "rgba(80, 160, 240, 0.20)",
-    shadowColor: "#2060C0",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.40,
-    shadowRadius: 16,
-    elevation: 8,
+    borderColor: "rgba(70, 150, 240, 0.15)",
+    overflow: "hidden",
+    shadowColor: "#1040A0",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.50,
+    shadowRadius: 20,
+    elevation: 10,
   },
   question: {
-    fontSize: 20,
+    fontSize: 21,
     fontFamily: "Inter_700Bold",
-    color: "#F0F4FF",
-    letterSpacing: -0.4,
-    lineHeight: 27,
+    color: "#EEF4FF",
+    letterSpacing: -0.5,
+    lineHeight: 28,
   },
   ctaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 13,
-    borderRadius: 13,
+    gap: 14,
+    borderRadius: 15,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     borderWidth: 1,
-    borderColor: "rgba(100, 140, 240, 0.25)",
+    borderColor: "rgba(100, 150, 255, 0.22)",
   },
-  avatar: { width: 40, height: 40, borderRadius: 10, flexShrink: 0 },
-  ctaText: { flex: 1, fontSize: 18, fontFamily: "Inter_700Bold", color: "#F0F4FF", letterSpacing: -0.3 },
-  chevronBubble: {
-    width: 28, height: 28, borderRadius: 8,
+  avatar: {
+    width: 44, height: 44,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
+  ctaTextWrap: { flex: 1, gap: 2 },
+  ctaLabel: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: "#EEF4FF",
+    letterSpacing: -0.3,
+  },
+  ctaHint: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#7A96CC",
+    letterSpacing: 0.1,
+  },
+  ctaArrow: {
+    width: 32, height: 32, borderRadius: 10,
     backgroundColor: "rgba(255,255,255,0.10)",
     alignItems: "center", justifyContent: "center",
   },
-  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#7A8EB8", lineHeight: 18 },
+  subtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#6A80AE",
+    lineHeight: 19,
+  },
+});
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <View style={sh.row}>
+      <Text style={sh.title}>{title}</Text>
+      <View style={sh.line} />
+    </View>
+  );
+}
+const sh = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  title: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: "#4A6090",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    flexShrink: 0,
+  },
+  line: { flex: 1, height: 1, backgroundColor: "rgba(60, 90, 160, 0.25)" },
 });
 
 // ─── Home Screen ──────────────────────────────────────────────────────────────
@@ -516,7 +419,6 @@ export default function HomeScreen() {
     router.push(route as any);
   };
 
-  // Action grid: 2 rows × 2 cols  →  [[0,1],[2,3]]
   const rows: [ActionItem, ActionItem][] = [
     [config.keyActions[0], config.keyActions[1]],
     [config.keyActions[2], config.keyActions[3]],
@@ -529,25 +431,25 @@ export default function HomeScreen() {
         style={sc.scroll}
         contentContainerStyle={[
           sc.content,
-          { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 18), paddingBottom: insets.bottom + 110 },
+          { paddingTop: insets.top + (Platform.OS === "web" ? 72 : 22), paddingBottom: insets.bottom + 120 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
         <View style={sc.header}>
           <View style={sc.headerLeft}>
-            <Text style={sc.pageTitle}>{config.title}</Text>
             <View style={sc.stagePill}>
               <View style={sc.stageDot} />
               <Text style={sc.stagePillText}>During Hospice</Text>
             </View>
+            <Text style={sc.pageTitle}>{config.title}</Text>
             <Text style={sc.contextLine}>{contextLine}</Text>
           </View>
           <Pressable
             onPress={() => tap("/(tabs)/more")}
-            style={({ pressed }) => [sc.settingsBtn, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [sc.settingsBtn, pressed && { opacity: 0.55, transform: [{ scale: 0.9 }] }]}
           >
-            <Feather name="settings" size={20} color="rgba(170,190,230,0.80)" />
+            <Feather name="settings" size={19} color="rgba(150, 175, 230, 0.75)" />
           </Pressable>
         </View>
 
@@ -560,22 +462,12 @@ export default function HomeScreen() {
 
         {/* ── Key Actions ── */}
         <View style={sc.section}>
-          <Text style={sc.sectionTitle}>Key Actions</Text>
+          <SectionHeader title="Quick Actions" />
           <View style={sc.actionGrid}>
             {rows.map((row, ri) => (
               <View key={ri} style={sc.actionRow}>
-                {/* left card — no chevron */}
-                <ActionCard
-                  item={row[0]}
-                  hasChevron={false}
-                  onPress={() => tap(row[0].route)}
-                />
-                {/* right card — has chevron */}
-                <ActionCard
-                  item={row[1]}
-                  hasChevron
-                  onPress={() => tap(row[1].route)}
-                />
+                <ActionCard item={row[0]} onPress={() => tap(row[0].route)} />
+                <ActionCard item={row[1]} onPress={() => tap(row[1].route)} />
               </View>
             ))}
           </View>
@@ -583,8 +475,8 @@ export default function HomeScreen() {
 
         {/* ── Helpful Resources ── */}
         <View style={sc.section}>
-          <Text style={sc.sectionTitle}>Helpful Resources</Text>
-          <View style={sc.resourceRow}>
+          <SectionHeader title="Resources" />
+          <View style={sc.resourceCol}>
             {config.resources.map((item) => (
               <ResourceCard key={item.label} item={item} onPress={() => tap(item.route)} />
             ))}
@@ -599,60 +491,62 @@ export default function HomeScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const sc = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: "#05080F" },
-  scroll:  { flex: 1, backgroundColor: "transparent" },
-  content: { paddingHorizontal: 20, gap: 22 },
+  root:   { flex: 1, backgroundColor: "#030A18" },
+  scroll: { flex: 1 },
+  content: { paddingHorizontal: 18, gap: 24 },
 
-  // Header
   header:      { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  headerLeft:  { flex: 1, gap: 7 },
-  pageTitle:   {
-    fontSize: 26, fontFamily: "Inter_700Bold",
-    color: "#F0F4FF", letterSpacing: -0.6,
-  },
+  headerLeft:  { flex: 1, gap: 6 },
 
-  // Stage pill — warm rose (fixed)
   stagePill: {
-    flexDirection: "row", alignItems: "center", gap: 7,
-    paddingHorizontal: 11, paddingVertical: 5,
-    borderRadius: 20, alignSelf: "flex-start",
-    backgroundColor: "#4C2A39",
-    shadowColor: "#FF8B68",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(76, 42, 57, 0.80)",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(240, 154, 122, 0.25)",
   },
-  stageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#FF8B68" },
-  stagePillText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "#F09A7A" },
+  stageDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: "#FF8B68",
+  },
+  stagePillText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: "#F09A7A",
+    letterSpacing: 0.2,
+  },
 
+  pageTitle: {
+    fontSize: 28,
+    fontFamily: "Inter_700Bold",
+    color: "#EEF4FF",
+    letterSpacing: -0.7,
+    lineHeight: 34,
+  },
   contextLine: {
-    fontSize: 14, fontFamily: "Inter_400Regular",
-    color: "#9AAAC8", lineHeight: 19,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: "#6880A8",
+    lineHeight: 20,
   },
 
   settingsBtn: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: "rgba(20, 38, 90, 0.70)",
-    borderWidth: 1, borderColor: "rgba(80, 120, 200, 0.28)",
     alignItems: "center", justifyContent: "center",
-    marginTop: 4,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(80, 110, 180, 0.18)",
+    marginTop: 8,
   },
 
-  // Sections
-  section:      { gap: 12 },
-  sectionTitle: {
-    fontSize: 17, fontFamily: "Inter_700Bold",
-    color: "#E8EEFF", letterSpacing: -0.3,
-  },
-
-  // Action grid — 2 rows of 2 side-by-side cards
-  actionGrid: { gap: 8 },
-  actionRow:  { flexDirection: "row", gap: 8 },
-
-  // Resources — 2 equal-width cards side by side
-  resourceRow: { flexDirection: "row", gap: 8 },
+  section: { gap: 12 },
+  actionGrid: { gap: 10 },
+  actionRow: { flexDirection: "row", gap: 10 },
+  resourceCol: { gap: 10 },
 });

@@ -1,6 +1,6 @@
+import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Image, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,21 +11,36 @@ const ragnaIcon = require("@/assets/images/ragna-icon.png");
 
 function ChatTabIcon({ focused }: { focused: boolean }) {
   return (
-    <View style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}>
-      <Image
-        source={ragnaIcon}
-        style={{
-          width: 26, height: 26, borderRadius: 7,
-          opacity: focused ? 1 : 0.7,
-          borderWidth: focused ? 1.5 : 0,
-          borderColor: Colors.tabIconSelected,
-        }}
-      />
+    <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
       <View style={{
-        position: "absolute", bottom: 0, right: 0,
-        width: 8, height: 8, borderRadius: 4,
+        width: focused ? 30 : 26,
+        height: focused ? 30 : 26,
+        borderRadius: focused ? 9 : 7,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: focused ? 1.5 : 0,
+        borderColor: focused ? Colors.tabIconSelected : "transparent",
+        shadowColor: focused ? Colors.tabIconSelected : "transparent",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: focused ? 0.7 : 0,
+        shadowRadius: 6,
+      }}>
+        <Image
+          source={ragnaIcon}
+          style={{
+            width: focused ? 28 : 24,
+            height: focused ? 28 : 24,
+            borderRadius: focused ? 8 : 6,
+            opacity: focused ? 1 : 0.65,
+          }}
+          resizeMode="cover"
+        />
+      </View>
+      <View style={{
+        position: "absolute", bottom: -1, right: -1,
+        width: 7, height: 7, borderRadius: 4,
         backgroundColor: Colors.chatLiveDot,
-        borderWidth: 1.5, borderColor: "#05080F",
+        borderWidth: 1.5, borderColor: "#040C1C",
       }} />
     </View>
   );
@@ -36,6 +51,8 @@ export default function TabLayout() {
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
 
+  const tabBarHeight = isWeb ? 56 : 58;
+
   return (
     <Tabs
       screenOptions={{
@@ -43,17 +60,22 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.tabIconSelected,
         tabBarInactiveTintColor: Colors.tabIconDefault,
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          letterSpacing: 0.1,
+          fontSize: 10,
+          fontWeight: "700",
+          letterSpacing: 0.2,
+          marginTop: 2,
         },
         tabBarStyle: {
-          backgroundColor: Colors.tabBarBg,
-          borderTopWidth: 1,
-          borderTopColor: "rgba(53, 94, 159, 0.5)",
+          backgroundColor: "rgba(4, 10, 28, 0.97)",
+          borderTopWidth: 0.5,
+          borderTopColor: "rgba(60, 100, 180, 0.35)",
           elevation: 0,
-          paddingBottom: safeAreaInsets.bottom,
-          ...(isWeb ? { height: 56 + safeAreaInsets.bottom } : {}),
+          paddingBottom: isWeb ? 0 : safeAreaInsets.bottom,
+          height: tabBarHeight + (isWeb ? 0 : safeAreaInsets.bottom),
+        },
+        tabBarItemStyle: {
+          paddingTop: 6,
+          paddingBottom: 4,
         },
       }}
     >
@@ -61,42 +83,60 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) =>
+          tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="house.fill" tintColor={color} size={22} />
+              <SymbolView name={focused ? "house.fill" : "house"} tintColor={color} size={22} />
             ) : (
-              <Feather name="home" size={22} color={color} />
+              <View style={{
+                width: 28, height: 28, alignItems: "center", justifyContent: "center",
+                backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
+                borderRadius: 8,
+              }}>
+                <Feather name={focused ? "home" : "home"} size={21} color={color} />
+              </View>
             ),
         }}
       />
       <Tabs.Screen
         name="help"
         options={{
-          title: "Chat",
+          title: "Ask Ragna",
           tabBarIcon: ({ focused }) => <ChatTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
-          title: "More",
-          tabBarIcon: ({ color }) =>
+          title: "Tools",
+          tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="ellipsis" tintColor={color} size={22} />
+              <SymbolView name="square.grid.2x2" tintColor={color} size={22} />
             ) : (
-              <Feather name="more-horizontal" size={22} color={color} />
+              <View style={{
+                width: 28, height: 28, alignItems: "center", justifyContent: "center",
+                backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
+                borderRadius: 8,
+              }}>
+                <Feather name="grid" size={20} color={color} />
+              </View>
             ),
         }}
       />
       <Tabs.Screen
         name="journey"
         options={{
-          title: "Resources",
-          tabBarIcon: ({ color }) =>
+          title: "Journey",
+          tabBarIcon: ({ color, focused }) =>
             isIOS ? (
-              <SymbolView name="book.fill" tintColor={color} size={22} />
+              <SymbolView name={focused ? "book.fill" : "book"} tintColor={color} size={22} />
             ) : (
-              <Feather name="book-open" size={22} color={color} />
+              <View style={{
+                width: 28, height: 28, alignItems: "center", justifyContent: "center",
+                backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
+                borderRadius: 8,
+              }}>
+                <Feather name="book-open" size={20} color={color} />
+              </View>
             ),
         }}
       />
