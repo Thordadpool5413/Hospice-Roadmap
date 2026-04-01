@@ -200,38 +200,46 @@ export default function LegalDocumentDetailScreen() {
           </SectionCard>
         )}
 
-        {/* Official links */}
-        <SectionCard title="Official Sources">
-          <View style={ds.linksRow}>
-            <OfficialLinkButton
-              label="Official Form"
-              url={doc.officialFormUrl}
-              icon="file-text"
-            />
-            <OfficialLinkButton
-              label="State Page"
-              url={doc.officialInfoUrl}
-              icon="globe"
-              variant="secondary"
-            />
-          </View>
-          {doc.additionalOfficialUrls.length > 0 && (
-            <View style={ds.additionalLinksSection}>
-              <Text style={ds.additionalLinksTitle}>Additional Official Resources</Text>
+        {/* Official links — only render when URL exists */}
+        {(doc.officialFormUrl || doc.officialInfoUrl || doc.additionalOfficialUrls.length > 0) && (
+          <SectionCard title="Official Sources">
+            {(doc.officialFormUrl || doc.officialInfoUrl) && (
               <View style={ds.linksRow}>
-                {doc.additionalOfficialUrls.map((link, i) => (
+                {doc.officialFormUrl ? (
                   <OfficialLinkButton
-                    key={i}
-                    label={link.label}
-                    url={link.url}
-                    icon="external-link"
+                    label="Official Form"
+                    url={doc.officialFormUrl}
+                    icon="file-text"
+                  />
+                ) : null}
+                {doc.officialInfoUrl ? (
+                  <OfficialLinkButton
+                    label="State Page"
+                    url={doc.officialInfoUrl}
+                    icon="globe"
                     variant="secondary"
                   />
-                ))}
+                ) : null}
               </View>
-            </View>
-          )}
-        </SectionCard>
+            )}
+            {doc.additionalOfficialUrls.length > 0 && (
+              <View style={ds.additionalLinksSection}>
+                <Text style={ds.additionalLinksTitle}>Additional Official Resources</Text>
+                <View style={ds.linksRow}>
+                  {doc.additionalOfficialUrls.map((link, i) => (
+                    <OfficialLinkButton
+                      key={i}
+                      label={link.label}
+                      url={link.url}
+                      icon="external-link"
+                      variant="secondary"
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+          </SectionCard>
+        )}
 
         {/* Education expandables */}
         <SectionCard title="Learn More">

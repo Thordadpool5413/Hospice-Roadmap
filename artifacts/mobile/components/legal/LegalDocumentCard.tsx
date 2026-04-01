@@ -44,8 +44,12 @@ export function LegalDocumentCard({ doc, saved, onLearnMore, onToggleSave }: Leg
           <Text style={s.learnLabel}>Learn More</Text>
           <Feather name="arrow-right" size={13} color="#67B7FF" />
         </Pressable>
-        <OfficialLinkButton label="Official Form" url={doc.officialFormUrl} icon="file-text" />
-        <OfficialLinkButton label="State Page" url={doc.officialInfoUrl} icon="globe" variant="secondary" />
+        {doc.officialFormUrl ? (
+          <OfficialLinkButton label="Official Form" url={doc.officialFormUrl} icon="file-text" />
+        ) : null}
+        {doc.officialInfoUrl ? (
+          <OfficialLinkButton label="State Page" url={doc.officialInfoUrl} icon="globe" variant="secondary" />
+        ) : null}
       </View>
     </View>
   );
