@@ -18,8 +18,9 @@ import { AppState, AppStateStatus, Platform } from "react-native";
 
 import { apiBase } from "@/services/apiClient";
 
-const CHECK_INTERVAL_MS = 15_000;
-const PROBE_TIMEOUT_MS = 6_000;
+const CHECK_INTERVAL_MS = 5_000;
+const OFFLINE_RETRY_MS = 3_000;
+const PROBE_TIMEOUT_MS = 8_000;
 
 async function checkServerReachable(): Promise<boolean> {
   try {
@@ -87,7 +88,28 @@ export function useAppNetwork(): AppNetworkState {
       };
     }
 
-    intervalRef.current = setInterval(check, CHECK_INTERVAL_MS);
+    // When offline, retry every OFFLINE_RETRY_MS; when online, every CHECK_INTERVAL_MS.
+    // This recovers quickly from a cold-start probe failure without hammering the server.
+    let scheduled: ReturnType<typeof setTimeout> | null = null;
+    function schedule(online: boolean) {
+      if (scheduled) clearTimeout(scheduled);
+      scheduled = setTimeout(async () => {
+        const reachable = await checkServerReachable();
+        setState({
+          isOnline: reachable,
+          isInternetReachable: reachable,
+          hasCheckedNetwork: true,
+        });
+        schedule(reachable);
+      }, online ? CHECK_INTERVAL_MS : OFFLINE_RETRY_MS);
+    }
+
+    // Kick off the adaptive schedule after the first check resolves.
+    checkServerReachable().then((reachable) => {
+      setState({ isOnline: reachable, isInternetReachable: reachable, hasCheckedNetwork: true });
+      schedule(reachable);
+    });
+
     const sub = AppState.addEventListener(
       "change",
       (status: AppStateStatus) => {
@@ -96,7 +118,7 @@ export function useAppNetwork(): AppNetworkState {
     );
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (scheduled) clearTimeout(scheduled);
       sub.remove();
     };
   }, [check]);
