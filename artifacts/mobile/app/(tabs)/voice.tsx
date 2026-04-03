@@ -41,6 +41,17 @@ const VOICE_STATUS_COPY: Record<OpenAiVoiceStatus, string> = {
   error: "Voice hit a snag. Tap again to retry.",
 };
 
+const VOICE_OPTIONS = [
+  { id: "marin", label: "Marin", description: "Balanced and natural" },
+  { id: "cedar", label: "Cedar", description: "Calm and grounded" },
+  { id: "alloy", label: "Alloy", description: "Neutral and clear" },
+  { id: "sage", label: "Sage", description: "Warm and steady" },
+  { id: "shimmer", label: "Shimmer", description: "Bright and lighter" },
+  { id: "echo", label: "Echo", description: "Direct and crisp" },
+] as const;
+
+type VoiceOptionId = (typeof VOICE_OPTIONS)[number]["id"];
+
 const STARTER_PROMPTS = [
   "Help me understand what changes are normal near the end of life.",
   "I am not sure if what I am seeing is urgent enough to call hospice.",
@@ -57,6 +68,7 @@ export default function VoiceScreen() {
   const { getObservationContext } = useRagnaLearning();
 
   const [voiceStatus, setVoiceStatus] = useState<OpenAiVoiceStatus>("idle");
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOptionId>("marin");
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const [sharedThreadStatus, setSharedThreadStatus] = useState<string | null>(null);
@@ -65,6 +77,7 @@ export default function VoiceScreen() {
   const pendingUserTranscriptRef = useRef<string | null>(null);
 
   const voiceSupported = isOpenAiVoiceSupported();
+  const selectedVoiceMeta = VOICE_OPTIONS.find((option) => option.id === selectedVoice) ?? VOICE_OPTIONS[0];
 
   const buildRagnaPatientContext = useCallback(() => {
     if (!ragnaPrivacy.personalizationEnabled) return "";
@@ -152,7 +165,7 @@ export default function VoiceScreen() {
       try {
         const conversationId = await ensureSharedConversation();
         await saveVoiceExchange(conversationId, userTranscript, assistantTranscript);
-        setSharedThreadStatus("Saved to your Ask Ragna conversation.");
+        setSharedThreadStatus(`Saved to your Ask Ragna conversation using ${selectedVoiceMeta.label}.`);
       } catch (error) {
         pendingUserTranscriptRef.current = userTranscript;
         const message = error instanceof Error ? error.message : "Voice exchange could not be saved.";
@@ -160,13 +173,23 @@ export default function VoiceScreen() {
         setSharedThreadStatus("Voice is live, but the last exchange was not saved yet.");
       }
     },
-    [ensureSharedConversation],
+    [ensureSharedConversation, selectedVoiceMeta.label],
   );
 
   const stopVoiceConversation = useCallback(() => {
     voiceSessionRef.current?.stop();
     voiceSessionRef.current = null;
     setVoiceStatus("idle");
+  }, []);
+
+  const handleSelectVoice = useCallback((voiceId: VoiceOptionId) => {
+    if (voiceSessionRef.current) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedVoice(voiceId);
+    const voice = VOICE_OPTIONS.find((option) => option.id === voiceId);
+    if (voice) {
+      setSharedThreadStatus(`Voice selected: ${voice.label}.`);
+    }
   }, []);
 
   const handleToggleVoice = useCallback(async () => {
@@ -193,11 +216,11 @@ export default function VoiceScreen() {
 
       const conversationId = await ensureSharedConversation();
       conversationIdRef.current = conversationId;
-      setSharedThreadStatus("Voice will be saved into your Ask Ragna conversation.");
+      setSharedThreadStatus(`Voice will be saved into your Ask Ragna conversation using ${selectedVoiceMeta.label}.`);
 
       voiceSessionRef.current = await startOpenAiVoiceSession({
         patientContext: buildRagnaPatientContext(),
-        voice: "marin",
+        voice: selectedVoice,
         onStatusChange: (status) => {
           setVoiceStatus(status);
           if (status === "idle") {
@@ -225,7 +248,7 @@ export default function VoiceScreen() {
       setVoiceStatus("error");
       voiceSessionRef.current = null;
     }
-  }, [buildRagnaPatientContext, ensureSharedConversation, persistVoiceExchange, stopVoiceConversation, voiceSupported]);
+  }, [buildRagnaPatientContext, ensureSharedConversation, persistVoiceExchange, selectedVoice, selectedVoiceMeta.label, stopVoiceConversation, voiceSupported]);
 
   useEffect(() => {
     void getActiveConversationId().then((conversationId) => {
@@ -274,6 +297,47 @@ export default function VoiceScreen() {
             <Text style={styles.statusText}>{statusText}</Text>
           </View>
 
+          <View style={styles.voicePickerCard}>
+            <View style={styles.voicePickerHeader}>
+              <Text style={styles.voicePickerTitle}>Choose Ragna's voice</Text>
+              <Text style={styles.voicePickerSubtitle}>
+                {isVoiceActive
+                  ? "Voice changes lock while a live session is active."
+                  : `Current: ${selectedVoiceMeta.label} · ${selectedVoiceMeta.description}`}
+              </Text>
+            </View>
+            <View style={styles.voiceOptionGrid}>
+              {VOICE_OPTIONS.map((option) => {
+                const selected = option.id === selectedVoice;
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => handleSelectVoice(option.id)}
+                    disabled={isVoiceActive}
+                    style={({ pressed }) => [
+                      styles.voiceOption,
+                      selected ? styles.voiceOptionSelected : null,
+                      isVoiceActive ? styles.voiceOptionDisabled : null,
+                      pressed && !isVoiceActive ? { opacity: 0.92, transform: [{ scale: 0.98 }] } : null,
+                    ]}
+                  >
+                    <Text style={[styles.voiceOptionLabel, selected ? styles.voiceOptionLabelSelected : null]}>
+                      {option.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.voiceOptionDescription,
+                        selected ? styles.voiceOptionDescriptionSelected : null,
+                      ]}
+                    >
+                      {option.description}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
           {sharedThreadStatus && (
             <View style={styles.sharedThreadBanner}>
               <Text style={styles.sharedThreadText}>{sharedThreadStatus}</Text>
@@ -289,7 +353,7 @@ export default function VoiceScreen() {
             ]}
           >
             <Text style={styles.voiceButtonLabel}>
-              {isVoiceActive ? "End Voice Session" : "Start Voice Session"}
+              {isVoiceActive ? "End Voice Session" : `Start Voice Session with ${selectedVoiceMeta.label}`}
             </Text>
           </Pressable>
 
@@ -394,6 +458,68 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontFamily: "Inter_500Medium",
   },
+  voicePickerCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(73,118,255,0.18)",
+    backgroundColor: "rgba(6,15,38,0.9)",
+    padding: 14,
+    gap: 12,
+  },
+  voicePickerHeader: {
+    gap: 4,
+  },
+  voicePickerTitle: {
+    color: "#EEF4FF",
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+  },
+  voicePickerSubtitle: {
+    color: "#9EB2D8",
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: "Inter_400Regular",
+  },
+  voiceOptionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  voiceOption: {
+    flexBasis: "48%",
+    minWidth: 130,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(73,118,255,0.16)",
+    backgroundColor: "rgba(13,24,58,0.92)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  voiceOptionSelected: {
+    borderColor: "rgba(91,192,255,0.7)",
+    backgroundColor: "rgba(28,58,126,0.72)",
+  },
+  voiceOptionDisabled: {
+    opacity: 0.7,
+  },
+  voiceOptionLabel: {
+    color: "#DDE8FF",
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+  },
+  voiceOptionLabelSelected: {
+    color: "#FFFFFF",
+  },
+  voiceOptionDescription: {
+    color: "#9EB2D8",
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: "Inter_400Regular",
+  },
+  voiceOptionDescriptionSelected: {
+    color: "#DCEBFF",
+  },
   sharedThreadBanner: {
     borderRadius: 14,
     borderWidth: 1,
@@ -423,6 +549,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontFamily: "Inter_700Bold",
+    textAlign: "center",
   },
   supportNote: {
     color: "#7C94BE",
