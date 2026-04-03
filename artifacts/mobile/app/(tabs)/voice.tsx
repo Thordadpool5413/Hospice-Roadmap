@@ -30,6 +30,10 @@ import {
   OpenAiVoiceStatus,
   startOpenAiVoiceSession,
 } from "@/services/openAiVoiceService";
+import {
+  getPreferredVoice,
+  setPreferredVoice,
+} from "@/services/voicePreferences";
 
 const VOICE_STATUS_COPY: Record<OpenAiVoiceStatus, string> = {
   idle: "Tap the button below to talk with Ragna live.",
@@ -186,6 +190,7 @@ export default function VoiceScreen() {
     if (voiceSessionRef.current) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedVoice(voiceId);
+    void setPreferredVoice(voiceId);
     const voice = VOICE_OPTIONS.find((option) => option.id === voiceId);
     if (voice) {
       setSharedThreadStatus(`Voice selected: ${voice.label}.`);
@@ -256,6 +261,16 @@ export default function VoiceScreen() {
         conversationIdRef.current = conversationId;
         setSharedThreadStatus("Using your current Ask Ragna conversation.");
       }
+    });
+  }, []);
+
+  useEffect(() => {
+    void getPreferredVoice().then((storedVoice) => {
+      if (!storedVoice) return;
+      const matchedVoice = VOICE_OPTIONS.find((option) => option.id === storedVoice);
+      if (!matchedVoice) return;
+      setSelectedVoice(matchedVoice.id);
+      setSharedThreadStatus(`Voice selected: ${matchedVoice.label}.`);
     });
   }, []);
 
