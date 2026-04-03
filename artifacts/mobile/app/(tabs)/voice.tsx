@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +21,12 @@ import {
   createConversation,
   saveVoiceExchange,
 } from "@/services/aiService";
+import {
+  isNativeOpenAiVoiceSupported,
+  startNativeOpenAiVoiceRecording,
+  stopNativeOpenAiVoice,
+  stopNativeOpenAiVoiceRecordingAndSend,
+} from "@/services/nativeOpenAiVoiceService";
 import {
   previewOpenAiVoice,
   stopOpenAiVoicePreview,
@@ -88,7 +95,10 @@ export default function VoiceScreen() {
   const conversationIdRef = useRef<number | null>(null);
   const pendingUserTranscriptRef = useRef<string | null>(null);
 
-  const voiceSupported = isOpenAiVoiceSupported();
+  const isWebVoiceSupported = isOpenAiVoiceSupported();
+  const isNativeVoiceMode = isNativeOpenAiVoiceSupported();
+  const voiceSupported = isWebVoiceSupported || isNativeVoiceMode;
+  const isRecordingNative = isNativeVoiceMode && voiceStatus === "listening";
   const selectedVoiceMeta = VOICE_OPTIONS.find((option) => option.id === selectedVoice) ?? VOICE_OPTIONS[0];
 
   const buildRagnaPatientContext = useCallback(() => {
@@ -188,14 +198,23 @@ export default function VoiceScreen() {
     [ensureSharedConversation, selectedVoiceMeta.label],
   );
 
-  const stopVoiceConversation = useCallback(() => {
+  const stopVoiceConversation = useCallback(async () => {
+    stopOpenAiVoicePreview();
+    setPreviewingVoiceId(null);
+
+    if (isNativeVoiceMode) {
+      await stopNativeOpenAiVoice();
+      setVoiceStatus("idle");
+      return;
+    }
+
     voiceSessionRef.current?.stop();
     voiceSessionRef.current = null;
     setVoiceStatus("idle");
-  }, []);
+  }, [isNativeVoiceMode]);
 
   const handleSelectVoice = useCallback((voiceId: VoiceOptionId) => {
-    if (voiceSessionRef.current) return;
+    if (voiceSessionRef.current || isRecordingNative) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedVoice(voiceId);
     void setPreferredVoice(voiceId);
@@ -203,10 +222,15 @@ export default function VoiceScreen() {
     if (voice) {
       setSharedThreadStatus(`Voice selected: ${voice.label}.`);
     }
-  }, []);
+  }, [isRecordingNative]);
 
   const handlePreviewVoice = useCallback(async (voiceId: VoiceOptionId) => {
-    if (voiceSessionRef.current) return;
+    if (voiceSessionRef.current || isRecordingNative) return;
+
+    if (isNativeVoiceMode) {
+      setSharedThreadStatus("Voice previews are available in the web preview. On iPhone, choose a voice and start recording.");
+      return;
+    }
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -234,19 +258,59 @@ export default function VoiceScreen() {
         setPreviewingVoiceId((current) => (current === voiceId ? null : current));
       }, 1800);
     }
-  }, [previewingVoiceId]);
+  }, [isNativeVoiceMode, isRecordingNative, previewingVoiceId]);
 
   const handleToggleVoice = useCallback(async () => {
+    if (isNativeVoiceMode) {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        setVoiceError(null);
+        stopOpenAiVoicePreview();
+        setPreviewingVoiceId(null);
+
+        const conversationId = await ensureSharedConversation();
+        conversationIdRef.current = conversationId;
+
+        if (!isRecordingNative) {
+          setVoiceTranscript(null);
+          setSharedThreadStatus(`Recording with ${selectedVoiceMeta.label}. Tap again when you are done speaking.`);
+          setVoiceStatus("requesting-mic");
+          await startNativeOpenAiVoiceRecording();
+          setVoiceStatus("listening");
+          return;
+        }
+
+        setVoiceStatus("connecting");
+        setSharedThreadStatus(`Sending your question to Ragna using ${selectedVoiceMeta.label}…`);
+        const result = await stopNativeOpenAiVoiceRecordingAndSend({
+          patientContext: buildRagnaPatientContext(),
+          voice: selectedVoice,
+        });
+        pendingUserTranscriptRef.current = result.userTranscript;
+        setVoiceTranscript(`Ragna: ${result.assistantTranscript}`);
+        setVoiceStatus("speaking");
+        await persistVoiceExchange(result.assistantTranscript);
+        setVoiceStatus("ready");
+        setSharedThreadStatus(`Ragna replied with ${selectedVoiceMeta.label}. Tap again to record another question.`);
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Native voice chat could not start.";
+        setVoiceError(message);
+        setVoiceStatus("error");
+        return;
+      }
+    }
+
     if (voiceSessionRef.current) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      stopVoiceConversation();
+      await stopVoiceConversation();
       return;
     }
 
     if (!voiceSupported) {
       Alert.alert(
-        "Voice chat is ready for the web app",
-        "Open Hospice Roadmap in the Replit web preview, allow microphone access, and tap the button again."
+        "Voice chat is ready for supported clients",
+        "Use the Replit web preview or a native build with microphone permission enabled."
       );
       return;
     }
@@ -294,7 +358,17 @@ export default function VoiceScreen() {
       setVoiceStatus("error");
       voiceSessionRef.current = null;
     }
-  }, [buildRagnaPatientContext, ensureSharedConversation, persistVoiceExchange, selectedVoice, selectedVoiceMeta.label, stopVoiceConversation, voiceSupported]);
+  }, [
+    buildRagnaPatientContext,
+    ensureSharedConversation,
+    isNativeVoiceMode,
+    isRecordingNative,
+    persistVoiceExchange,
+    selectedVoice,
+    selectedVoiceMeta.label,
+    stopVoiceConversation,
+    voiceSupported,
+  ]);
 
   useEffect(() => {
     void getActiveConversationId().then((conversationId) => {
@@ -318,13 +392,23 @@ export default function VoiceScreen() {
   useEffect(() => {
     return () => {
       stopOpenAiVoicePreview();
+      void stopNativeOpenAiVoice();
       voiceSessionRef.current?.stop();
       voiceSessionRef.current = null;
     };
   }, []);
 
-  const statusText = voiceError ?? VOICE_STATUS_COPY[voiceStatus];
+  const statusText = isNativeVoiceMode && isRecordingNative
+    ? `Recording your question with ${selectedVoiceMeta.label}. Tap again to send.`
+    : voiceError ?? VOICE_STATUS_COPY[voiceStatus];
   const isVoiceActive = voiceStatus !== "idle" && voiceStatus !== "error";
+  const actionButtonLabel = isNativeVoiceMode
+    ? isRecordingNative
+      ? "Stop Recording and Send"
+      : `Start Recording with ${selectedVoiceMeta.label}`
+    : isVoiceActive
+      ? "End Voice Session"
+      : `Start Voice Session with ${selectedVoiceMeta.label}`;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -337,10 +421,12 @@ export default function VoiceScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroCard}>
-          <Text style={styles.eyebrow}>LIVE VOICE</Text>
+          <Text style={styles.eyebrow}>{isNativeVoiceMode ? "IOS VOICE" : "LIVE VOICE"}</Text>
           <Text style={styles.title}>Talk with Ragna</Text>
           <Text style={styles.subtitle}>
-            This opens a real time voice conversation so your user can speak naturally and hear Ragna answer back.
+            {isNativeVoiceMode
+              ? "On iPhone and Android, tap once to record your question, then tap again to send it and hear Ragna’s reply."
+              : "This opens a real time voice conversation so your user can speak naturally and hear Ragna answer back."}
           </Text>
 
           <View style={styles.statusRow}>
@@ -359,7 +445,7 @@ export default function VoiceScreen() {
               <Text style={styles.voicePickerTitle}>Choose Ragna's voice</Text>
               <Text style={styles.voicePickerSubtitle}>
                 {isVoiceActive
-                  ? "Voice changes lock while a live session is active."
+                  ? "Voice changes lock while a session or recording is active."
                   : `Current: ${selectedVoiceMeta.label} · ${selectedVoiceMeta.description}`}
               </Text>
             </View>
@@ -396,20 +482,22 @@ export default function VoiceScreen() {
                         {option.description}
                       </Text>
                     </Pressable>
-                    <Pressable
-                      onPress={() => handlePreviewVoice(option.id)}
-                      disabled={isVoiceActive}
-                      style={({ pressed }) => [
-                        styles.previewButton,
-                        previewing ? styles.previewButtonActive : null,
-                        isVoiceActive ? styles.previewButtonDisabled : null,
-                        pressed && !isVoiceActive ? { opacity: 0.92 } : null,
-                      ]}
-                    >
-                      <Text style={[styles.previewButtonText, previewing ? styles.previewButtonTextActive : null]}>
-                        {previewing ? "Stop" : "Preview"}
-                      </Text>
-                    </Pressable>
+                    {Platform.OS === "web" ? (
+                      <Pressable
+                        onPress={() => handlePreviewVoice(option.id)}
+                        disabled={isVoiceActive}
+                        style={({ pressed }) => [
+                          styles.previewButton,
+                          previewing ? styles.previewButtonActive : null,
+                          isVoiceActive ? styles.previewButtonDisabled : null,
+                          pressed && !isVoiceActive ? { opacity: 0.92 } : null,
+                        ]}
+                      >
+                        <Text style={[styles.previewButtonText, previewing ? styles.previewButtonTextActive : null]}>
+                          {previewing ? "Stop" : "Preview"}
+                        </Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                 );
               })}
@@ -423,21 +511,27 @@ export default function VoiceScreen() {
           )}
 
           <Pressable
-            onPress={handleToggleVoice}
+            onPress={() => {
+              void handleToggleVoice();
+            }}
             style={({ pressed }) => [
               styles.voiceButton,
               isVoiceActive ? styles.voiceButtonActive : null,
               pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
             ]}
           >
-            <Text style={styles.voiceButtonLabel}>
-              {isVoiceActive ? "End Voice Session" : `Start Voice Session with ${selectedVoiceMeta.label}`}
-            </Text>
+            <Text style={styles.voiceButtonLabel}>{actionButtonLabel}</Text>
           </Pressable>
 
           {!voiceSupported && (
             <Text style={styles.supportNote}>
-              Voice chat currently runs in the web preview. On native builds you can keep using text chat until WebRTC is added there.
+              Voice chat is only available in supported clients with microphone permission enabled.
+            </Text>
+          )}
+
+          {Platform.OS !== "web" && (
+            <Text style={styles.supportNote}>
+              The App Store path uses native recording and playback. Choose a voice, record your question, and Ragna will answer out loud.
             </Text>
           )}
 
