@@ -59,6 +59,32 @@ export async function deleteConversation(id: number): Promise<void> {
   if (!res.ok) throw new Error("Failed to delete conversation");
 }
 
+export async function saveVoiceExchange(
+  conversationId: number,
+  userTranscript: string,
+  assistantTranscript: string,
+): Promise<void> {
+  const res = await fetch(
+    `${apiBase()}/anthropic/conversations/${conversationId}/voice-exchange`,
+    {
+      method: "POST",
+      headers: await jsonHeaders(),
+      body: JSON.stringify({ userTranscript, assistantTranscript }),
+    },
+  );
+
+  if (!res.ok) {
+    let message = "Failed to save voice exchange";
+    try {
+      const data = (await res.json()) as { error?: string; message?: string };
+      message = data.error ?? data.message ?? message;
+    } catch {
+      // Ignore non-JSON responses.
+    }
+    throw new Error(message);
+  }
+}
+
 // ─── Memory / profile synthesis ─────────────────────────────────────────────
 
 export async function synthesizeProfile(

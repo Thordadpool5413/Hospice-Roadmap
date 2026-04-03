@@ -17,6 +17,14 @@ import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
 import {
+  createConversation,
+  saveVoiceExchange,
+} from "@/services/aiService";
+import {
+  getActiveConversationId,
+  setActiveConversationId,
+} from "@/services/ragnaConversationState";
+import {
   isOpenAiVoiceSupported,
   OpenAiVoiceSession,
   OpenAiVoiceStatus,
@@ -51,7 +59,10 @@ export default function VoiceScreen() {
   const [voiceStatus, setVoiceStatus] = useState<OpenAiVoiceStatus>("idle");
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
+  const [sharedThreadStatus, setSharedThreadStatus] = useState<string | null>(null);
   const voiceSessionRef = useRef<OpenAiVoiceSession | null>(null);
+  const conversationIdRef = useRef<number | null>(null);
+  const pendingUserTranscriptRef = useRef<string | null>(null);
 
   const voiceSupported = isOpenAiVoiceSupported();
 
@@ -116,6 +127,42 @@ export default function VoiceScreen() {
     ragnaPrivacy.personalizationEnabled,
   ]);
 
+  const ensureSharedConversation = useCallback(async () => {
+    if (conversationIdRef.current) return conversationIdRef.current;
+
+    const storedConversationId = await getActiveConversationId();
+    if (storedConversationId) {
+      conversationIdRef.current = storedConversationId;
+      return storedConversationId;
+    }
+
+    const conversation = await createConversation("Voice conversation");
+    conversationIdRef.current = conversation.id;
+    await setActiveConversationId(conversation.id);
+    return conversation.id;
+  }, []);
+
+  const persistVoiceExchange = useCallback(
+    async (assistantTranscript: string) => {
+      const userTranscript = pendingUserTranscriptRef.current?.trim();
+      if (!userTranscript) return;
+
+      pendingUserTranscriptRef.current = null;
+
+      try {
+        const conversationId = await ensureSharedConversation();
+        await saveVoiceExchange(conversationId, userTranscript, assistantTranscript);
+        setSharedThreadStatus("Saved to your Ask Ragna conversation.");
+      } catch (error) {
+        pendingUserTranscriptRef.current = userTranscript;
+        const message = error instanceof Error ? error.message : "Voice exchange could not be saved.";
+        setVoiceError(message);
+        setSharedThreadStatus("Voice is live, but the last exchange was not saved yet.");
+      }
+    },
+    [ensureSharedConversation],
+  );
+
   const stopVoiceConversation = useCallback(() => {
     voiceSessionRef.current?.stop();
     voiceSessionRef.current = null;
@@ -141,7 +188,12 @@ export default function VoiceScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setVoiceError(null);
       setVoiceTranscript(null);
+      setSharedThreadStatus("Connecting to your Ask Ragna conversation…");
       setVoiceStatus("requesting-mic");
+
+      const conversationId = await ensureSharedConversation();
+      conversationIdRef.current = conversationId;
+      setSharedThreadStatus("Voice will be saved into your Ask Ragna conversation.");
 
       voiceSessionRef.current = await startOpenAiVoiceSession({
         patientContext: buildRagnaPatientContext(),
@@ -153,6 +205,14 @@ export default function VoiceScreen() {
           }
         },
         onTranscript: (line) => setVoiceTranscript(line),
+        onUserTranscript: (text) => {
+          pendingUserTranscriptRef.current = text;
+          setVoiceTranscript(`You: ${text}`);
+        },
+        onAssistantTranscript: (text) => {
+          setVoiceTranscript(`Ragna: ${text}`);
+          void persistVoiceExchange(text);
+        },
         onError: (message) => {
           setVoiceError(message);
           setVoiceStatus("error");
@@ -165,7 +225,16 @@ export default function VoiceScreen() {
       setVoiceStatus("error");
       voiceSessionRef.current = null;
     }
-  }, [buildRagnaPatientContext, stopVoiceConversation, voiceSupported]);
+  }, [buildRagnaPatientContext, ensureSharedConversation, persistVoiceExchange, stopVoiceConversation, voiceSupported]);
+
+  useEffect(() => {
+    void getActiveConversationId().then((conversationId) => {
+      if (conversationId) {
+        conversationIdRef.current = conversationId;
+        setSharedThreadStatus("Using your current Ask Ragna conversation.");
+      }
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -204,6 +273,12 @@ export default function VoiceScreen() {
             />
             <Text style={styles.statusText}>{statusText}</Text>
           </View>
+
+          {sharedThreadStatus && (
+            <View style={styles.sharedThreadBanner}>
+              <Text style={styles.sharedThreadText}>{sharedThreadStatus}</Text>
+            </View>
+          )}
 
           <Pressable
             onPress={handleToggleVoice}
@@ -249,7 +324,7 @@ export default function VoiceScreen() {
             Ragna listens, responds with an AI voice, and uses the same patient context you already build for text chat.
           </Text>
           <Text style={styles.bodyText}>
-            This voice mode is intentionally separate from the saved text thread, so the live call stays fast and the existing Ask Ragna experience stays untouched.
+            Every completed voice exchange is saved into the same Ask Ragna conversation so the text tab can pick up where the live call left off.
           </Text>
         </View>
       </ScrollView>
@@ -317,6 +392,20 @@ const styles = StyleSheet.create({
     color: "#DDE8FF",
     fontSize: 13,
     lineHeight: 19,
+    fontFamily: "Inter_500Medium",
+  },
+  sharedThreadBanner: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(91,192,255,0.24)",
+    backgroundColor: "rgba(8,22,56,0.82)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  sharedThreadText: {
+    color: "#CFE5FF",
+    fontSize: 12,
+    lineHeight: 18,
     fontFamily: "Inter_500Medium",
   },
   voiceButton: {

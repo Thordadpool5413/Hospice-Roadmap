@@ -233,6 +233,57 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
   }
 });
 
+router.post("/conversations/:id/voice-exchange", async (req: Request, res: Response) => {
+  const clientId = requireClientId(req, res);
+  if (!clientId) return;
+
+  const id = Number(req.params["id"]);
+  const { userTranscript, assistantTranscript } = req.body as {
+    userTranscript?: string;
+    assistantTranscript?: string;
+  };
+
+  if (!userTranscript || typeof userTranscript !== "string") {
+    res.status(400).json({ error: "userTranscript is required" });
+    return;
+  }
+
+  if (!assistantTranscript || typeof assistantTranscript !== "string") {
+    res.status(400).json({ error: "assistantTranscript is required" });
+    return;
+  }
+
+  try {
+    const [conv] = await db
+      .select()
+      .from(conversations)
+      .where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+
+    if (!conv) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+
+    await db.insert(messages).values([
+      {
+        conversationId: id,
+        role: "user",
+        content: userTranscript.trim(),
+      },
+      {
+        conversationId: id,
+        role: "assistant",
+        content: assistantTranscript.trim(),
+      },
+    ]);
+
+    res.status(204).send();
+  } catch (err: unknown) {
+    console.error("Error saving voice exchange:", err);
+    res.status(500).json({ error: "Failed to save voice exchange" });
+  }
+});
+
 router.post("/profile-synthesize", async (req: Request, res: Response) => {
   const clientId = requireClientId(req, res);
   if (!clientId) return;

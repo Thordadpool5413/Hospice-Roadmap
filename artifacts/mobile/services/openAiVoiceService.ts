@@ -23,6 +23,8 @@ interface StartOpenAiVoiceSessionOptions {
   voice?: string;
   onStatusChange?: (status: OpenAiVoiceStatus) => void;
   onTranscript?: (line: string) => void;
+  onUserTranscript?: (text: string) => void;
+  onAssistantTranscript?: (text: string) => void;
   onError?: (message: string) => void;
 }
 
@@ -50,6 +52,8 @@ export async function startOpenAiVoiceSession({
   voice = "marin",
   onStatusChange,
   onTranscript,
+  onUserTranscript,
+  onAssistantTranscript,
   onError,
 }: StartOpenAiVoiceSessionOptions): Promise<OpenAiVoiceSession> {
   if (!isOpenAiVoiceSupported()) {
@@ -95,11 +99,17 @@ export async function startOpenAiVoiceSession({
           onStatusChange?.("ready");
           break;
         case "conversation.item.input_audio_transcription.completed":
-          if (data.transcript) onTranscript?.(`You: ${data.transcript}`);
+          if (data.transcript) {
+            onTranscript?.(`You: ${data.transcript}`);
+            onUserTranscript?.(data.transcript);
+          }
           onStatusChange?.("listening");
           break;
         case "response.audio_transcript.done":
-          if (data.transcript) onTranscript?.(`Ragna: ${data.transcript}`);
+          if (data.transcript) {
+            onTranscript?.(`Ragna: ${data.transcript}`);
+            onAssistantTranscript?.(data.transcript);
+          }
           onStatusChange?.("ready");
           break;
         case "error":
