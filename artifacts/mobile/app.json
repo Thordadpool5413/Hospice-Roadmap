@@ -14,9 +14,16 @@
       "backgroundColor": "#1A1840"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Hospice Roadmap uses your microphone so you can speak with Ragna."
+      }
     },
-    "android": {},
+    "android": {
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/app-icon.png"
     },

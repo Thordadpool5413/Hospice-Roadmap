@@ -30,6 +30,11 @@ import {
   streamMessage,
   synthesizeProfile,
 } from "@/services/aiService";
+import {
+  clearActiveConversationId,
+  getActiveConversationId,
+  setActiveConversationId,
+} from "@/services/ragnaConversationState";
 import { VeraEmotionalTone } from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
@@ -263,10 +268,11 @@ export default function HelpScreen() {
     }, delay);
   }, []);
 
-  const loadConversation = useCallback(async (convId: number) => {
+  const loadConversation = useCallback(async (convId: number): Promise<boolean> => {
     try {
       const conv = await getConversation(convId);
       setConversation(conv);
+      await setActiveConversationId(conv.id);
       if (conv.messages) {
         setLocalMessages(
           conv.messages.map((m: AiMessage) => ({
@@ -277,8 +283,9 @@ export default function HelpScreen() {
         );
         scrollToBottom(200);
       }
+      return true;
     } catch {
-      // ignore
+      return false;
     }
   }, [scrollToBottom]);
 
@@ -287,6 +294,7 @@ export default function HelpScreen() {
     setLocalMessages([]);
     setInputText("");
     setSuggestions([]);
+    await clearActiveConversationId();
   }, []);
 
   const sendMessage = useCallback(
@@ -303,6 +311,7 @@ export default function HelpScreen() {
           const shortTitle = text.slice(0, 60);
           activeConv = await createConversation(shortTitle);
           setConversation(activeConv);
+          await setActiveConversationId(activeConv.id);
         } catch {
           Alert.alert("Connection Error", "Could not connect to Ragna. Please check your connection.");
           setIsLoading(false);
@@ -310,6 +319,8 @@ export default function HelpScreen() {
         } finally {
           setIsLoading(false);
         }
+      } else {
+        void setActiveConversationId(activeConv.id);
       }
 
       const userMsgId = `user-${Date.now()}`;
@@ -482,6 +493,7 @@ export default function HelpScreen() {
           } catch {
             // ignore
           }
+          await clearActiveConversationId();
           startNewConversation();
         },
       },
@@ -500,6 +512,27 @@ export default function HelpScreen() {
       return () => clearTimeout(timer);
     }
   }, [initialMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreConversation = async () => {
+      if (conversation || localMessages.length > 0) return;
+      const activeConversationId = await getActiveConversationId();
+      if (!activeConversationId || cancelled) return;
+
+      const loaded = await loadConversation(activeConversationId);
+      if (!loaded && !cancelled) {
+        await clearActiveConversationId();
+      }
+    };
+
+    void restoreConversation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conversation, localMessages.length, loadConversation]);
 
   const hasMessages = localMessages.length > 0;
 
