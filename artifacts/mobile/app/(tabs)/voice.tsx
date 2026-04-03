@@ -21,6 +21,10 @@ import {
   saveVoiceExchange,
 } from "@/services/aiService";
 import {
+  previewOpenAiVoice,
+  stopOpenAiVoicePreview,
+} from "@/services/openAiVoicePreviewService";
+import {
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
@@ -54,6 +58,9 @@ const VOICE_OPTIONS = [
   { id: "echo", label: "Echo", description: "Direct and crisp" },
 ] as const;
 
+const VOICE_PREVIEW_TEXT =
+  "Hi, I’m Ragna. I’m here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
+
 type VoiceOptionId = (typeof VOICE_OPTIONS)[number]["id"];
 
 const STARTER_PROMPTS = [
@@ -73,6 +80,7 @@ export default function VoiceScreen() {
 
   const [voiceStatus, setVoiceStatus] = useState<OpenAiVoiceStatus>("idle");
   const [selectedVoice, setSelectedVoice] = useState<VoiceOptionId>("marin");
+  const [previewingVoiceId, setPreviewingVoiceId] = useState<VoiceOptionId | null>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const [sharedThreadStatus, setSharedThreadStatus] = useState<string | null>(null);
@@ -197,6 +205,37 @@ export default function VoiceScreen() {
     }
   }, []);
 
+  const handlePreviewVoice = useCallback(async (voiceId: VoiceOptionId) => {
+    if (voiceSessionRef.current) return;
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (previewingVoiceId === voiceId) {
+        stopOpenAiVoicePreview();
+        setPreviewingVoiceId(null);
+        setSharedThreadStatus("Voice preview stopped.");
+        return;
+      }
+
+      stopOpenAiVoicePreview();
+      setPreviewingVoiceId(voiceId);
+      setVoiceError(null);
+      const voice = VOICE_OPTIONS.find((option) => option.id === voiceId);
+      setSharedThreadStatus(`Previewing ${voice?.label ?? voiceId}…`);
+      await previewOpenAiVoice(voiceId, VOICE_PREVIEW_TEXT);
+      setSharedThreadStatus(`Preview playing for ${voice?.label ?? voiceId}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Voice preview could not start.";
+      setVoiceError(message);
+      setSharedThreadStatus("Voice preview could not be played.");
+      stopOpenAiVoicePreview();
+    } finally {
+      setTimeout(() => {
+        setPreviewingVoiceId((current) => (current === voiceId ? null : current));
+      }, 1800);
+    }
+  }, [previewingVoiceId]);
+
   const handleToggleVoice = useCallback(async () => {
     if (voiceSessionRef.current) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -214,6 +253,8 @@ export default function VoiceScreen() {
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      stopOpenAiVoicePreview();
+      setPreviewingVoiceId(null);
       setVoiceError(null);
       setVoiceTranscript(null);
       setSharedThreadStatus("Connecting to your Ask Ragna conversation…");
@@ -276,6 +317,7 @@ export default function VoiceScreen() {
 
   useEffect(() => {
     return () => {
+      stopOpenAiVoicePreview();
       voiceSessionRef.current?.stop();
       voiceSessionRef.current = null;
     };
@@ -324,30 +366,51 @@ export default function VoiceScreen() {
             <View style={styles.voiceOptionGrid}>
               {VOICE_OPTIONS.map((option) => {
                 const selected = option.id === selectedVoice;
+                const previewing = previewingVoiceId === option.id;
                 return (
-                  <Pressable
+                  <View
                     key={option.id}
-                    onPress={() => handleSelectVoice(option.id)}
-                    disabled={isVoiceActive}
-                    style={({ pressed }) => [
+                    style={[
                       styles.voiceOption,
                       selected ? styles.voiceOptionSelected : null,
                       isVoiceActive ? styles.voiceOptionDisabled : null,
-                      pressed && !isVoiceActive ? { opacity: 0.92, transform: [{ scale: 0.98 }] } : null,
                     ]}
                   >
-                    <Text style={[styles.voiceOptionLabel, selected ? styles.voiceOptionLabelSelected : null]}>
-                      {option.label}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.voiceOptionDescription,
-                        selected ? styles.voiceOptionDescriptionSelected : null,
+                    <Pressable
+                      onPress={() => handleSelectVoice(option.id)}
+                      disabled={isVoiceActive}
+                      style={({ pressed }) => [
+                        styles.voiceSelectArea,
+                        pressed && !isVoiceActive ? { opacity: 0.92 } : null,
                       ]}
                     >
-                      {option.description}
-                    </Text>
-                  </Pressable>
+                      <Text style={[styles.voiceOptionLabel, selected ? styles.voiceOptionLabelSelected : null]}>
+                        {option.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.voiceOptionDescription,
+                          selected ? styles.voiceOptionDescriptionSelected : null,
+                        ]}
+                      >
+                        {option.description}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handlePreviewVoice(option.id)}
+                      disabled={isVoiceActive}
+                      style={({ pressed }) => [
+                        styles.previewButton,
+                        previewing ? styles.previewButtonActive : null,
+                        isVoiceActive ? styles.previewButtonDisabled : null,
+                        pressed && !isVoiceActive ? { opacity: 0.92 } : null,
+                      ]}
+                    >
+                      <Text style={[styles.previewButtonText, previewing ? styles.previewButtonTextActive : null]}>
+                        {previewing ? "Stop" : "Preview"}
+                      </Text>
+                    </Pressable>
+                  </View>
                 );
               })}
             </View>
@@ -509,7 +572,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(13,24,58,0.92)",
     paddingHorizontal: 12,
     paddingVertical: 12,
-    gap: 4,
+    gap: 10,
   },
   voiceOptionSelected: {
     borderColor: "rgba(91,192,255,0.7)",
@@ -517,6 +580,9 @@ const styles = StyleSheet.create({
   },
   voiceOptionDisabled: {
     opacity: 0.7,
+  },
+  voiceSelectArea: {
+    gap: 4,
   },
   voiceOptionLabel: {
     color: "#DDE8FF",
@@ -534,6 +600,31 @@ const styles = StyleSheet.create({
   },
   voiceOptionDescriptionSelected: {
     color: "#DCEBFF",
+  },
+  previewButton: {
+    minHeight: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(91,192,255,0.22)",
+    backgroundColor: "rgba(9,21,49,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  previewButtonActive: {
+    borderColor: "rgba(139,124,255,0.65)",
+    backgroundColor: "rgba(71,50,142,0.72)",
+  },
+  previewButtonDisabled: {
+    opacity: 0.6,
+  },
+  previewButtonText: {
+    color: "#CFE5FF",
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+  },
+  previewButtonTextActive: {
+    color: "#FFFFFF",
   },
   sharedThreadBanner: {
     borderRadius: 14,

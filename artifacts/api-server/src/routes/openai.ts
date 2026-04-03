@@ -17,6 +17,8 @@ const ALLOWED_VOICES = new Set([
   "shimmer",
   "verse",
 ]);
+const DEFAULT_PREVIEW_TEXT =
+  "Hi, I’m Ragna. I’m here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
 
 function requireClientId(req: Request, res: Response): string | null {
   const raw = req.header("x_client_id");
@@ -109,6 +111,66 @@ router.post("/realtime/session", async (req: Request, res: Response) => {
   } catch (error: unknown) {
     console.error("Realtime voice session failure:", error);
     res.status(500).json({ error: "Failed to create realtime voice session." });
+  }
+});
+
+router.post("/preview", async (req: Request, res: Response) => {
+  const clientId = requireClientId(req, res);
+  if (!clientId) return;
+
+  const apiKey = process.env["OPENAI_API_KEY"];
+  if (!apiKey) {
+    res.status(500).json({ error: "OPENAI_API_KEY is not configured on the server." });
+    return;
+  }
+
+  const { voice, text } = req.body as {
+    voice?: string;
+    text?: string;
+  };
+
+  const selectedVoice =
+    typeof voice === "string" && ALLOWED_VOICES.has(voice) ? voice : "marin";
+  const previewText =
+    typeof text === "string" && text.trim().length > 0
+      ? text.trim().slice(0, 280)
+      : DEFAULT_PREVIEW_TEXT;
+
+  try {
+    const openAiResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice: selectedVoice,
+        input: previewText,
+        format: "mp3",
+      }),
+    });
+
+    if (!openAiResponse.ok) {
+      const errorBody = await openAiResponse.text();
+      console.error("OpenAI voice preview error:", {
+        clientId,
+        status: openAiResponse.status,
+        body: errorBody,
+      });
+      res
+        .status(openAiResponse.status >= 400 && openAiResponse.status < 500 ? openAiResponse.status : 502)
+        .json({ error: errorBody || "Failed to generate voice preview." });
+      return;
+    }
+
+    const audioBuffer = Buffer.from(await openAiResponse.arrayBuffer());
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).send(audioBuffer);
+  } catch (error: unknown) {
+    console.error("OpenAI voice preview failure:", error);
+    res.status(500).json({ error: "Failed to generate voice preview." });
   }
 });
 
