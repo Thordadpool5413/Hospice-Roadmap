@@ -37,10 +37,63 @@ type RealtimeEvent =
   | { type: "error"; error?: { message?: string } }
   | { type: string; [key: string]: unknown };
 
+function createManagedRemoteAudio(): HTMLAudioElement {
+  const audio = document.createElement("audio");
+  audio.autoplay = true;
+  audio.playsInline = true;
+  audio.controls = false;
+  audio.preload = "auto";
+  audio.style.position = "fixed";
+  audio.style.width = "1px";
+  audio.style.height = "1px";
+  audio.style.opacity = "0";
+  audio.style.pointerEvents = "none";
+  audio.style.bottom = "0";
+  audio.style.left = "0";
+  document.body.appendChild(audio);
+  return audio;
+}
+
+function removeManagedAudio(audio: HTMLAudioElement | null): void {
+  if (!audio) return;
+  try {
+    audio.pause();
+    audio.srcObject = null;
+    audio.removeAttribute("src");
+    audio.load();
+  } catch {
+  }
+  if (audio.parentNode) {
+    audio.parentNode.removeChild(audio);
+  }
+}
+
+async function waitForIceGatheringComplete(peerConnection: RTCPeerConnection): Promise<void> {
+  if (peerConnection.iceGatheringState === "complete") return;
+
+  await new Promise<void>((resolve) => {
+    const timeout = window.setTimeout(() => {
+      peerConnection.removeEventListener("icegatheringstatechange", handleStateChange);
+      resolve();
+    }, 2000);
+
+    function handleStateChange() {
+      if (peerConnection.iceGatheringState === "complete") {
+        window.clearTimeout(timeout);
+        peerConnection.removeEventListener("icegatheringstatechange", handleStateChange);
+        resolve();
+      }
+    }
+
+    peerConnection.addEventListener("icegatheringstatechange", handleStateChange);
+  });
+}
+
 export function isOpenAiVoiceSupported(): boolean {
   return (
     Platform.OS === "web" &&
     typeof window !== "undefined" &&
+    typeof document !== "undefined" &&
     typeof navigator !== "undefined" &&
     !!navigator.mediaDevices?.getUserMedia &&
     typeof RTCPeerConnection !== "undefined"
@@ -71,17 +124,17 @@ export async function startOpenAiVoiceSession({
 
   onStatusChange?.("connecting");
 
-  const peerConnection = new RTCPeerConnection();
-  const remoteAudio = new Audio();
-  remoteAudio.autoplay = true;
-  remoteAudio.playsInline = true;
-  remoteAudio.volume = 1;
+  const remoteAudio = createManagedRemoteAudio();
+  const peerConnection = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  });
 
   peerConnection.ontrack = (event) => {
     const [stream] = event.streams;
     if (!stream) return;
     remoteAudio.srcObject = stream;
-    void remoteAudio.play().catch(() => {});
+    void remoteAudio.play().catch(() => {
+    });
   };
 
   const dataChannel = peerConnection.createDataChannel("oai-events");
@@ -120,7 +173,6 @@ export async function startOpenAiVoiceSession({
           break;
       }
     } catch {
-      // Ignore malformed realtime events.
     }
   };
 
@@ -130,12 +182,24 @@ export async function startOpenAiVoiceSession({
       return;
     }
 
+    if (peerConnection.connectionState === "failed") {
+      onError?.("Voice connection failed. Refresh the app and try again in the web preview.");
+      onStatusChange?.("error");
+      return;
+    }
+
     if (
-      peerConnection.connectionState === "failed" ||
       peerConnection.connectionState === "disconnected" ||
       peerConnection.connectionState === "closed"
     ) {
       onStatusChange?.("idle");
+    }
+  };
+
+  peerConnection.oniceconnectionstatechange = () => {
+    if (peerConnection.iceConnectionState === "failed") {
+      onError?.("Voice network negotiation failed. Refresh the app and try again.");
+      onStatusChange?.("error");
     }
   };
 
@@ -147,13 +211,14 @@ export async function startOpenAiVoiceSession({
     offerToReceiveAudio: true,
   });
   await peerConnection.setLocalDescription(offer);
+  await waitForIceGatheringComplete(peerConnection);
 
   const clientId = await getClientId();
   const response = await fetch(`${apiBase()}/openai/realtime/session`, {
     method: "POST",
     headers: mergeJsonHeaders({ x_client_id: clientId }),
     body: JSON.stringify({
-      sdp: offer.sdp,
+      sdp: peerConnection.localDescription?.sdp ?? offer.sdp,
       patientContext,
       voice,
     }),
@@ -181,25 +246,16 @@ export async function startOpenAiVoiceSession({
     try {
       dataChannel.close();
     } catch {
-      // ignore
     }
 
     try {
       peerConnection.getSenders().forEach((sender) => sender.track?.stop());
       localStream.getTracks().forEach((track) => track.stop());
-      remoteAudio.pause();
-
-      if (remoteAudio.srcObject) {
-        const remoteStream = remoteAudio.srcObject as MediaStream;
-        remoteStream.getTracks().forEach((track) => track.stop());
-        remoteAudio.srcObject = null;
-      }
-
       peerConnection.close();
     } catch {
-      // ignore cleanup errors
     }
 
+    removeManagedAudio(remoteAudio);
     onStatusChange?.("idle");
   };
 
