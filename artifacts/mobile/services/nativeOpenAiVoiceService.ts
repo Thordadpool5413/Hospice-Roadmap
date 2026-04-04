@@ -1,7 +1,6 @@
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
-
 import { apiBase } from "./apiClient";
 import { getClientId } from "./clientIdentity";
 
@@ -46,12 +45,10 @@ async function stopActiveSound(): Promise<void> {
   activeSound = null;
   try {
     await sound.stopAsync();
-  } catch {
-  }
+  } catch {}
   try {
     await sound.unloadAsync();
-  } catch {
-  }
+  } catch {}
 }
 
 export function isNativeOpenAiVoiceSupported(): boolean {
@@ -60,7 +57,9 @@ export function isNativeOpenAiVoiceSupported(): boolean {
 
 export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   if (!isNativeOpenAiVoiceSupported()) {
-    throw new Error("Native voice recording is only available on iPhone and Android builds.");
+    throw new Error(
+      "Native voice recording is only available on iPhone and Android builds.",
+    );
   }
 
   await stopActiveSound();
@@ -73,20 +72,24 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {
-    }
+    } catch {}
     activeRecording = null;
   }
 
   await configureRecordingMode();
 
   const recording = new Audio.Recording();
-  await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+  await recording.prepareToRecordAsync(
+    Audio.RecordingOptionsPresets.HIGH_QUALITY,
+  );
   await recording.startAsync();
   activeRecording = recording;
 }
 
-async function playAudioReply(audioBase64: string, audioMimeType?: string): Promise<void> {
+async function playAudioReply(
+  audioBase64: string,
+  audioMimeType?: string,
+): Promise<void> {
   await stopActiveSound();
   await configurePlaybackMode();
 
@@ -124,8 +127,7 @@ export async function stopNativeOpenAiVoice(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {
-    }
+    } catch {}
     activeRecording = null;
   }
 
@@ -177,7 +179,10 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
   if (!response.ok) {
     let message = "Voice turn failed.";
     try {
-      const data = (await response.json()) as { error?: string; message?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
       message = data.error ?? data.message ?? message;
     } catch {
       const text = await response.text();
