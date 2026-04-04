@@ -21,6 +21,11 @@ interface RagnaComposerProps {
   hasMessages: boolean;
   insetsBottom: number;
   inputRef: React.RefObject<TextInput | null>;
+  onVoicePress?: () => void;
+  isVoiceAvailable?: boolean;
+  isVoiceBusy?: boolean;
+  isVoiceRecording?: boolean;
+  voiceStatusText?: string | null;
 }
 
 export function RagnaComposer({
@@ -32,14 +37,21 @@ export function RagnaComposer({
   hasMessages,
   insetsBottom,
   inputRef,
+  onVoicePress,
+  isVoiceAvailable = false,
+  isVoiceBusy = false,
+  isVoiceRecording = false,
+  voiceStatusText,
 }: RagnaComposerProps) {
+  const voiceDisabled = !isOnline || isStreaming || (isVoiceBusy && !isVoiceRecording);
+
   return (
     <View style={[styles.inputBar, { paddingBottom: Platform.OS === "web" ? 84 : 49 + insetsBottom }]}>
       {!isOnline && (
         <View style={styles.offlineInputNotice}>
           <Feather name="wifi-off" size={15} color={Colors.amber} />
           <Text style={styles.offlineInputText}>
-            No connection — check your internet and try again.
+            No connection. Check your internet and try again.
           </Text>
         </View>
       )}
@@ -49,6 +61,16 @@ export function RagnaComposer({
           <Text style={styles.streamingBannerText}>Ragna is responding…</Text>
         </View>
       )}
+      {voiceStatusText ? (
+        <View style={styles.voiceBanner}>
+          <Feather
+            name={isVoiceRecording ? "mic" : isVoiceBusy ? "radio" : "volume-2"}
+            size={15}
+            color={Colors.primaryLight}
+          />
+          <Text style={styles.voiceBannerText}>{voiceStatusText}</Text>
+        </View>
+      ) : null}
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}
@@ -74,6 +96,24 @@ export function RagnaComposer({
           returnKeyType="default"
           editable={!isStreaming && isOnline}
         />
+        {isVoiceAvailable && onVoicePress ? (
+          <Pressable
+            onPress={onVoicePress}
+            disabled={voiceDisabled}
+            style={({ pressed }) => [
+              styles.voiceBtn,
+              isVoiceRecording && styles.voiceBtnRecording,
+              voiceDisabled && styles.voiceBtnDisabled,
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            {isVoiceBusy && !isVoiceRecording ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Feather name={isVoiceRecording ? "square" : "mic"} size={18} color="#FFFFFF" />
+            )}
+          </Pressable>
+        ) : null}
         <Pressable
           onPress={() => onSend(inputText)}
           disabled={!inputText.trim() || isStreaming || !isOnline}
@@ -116,6 +156,19 @@ const styles = StyleSheet.create({
     color: "#5A78A8",
     fontStyle: "italic",
   },
+  voiceBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  voiceBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primaryLight,
+    lineHeight: 17,
+  },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -144,6 +197,28 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(8,16,45,0.95)",
     borderColor: Colors.amber + "40",
     opacity: 0.6,
+  },
+  voiceBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#6E5BFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#6E5BFF",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  voiceBtnRecording: {
+    backgroundColor: Colors.error,
+    shadowColor: Colors.error,
+  },
+  voiceBtnDisabled: {
+    backgroundColor: "rgba(95,90,160,0.25)",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   sendBtn: {
     width: 44,
