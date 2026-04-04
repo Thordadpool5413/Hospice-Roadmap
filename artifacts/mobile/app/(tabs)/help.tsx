@@ -27,14 +27,22 @@ import {
   deleteConversation,
   generateConversationMemory,
   getConversation,
+  saveVoiceExchange,
   streamMessage,
   synthesizeProfile,
 } from "@/services/aiService";
+import {
+  isNativeOpenAiVoiceSupported,
+  startNativeOpenAiVoiceRecording,
+  stopNativeOpenAiVoice,
+  stopNativeOpenAiVoiceRecordingAndSend,
+} from "@/services/nativeOpenAiVoiceService";
 import {
   clearActiveConversationId,
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
+import { getPreferredVoice } from "@/services/voicePreferences";
 import { VeraEmotionalTone } from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
@@ -42,6 +50,15 @@ import { RagnaEmptyState } from "@/components/ragna/RagnaEmptyState";
 import { RagnaHeader } from "@/components/ragna/RagnaHeader";
 import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
 import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
+
+const VOICE_LABELS: Record<string, string> = {
+  marin: "Marin",
+  cedar: "Cedar",
+  alloy: "Alloy",
+  sage: "Sage",
+  shimmer: "Shimmer",
+  echo: "Echo",
+};
 
 const GUIDANCE_PROMPTS: { label: string; prompt: string; caregiverOnly?: boolean; patientPrompt?: string }[] = [
   {
@@ -65,7 +82,7 @@ const GUIDANCE_PROMPTS: { label: string; prompt: string; caregiverOnly?: boolean
   },
   {
     label: "How do I explain this to a child?",
-    prompt: "I need to explain what is happening — that someone is dying — to a child. Can you help me with honest, age-appropriate language that won't traumatize them?",
+    prompt: "I need to explain what is happening to a child. Can you help me with honest, age-appropriate language that will not traumatize them?",
   },
   {
     label: "What do I do if death happens now?",
@@ -74,7 +91,7 @@ const GUIDANCE_PROMPTS: { label: string; prompt: string; caregiverOnly?: boolean
   },
   {
     label: "What happens right after death?",
-    prompt: "Can you walk me through what happens in the hours and days after someone dies at home on hospice? I want to be prepared — the practical steps, the calls, the process.",
+    prompt: "Can you walk me through what happens in the hours and days after someone dies at home on hospice? I want to be prepared with the practical steps, the calls, and the process.",
     caregiverOnly: true,
   },
   {
@@ -84,7 +101,7 @@ const GUIDANCE_PROMPTS: { label: string; prompt: string; caregiverOnly?: boolean
   },
   {
     label: "I'm carrying grief right now",
-    prompt: "I'm carrying a lot of grief, guilt, or fear right now. I don't need clinical advice — I just need to talk through what I'm feeling with someone who understands.",
+    prompt: "I'm carrying a lot of grief, guilt, or fear right now. I don't need clinical advice. I just need to talk through what I'm feeling with someone who understands.",
   },
   {
     label: "No one has explained anything",
@@ -93,7 +110,7 @@ const GUIDANCE_PROMPTS: { label: string; prompt: string; caregiverOnly?: boolean
   },
   {
     label: "How do I document care concerns?",
-    prompt: "I think there have been problems with our hospice care — delayed responses, unanswered calls, or things that weren't handled well. How do I document this and what can I do about it?",
+    prompt: "I think there have been problems with our hospice care. How do I document this and what can I do about it?",
     caregiverOnly: true,
   },
   {
@@ -164,7 +181,7 @@ const URGENT_TILES = [
   {
     label: "Prepare to call hospice",
     icon: "phone-call", color: Colors.primary,
-    prompt: "I need to call my hospice nurse and want to be organized. Based on everything you know about our situation — the patient's diagnosis, recent symptoms, medications, and what's been happening — give me a ready-to-read SBAR script: (1) Situation — what's happening right now in 1–2 sentences, (2) Background — the patient's relevant history in 2–3 sentences, (3) Assessment — how serious this appears, (4) Request — exactly what I need from the hospice team. Make it brief and something I can read directly to the nurse on the phone.",
+    prompt: "I need to call my hospice nurse and want to be organized. Based on everything you know about our situation, give me a brief SBAR script I can read directly to the nurse.",
     caregiverOnly: true,
   },
 ];
@@ -195,6 +212,8 @@ export default function HelpScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const isPatient = user?.role === "patient";
+  const nativeVoiceSupported = isNativeOpenAiVoiceSupported();
+
   const visibleTiles = URGENT_TILES
     .filter((t) => !isPatient || !t.caregiverOnly)
     .map((t) => ({
@@ -216,8 +235,13 @@ export default function HelpScreen() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [knowsExpanded, setKnowsExpanded] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState("marin");
+  const [isVoiceBusy, setIsVoiceBusy] = useState(false);
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const [voiceStatusText, setVoiceStatusText] = useState<string | null>(null);
 
   const todayEntry = useMemo(() => getTodayEntry(), [symptomEntries, getTodayEntry]);
+  const selectedVoiceLabel = VOICE_LABELS[selectedVoice] ?? "Marin";
 
   const symptomAlert = useMemo<{ text: string; prompt: string } | null>(() => {
     if (!todayEntry) return null;
@@ -249,14 +273,14 @@ export default function HelpScreen() {
     let display: string;
     let sendPrompt: string;
     if (topTopic) {
-      display = `${greeting}. Last time we spoke, ${topTopic} was on your mind — how have things been since then?`;
+      display = `${greeting}. Last time we spoke, ${topTopic} was on your mind. How have things been since then?`;
       sendPrompt = `I'm back. Last time we spoke about ${topTopic}. How do you think things are going with that, and is there anything I should be watching for?`;
     } else if (topTile) {
       const tileLabel = topTile.toLowerCase();
-      display = `${greeting}. I've been thinking about you — how has ${tileLabel} been going?`;
-      sendPrompt = `I'm checking back in. I've been dealing with ${tileLabel} — what should I be thinking about now?`;
+      display = `${greeting}. I've been thinking about you. How has ${tileLabel} been going?`;
+      sendPrompt = `I'm checking back in. I've been dealing with ${tileLabel}. What should I be thinking about now?`;
     } else {
-      display = `${greeting}. Good to see you again — how are you and your loved one doing today?`;
+      display = `${greeting}. Good to see you again. How are you and your loved one doing today?`;
       sendPrompt = `I'm back checking in. How are things going overall and is there anything I should be watching for right now?`;
     }
     return { display, sendPrompt };
@@ -267,6 +291,67 @@ export default function HelpScreen() {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, delay);
   }, []);
+
+  const buildRagnaPatientContext = useCallback(() => {
+    if (!ragnaPrivacy.personalizationEnabled) return "";
+
+    const baseContext = buildPatientContext();
+    const symptomSummary = ragnaPrivacy.includeRecentSymptoms ? getRecentSummary(7) : "";
+    const memorySummary = ragnaPrivacy.includeConversationMemory ? getMemorySummary() : "";
+
+    const now = new Date();
+    const timeContext = ragnaPrivacy.includeTimeContext
+      ? [
+          `Current date/time: ${now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at ${now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
+          now.getHours() < 6 || now.getHours() >= 22
+            ? "Note: This person is reaching out in the middle of the night. That often signals urgency, fear, or exhaustion."
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
+    const journalContext = ragnaPrivacy.includeRecentJournal
+      ? (() => {
+          const recentJournal = journalEntries.slice(0, 3);
+          return recentJournal.length > 0
+            ? `--- Recent Caregiver Journal Entries ---\n${recentJournal
+                .map((entry) => {
+                  const dateStr =
+                    entry.date ||
+                    new Date(entry.timestamp).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    });
+                  return `[${dateStr} · ${entry.type}] ${entry.title}: ${entry.body.slice(0, 200)}${entry.body.length > 200 ? "…" : ""}`;
+                })
+                .join("\n")}`
+            : "";
+        })()
+      : "";
+
+    return [
+      baseContext,
+      symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
+      journalContext,
+      getObservationContext(),
+      memorySummary,
+      timeContext,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }, [
+    buildPatientContext,
+    getMemorySummary,
+    getObservationContext,
+    getRecentSummary,
+    journalEntries,
+    ragnaPrivacy.includeConversationMemory,
+    ragnaPrivacy.includeRecentJournal,
+    ragnaPrivacy.includeRecentSymptoms,
+    ragnaPrivacy.includeTimeContext,
+    ragnaPrivacy.personalizationEnabled,
+  ]);
 
   const loadConversation = useCallback(async (convId: number): Promise<boolean> => {
     try {
@@ -289,11 +374,24 @@ export default function HelpScreen() {
     }
   }, [scrollToBottom]);
 
+  const ensureConversation = useCallback(async (seedText: string): Promise<AiConversation> => {
+    if (conversation) {
+      await setActiveConversationId(conversation.id);
+      return conversation;
+    }
+
+    const created = await createConversation(seedText.trim().slice(0, 60) || "Voice conversation");
+    setConversation(created);
+    await setActiveConversationId(created.id);
+    return created;
+  }, [conversation]);
+
   const startNewConversation = useCallback(async () => {
     setConversation(null);
     setLocalMessages([]);
     setInputText("");
     setSuggestions([]);
+    setVoiceStatusText(null);
     await clearActiveConversationId();
   }, []);
 
@@ -308,8 +406,7 @@ export default function HelpScreen() {
       if (!activeConv) {
         try {
           setIsLoading(true);
-          const shortTitle = text.slice(0, 60);
-          activeConv = await createConversation(shortTitle);
+          activeConv = await createConversation(text.slice(0, 60));
           setConversation(activeConv);
           await setActiveConversationId(activeConv.id);
         } catch {
@@ -336,58 +433,7 @@ export default function HelpScreen() {
       setIsStreaming(true);
       scrollToBottom(150);
 
-      let patientContext = "";
-      if (ragnaPrivacy.personalizationEnabled) {
-        const baseContext = buildPatientContext();
-
-        const symptomSummary = ragnaPrivacy.includeRecentSymptoms ? getRecentSummary(7) : "";
-
-        const memorySummary = ragnaPrivacy.includeConversationMemory ? getMemorySummary() : "";
-
-        const now = new Date();
-        const timeContext = ragnaPrivacy.includeTimeContext
-          ? [
-              `Current date/time: ${now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at ${now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
-              now.getHours() < 6 || now.getHours() >= 22
-                ? "Note: This person is reaching out in the middle of the night — that often signals urgency, fear, or exhaustion."
-                : "",
-            ]
-              .filter(Boolean)
-              .join("\n")
-          : "";
-
-        const journalContext = ragnaPrivacy.includeRecentJournal
-          ? (() => {
-              const recentJournal = journalEntries.slice(0, 3);
-              return recentJournal.length > 0
-                ? `--- Recent Caregiver Journal Entries ---\n${recentJournal
-                    .map((e) => {
-                      const dateStr =
-                        e.date ||
-                        new Date(e.timestamp).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        });
-                      return `[${dateStr} · ${e.type}] ${e.title}: ${e.body.slice(0, 200)}${e.body.length > 200 ? "…" : ""}`;
-                    })
-                    .join("\n")}`
-                : "";
-            })()
-          : "";
-
-        const observationContext = getObservationContext();
-
-        patientContext = [
-          baseContext,
-          symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
-          journalContext,
-          observationContext,
-          memorySummary,
-          timeContext,
-        ]
-          .filter(Boolean)
-          .join("\n\n");
-      }
+      const patientContext = buildRagnaPatientContext();
 
       await streamMessage(
         activeConv.id,
@@ -429,8 +475,66 @@ export default function HelpScreen() {
         }
       );
     },
-    [conversation, isStreaming, buildPatientContext, getRecentSummary, getMemorySummary, journalEntries, scrollToBottom, ragnaPrivacy]
+    [buildRagnaPatientContext, conversation, isStreaming, scrollToBottom]
   );
+
+  const handleVoicePress = useCallback(async () => {
+    if (!nativeVoiceSupported) {
+      Alert.alert("Voice is available on the phone app", "Use the iPhone or Android app build to speak with Ragna in chat.");
+      return;
+    }
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      if (!isVoiceRecording) {
+        setVoiceStatusText(`Recording with ${selectedVoiceLabel}. Tap the mic again to send.`);
+        setIsVoiceBusy(false);
+        await startNativeOpenAiVoiceRecording();
+        setIsVoiceRecording(true);
+        return;
+      }
+
+      setIsVoiceRecording(false);
+      setIsVoiceBusy(true);
+      setVoiceStatusText(`Sending your question to Ragna using ${selectedVoiceLabel}…`);
+
+      const patientContext = buildRagnaPatientContext();
+      const result = await stopNativeOpenAiVoiceRecordingAndSend({
+        patientContext,
+        voice: selectedVoice,
+      });
+
+      const activeConv = await ensureConversation(result.userTranscript || "Voice conversation");
+
+      setLocalMessages((prev) => [
+        ...prev,
+        { id: `voice-user-${Date.now()}`, role: "user", content: result.userTranscript },
+        { id: `voice-assistant-${Date.now()}`, role: "assistant", content: result.assistantTranscript },
+      ]);
+      scrollToBottom(150);
+
+      await saveVoiceExchange(activeConv.id, result.userTranscript, result.assistantTranscript);
+      setVoiceStatusText(`Ragna replied with ${selectedVoiceLabel}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Voice chat could not start.";
+      setVoiceStatusText(message);
+      Alert.alert("Voice Error", message);
+      await stopNativeOpenAiVoice();
+      setIsVoiceRecording(false);
+    } finally {
+      setIsVoiceBusy(false);
+      setTimeout(() => inputRef.current?.focus(), 250);
+    }
+  }, [
+    buildRagnaPatientContext,
+    ensureConversation,
+    isVoiceRecording,
+    nativeVoiceSupported,
+    scrollToBottom,
+    selectedVoice,
+    selectedVoiceLabel,
+  ]);
 
   const handleTilePress = useCallback(
     (tile: { label: string; activePrompt: string }) => {
@@ -485,13 +589,11 @@ export default function HelpScreen() {
                 }
               }
             } catch {
-              // memory + profile generation is best-effort — still clear the conversation
             }
           }
           try {
             await deleteConversation(conversation.id);
           } catch {
-            // ignore
           }
           await clearActiveConversationId();
           startNewConversation();
@@ -511,7 +613,7 @@ export default function HelpScreen() {
       const timer = setTimeout(() => sendMessage(initialMessage), 150);
       return () => clearTimeout(timer);
     }
-  }, [initialMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialMessage, sendMessage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -533,6 +635,21 @@ export default function HelpScreen() {
       cancelled = true;
     };
   }, [conversation, localMessages.length, loadConversation]);
+
+  useEffect(() => {
+    void getPreferredVoice().then((storedVoice) => {
+      if (storedVoice) {
+        setSelectedVoice(storedVoice);
+        setVoiceStatusText(`Voice replies will use ${VOICE_LABELS[storedVoice] ?? "Marin"}.`);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      void stopNativeOpenAiVoice();
+    };
+  }, []);
 
   const hasMessages = localMessages.length > 0;
 
@@ -597,6 +714,13 @@ export default function HelpScreen() {
         hasMessages={hasMessages}
         insetsBottom={insets.bottom}
         inputRef={inputRef}
+        onVoicePress={() => {
+          void handleVoicePress();
+        }}
+        isVoiceAvailable={nativeVoiceSupported}
+        isVoiceBusy={isVoiceBusy}
+        isVoiceRecording={isVoiceRecording}
+        voiceStatusText={voiceStatusText}
       />
     </KeyboardAvoidingView>
   );

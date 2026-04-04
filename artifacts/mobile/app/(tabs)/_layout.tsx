@@ -109,21 +109,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="voice"
-        options={{
-          title: "Talk",
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView name={focused ? "mic.fill" : "mic"} tintColor={color} size={22} />
-            ) : (
-              <View style={{
-                width: 28, height: 28, alignItems: "center", justifyContent: "center",
-                backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
-                borderRadius: 8,
-              }}>
-                <Feather name="mic" size={20} color={color} />
-              </View>
-            ),
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="more"
