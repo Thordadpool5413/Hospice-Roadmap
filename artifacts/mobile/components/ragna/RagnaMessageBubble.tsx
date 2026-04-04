@@ -15,6 +15,8 @@ export interface LocalMessage {
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
+  audioBase64?: string;
+  audioMimeType?: string;
 }
 
 function renderInline(text: string): React.ReactNode {
@@ -85,13 +87,16 @@ function RenderedMessage({ content, isUser }: { content: string; isUser: boolean
 export function RagnaMessageBubble({
   message,
   onLongPress,
+  onPlayAudio,
 }: {
   message: LocalMessage;
   onLongPress?: () => void;
+  onPlayAudio?: () => void;
 }) {
   const isUser = message.role === "user";
   const content = message.content;
   const isStreaming = message.isStreaming;
+  const hasAudio = !isUser && !!message.audioBase64;
 
   return (
     <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
@@ -119,6 +124,12 @@ export function RagnaMessageBubble({
         ) : (
           <RenderedMessage content={content} isUser={isUser} />
         )}
+        {hasAudio && onPlayAudio ? (
+          <Pressable onPress={onPlayAudio} style={styles.audioButton}>
+            <Feather name="volume-2" size={14} color={Colors.primary} />
+            <Text style={styles.audioButtonText}>Play voice reply</Text>
+          </Pressable>
+        ) : null}
         {isStreaming && content !== "" && (
           <View style={styles.streamingCursor} />
         )}
@@ -179,6 +190,24 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: 4,
     opacity: 0.6,
+  },
+  audioButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: Colors.primaryPale,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+  },
+  audioButtonText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primaryDark,
   },
   msgHeading: {
     fontSize: 15,

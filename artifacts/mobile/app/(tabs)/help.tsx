@@ -33,6 +33,7 @@ import {
 } from "@/services/aiService";
 import {
   isNativeOpenAiVoiceSupported,
+  playNativeOpenAiVoiceAudio,
   startNativeOpenAiVoiceRecording,
   stopNativeOpenAiVoice,
   stopNativeOpenAiVoiceRecordingAndSend,
@@ -42,7 +43,7 @@ import {
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
-import { getPreferredVoice } from "@/services/voicePreferences";
+import { getPreferredVoice, setPreferredVoice } from "@/services/voicePreferences";
 import { VeraEmotionalTone } from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
@@ -50,6 +51,15 @@ import { RagnaEmptyState } from "@/components/ragna/RagnaEmptyState";
 import { RagnaHeader } from "@/components/ragna/RagnaHeader";
 import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
 import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
+
+const VOICE_OPTIONS = [
+  { id: "marin", label: "Marin" },
+  { id: "cedar", label: "Cedar" },
+  { id: "alloy", label: "Alloy" },
+  { id: "sage", label: "Sage" },
+  { id: "shimmer", label: "Shimmer" },
+  { id: "echo", label: "Echo" },
+] as const;
 
 const VOICE_LABELS: Record<string, string> = {
   marin: "Marin",
@@ -478,6 +488,24 @@ export default function HelpScreen() {
     [buildRagnaPatientContext, conversation, isStreaming, scrollToBottom]
   );
 
+  const handleVoiceSelect = useCallback(async (voiceId: string) => {
+    setSelectedVoice(voiceId);
+    await setPreferredVoice(voiceId);
+    setVoiceStatusText(`Voice replies will use ${VOICE_LABELS[voiceId] ?? "Marin"}.`);
+  }, []);
+
+  const handlePlayAudio = useCallback(async (message: LocalMessage) => {
+    if (!message.audioBase64) return;
+    try {
+      await playNativeOpenAiVoiceAudio(message.audioBase64, message.audioMimeType);
+      setVoiceStatusText("Playing Ragna's voice reply.");
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : "Ragna's voice reply could not be played.";
+      setVoiceStatusText(messageText);
+      Alert.alert("Playback Error", messageText);
+    }
+  }, []);
+
   const handleVoicePress = useCallback(async () => {
     if (!nativeVoiceSupported) {
       Alert.alert("Voice is available on the phone app", "Use the iPhone or Android app build to speak with Ragna in chat.");
@@ -488,6 +516,7 @@ export default function HelpScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       if (!isVoiceRecording) {
+        setInputText("");
         setVoiceStatusText(`Recording with ${selectedVoiceLabel}. Tap the mic again to send.`);
         setIsVoiceBusy(false);
         await startNativeOpenAiVoiceRecording();
@@ -497,7 +526,7 @@ export default function HelpScreen() {
 
       setIsVoiceRecording(false);
       setIsVoiceBusy(true);
-      setVoiceStatusText(`Sending your question to Ragna using ${selectedVoiceLabel}…`);
+      setVoiceStatusText(`Transcribing your question with ${selectedVoiceLabel}…`);
 
       const patientContext = buildRagnaPatientContext();
       const result = await stopNativeOpenAiVoiceRecordingAndSend({
@@ -507,21 +536,34 @@ export default function HelpScreen() {
 
       const activeConv = await ensureConversation(result.userTranscript || "Voice conversation");
 
+      setInputText(result.userTranscript);
       setLocalMessages((prev) => [
         ...prev,
         { id: `voice-user-${Date.now()}`, role: "user", content: result.userTranscript },
-        { id: `voice-assistant-${Date.now()}`, role: "assistant", content: result.assistantTranscript },
+        {
+          id: `voice-assistant-${Date.now()}`,
+          role: "assistant",
+          content: result.assistantTranscript,
+          audioBase64: result.audioBase64,
+          audioMimeType: result.audioMimeType,
+        },
       ]);
       scrollToBottom(150);
 
       await saveVoiceExchange(activeConv.id, result.userTranscript, result.assistantTranscript);
-      setVoiceStatusText(`Ragna replied with ${selectedVoiceLabel}.`);
+      setInputText("");
+      setVoiceStatusText(
+        result.didAutoPlayAudio
+          ? `Ragna replied with ${selectedVoiceLabel}.`
+          : `Ragna replied with ${selectedVoiceLabel}. Tap Play voice reply in the chat if audio did not start.`
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Voice chat could not start.";
       setVoiceStatusText(message);
       Alert.alert("Voice Error", message);
       await stopNativeOpenAiVoice();
       setIsVoiceRecording(false);
+      setInputText("");
     } finally {
       setIsVoiceBusy(false);
       setTimeout(() => inputRef.current?.focus(), 250);
@@ -701,6 +743,7 @@ export default function HelpScreen() {
             suggestions={suggestions}
             onShareMessage={handleShareMessage}
             onSuggestionPress={sendMessage}
+            onPlayAudio={handlePlayAudio}
           />
         )}
       </ScrollView>
@@ -721,6 +764,11 @@ export default function HelpScreen() {
         isVoiceBusy={isVoiceBusy}
         isVoiceRecording={isVoiceRecording}
         voiceStatusText={voiceStatusText}
+        voiceOptions={VOICE_OPTIONS as unknown as { id: string; label: string }[]}
+        selectedVoiceId={selectedVoice}
+        onVoiceOptionSelect={(voiceId) => {
+          void handleVoiceSelect(voiceId);
+        }}
       />
     </KeyboardAvoidingView>
   );

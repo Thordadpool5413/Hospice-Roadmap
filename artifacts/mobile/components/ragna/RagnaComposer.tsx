@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +12,11 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
+
+interface VoiceOption {
+  id: string;
+  label: string;
+}
 
 interface RagnaComposerProps {
   inputText: string;
@@ -26,6 +32,9 @@ interface RagnaComposerProps {
   isVoiceBusy?: boolean;
   isVoiceRecording?: boolean;
   voiceStatusText?: string | null;
+  voiceOptions?: VoiceOption[];
+  selectedVoiceId?: string;
+  onVoiceOptionSelect?: (voiceId: string) => void;
 }
 
 export function RagnaComposer({
@@ -42,8 +51,12 @@ export function RagnaComposer({
   isVoiceBusy = false,
   isVoiceRecording = false,
   voiceStatusText,
+  voiceOptions = [],
+  selectedVoiceId,
+  onVoiceOptionSelect,
 }: RagnaComposerProps) {
   const voiceDisabled = !isOnline || isStreaming || (isVoiceBusy && !isVoiceRecording);
+  const showVoiceOptions = isVoiceAvailable && voiceOptions.length > 1 && !!onVoiceOptionSelect;
 
   return (
     <View style={[styles.inputBar, { paddingBottom: Platform.OS === "web" ? 84 : 49 + insetsBottom }]}>
@@ -70,6 +83,30 @@ export function RagnaComposer({
           />
           <Text style={styles.voiceBannerText}>{voiceStatusText}</Text>
         </View>
+      ) : null}
+      {showVoiceOptions ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.voiceOptionsRow}>
+          {voiceOptions.map((option) => {
+            const selected = option.id === selectedVoiceId;
+            return (
+              <Pressable
+                key={option.id}
+                onPress={() => onVoiceOptionSelect?.(option.id)}
+                disabled={voiceDisabled}
+                style={({ pressed }) => [
+                  styles.voiceOptionPill,
+                  selected && styles.voiceOptionPillSelected,
+                  voiceDisabled && styles.voiceOptionPillDisabled,
+                  pressed && !voiceDisabled ? { opacity: 0.8 } : null,
+                ]}
+              >
+                <Text style={[styles.voiceOptionText, selected && styles.voiceOptionTextSelected]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       ) : null}
       <View style={styles.inputRow}>
         <TextInput
@@ -168,6 +205,33 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.primaryLight,
     lineHeight: 17,
+  },
+  voiceOptionsRow: {
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  voiceOptionPill: {
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "rgba(12,24,58,0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(73,118,255,0.18)",
+  },
+  voiceOptionPillSelected: {
+    backgroundColor: Colors.primaryPale,
+    borderColor: Colors.primary + "40",
+  },
+  voiceOptionPillDisabled: {
+    opacity: 0.5,
+  },
+  voiceOptionText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  voiceOptionTextSelected: {
+    color: Colors.primaryDark,
   },
   inputRow: {
     flexDirection: "row",

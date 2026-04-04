@@ -1,5 +1,5 @@
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 
 import { apiBase } from "./apiClient";
@@ -8,6 +8,9 @@ import { getClientId } from "./clientIdentity";
 export interface NativeOpenAiVoiceTurnResult {
   userTranscript: string;
   assistantTranscript: string;
+  audioBase64?: string;
+  audioMimeType?: string;
+  didAutoPlayAudio?: boolean;
 }
 
 let activeRecording: Audio.Recording | null = null;
@@ -113,6 +116,10 @@ async function playAudioReply(audioBase64: string, audioMimeType?: string): Prom
   });
 }
 
+export async function playNativeOpenAiVoiceAudio(audioBase64: string, audioMimeType?: string): Promise<void> {
+  await playAudioReply(audioBase64, audioMimeType);
+}
+
 export async function stopNativeOpenAiVoice(): Promise<void> {
   if (activeRecording) {
     try {
@@ -182,14 +189,25 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
   const payload = (await response.json()) as {
     userTranscript: string;
     assistantTranscript: string;
-    audioBase64: string;
+    audioBase64?: string;
     audioMimeType?: string;
   };
 
-  await playAudioReply(payload.audioBase64, payload.audioMimeType);
+  let didAutoPlayAudio = false;
+  if (payload.audioBase64) {
+    try {
+      await playAudioReply(payload.audioBase64, payload.audioMimeType);
+      didAutoPlayAudio = true;
+    } catch {
+      didAutoPlayAudio = false;
+    }
+  }
 
   return {
     userTranscript: payload.userTranscript,
     assistantTranscript: payload.assistantTranscript,
+    audioBase64: payload.audioBase64,
+    audioMimeType: payload.audioMimeType,
+    didAutoPlayAudio,
   };
 }
