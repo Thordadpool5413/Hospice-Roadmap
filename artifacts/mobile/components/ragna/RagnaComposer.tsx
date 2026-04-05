@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +12,11 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
+
+interface VoiceOption {
+  id: string;
+  label: string;
+}
 
 interface RagnaComposerProps {
   inputText: string;
@@ -26,6 +32,13 @@ interface RagnaComposerProps {
   isVoiceBusy?: boolean;
   isVoiceRecording?: boolean;
   voiceStatusText?: string | null;
+  voiceOptions?: VoiceOption[];
+  selectedVoiceId?: string;
+  onVoiceOptionSelect?: (voiceId: string) => void;
+  isPlaybackActive?: boolean;
+  isPlaybackPaused?: boolean;
+  onPlaybackToggle?: () => void;
+  onPlaybackStop?: () => void;
 }
 
 export function RagnaComposer({
@@ -42,8 +55,17 @@ export function RagnaComposer({
   isVoiceBusy = false,
   isVoiceRecording = false,
   voiceStatusText,
+  voiceOptions = [],
+  selectedVoiceId,
+  onVoiceOptionSelect,
+  isPlaybackActive = false,
+  isPlaybackPaused = false,
+  onPlaybackToggle,
+  onPlaybackStop,
 }: RagnaComposerProps) {
-  const voiceDisabled = !isOnline || isStreaming || (isVoiceBusy && !isVoiceRecording);
+  const voiceDisabled = !isOnline || isStreaming || isVoiceBusy;
+  const showVoiceOptions = isVoiceAvailable && voiceOptions.length > 1 && !!onVoiceOptionSelect;
+  const showPlaybackControls = isPlaybackActive && !!onPlaybackToggle && !!onPlaybackStop;
 
   return (
     <View style={[styles.inputBar, { paddingBottom: Platform.OS === "web" ? 84 : 49 + insetsBottom }]}>
@@ -69,6 +91,42 @@ export function RagnaComposer({
             color={Colors.primaryLight}
           />
           <Text style={styles.voiceBannerText}>{voiceStatusText}</Text>
+        </View>
+      ) : null}
+      {showVoiceOptions ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.voiceOptionsRow}>
+          {voiceOptions.map((option) => {
+            const selected = option.id === selectedVoiceId;
+            return (
+              <Pressable
+                key={option.id}
+                onPress={() => onVoiceOptionSelect?.(option.id)}
+                disabled={voiceDisabled}
+                style={({ pressed }) => [
+                  styles.voiceOptionPill,
+                  selected && styles.voiceOptionPillSelected,
+                  voiceDisabled && styles.voiceOptionPillDisabled,
+                  pressed && !voiceDisabled ? { opacity: 0.8 } : null,
+                ]}
+              >
+                <Text style={[styles.voiceOptionText, selected && styles.voiceOptionTextSelected]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+      {showPlaybackControls ? (
+        <View style={styles.playbackRow}>
+          <Pressable onPress={onPlaybackToggle} style={styles.playbackButton}>
+            <Feather name={isPlaybackPaused ? "play" : "pause"} size={14} color={Colors.primaryDark} />
+            <Text style={styles.playbackButtonText}>{isPlaybackPaused ? "Resume" : "Pause"}</Text>
+          </Pressable>
+          <Pressable onPress={onPlaybackStop} style={styles.playbackButton}>
+            <Feather name="square" size={14} color={Colors.primaryDark} />
+            <Text style={styles.playbackButtonText}>Stop</Text>
+          </Pressable>
         </View>
       ) : null}
       <View style={styles.inputRow}>
@@ -107,7 +165,7 @@ export function RagnaComposer({
               pressed && { opacity: 0.8 },
             ]}
           >
-            {isVoiceBusy && !isVoiceRecording ? (
+            {isVoiceBusy ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Feather name={isVoiceRecording ? "square" : "mic"} size={18} color="#FFFFFF" />
@@ -168,6 +226,54 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.primaryLight,
     lineHeight: 17,
+  },
+  voiceOptionsRow: {
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  voiceOptionPill: {
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "rgba(12,24,58,0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(73,118,255,0.18)",
+  },
+  voiceOptionPillSelected: {
+    backgroundColor: Colors.primaryPale,
+    borderColor: Colors.primary + "40",
+  },
+  voiceOptionPillDisabled: {
+    opacity: 0.5,
+  },
+  voiceOptionText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSecondary,
+  },
+  voiceOptionTextSelected: {
+    color: Colors.primaryDark,
+  },
+  playbackRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  playbackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: Colors.primaryPale,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+  },
+  playbackButtonText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primaryDark,
   },
   inputRow: {
     flexDirection: "row",

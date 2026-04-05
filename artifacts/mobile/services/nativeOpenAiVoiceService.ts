@@ -1,16 +1,37 @@
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
-import { apiBase } from "./apiClient";
+
+import { apiBase, mergeJsonHeaders } from "./apiClient";
 import { getClientId } from "./clientIdentity";
 
-export interface NativeOpenAiVoiceTurnResult {
+export interface NativeOpenAiVoiceTranscriptResult {
   userTranscript: string;
-  assistantTranscript: string;
+}
+
+export interface NativeOpenAiVoicePlaybackResult {
+  audioBase64?: string;
+  audioMimeType?: string;
+  didAutoPlayAudio: boolean;
+}
+
+export interface NativeOpenAiVoicePlaybackState {
+  isPlaying: boolean;
+  isPaused: boolean;
 }
 
 let activeRecording: Audio.Recording | null = null;
 let activeSound: Audio.Sound | null = null;
+let playbackState: NativeOpenAiVoicePlaybackState = {
+  isPlaying: false,
+  isPaused: false,
+};
+const playbackListeners = new Set<(state: NativeOpenAiVoicePlaybackState) => void>();
+
+function emitPlaybackState(nextState: NativeOpenAiVoicePlaybackState): void {
+  playbackState = nextState;
+  playbackListeners.forEach((listener) => listener(nextState));
+}
 
 async function configureRecordingMode(): Promise<void> {
   await Audio.setAudioModeAsync({
@@ -37,15 +58,31 @@ async function configurePlaybackMode(): Promise<void> {
 }
 
 async function stopActiveSound(): Promise<void> {
-  if (!activeSound) return;
+  if (!activeSound) {
+    emitPlaybackState({ isPlaying: false, isPaused: false });
+    return;
+  }
   const sound = activeSound;
   activeSound = null;
   try {
     await sound.stopAsync();
-  } catch {}
+  } catch {
+  }
   try {
     await sound.unloadAsync();
-  } catch {}
+  } catch {
+  }
+  emitPlaybackState({ isPlaying: false, isPaused: false });
+}
+
+export function subscribeNativeOpenAiVoicePlayback(
+  listener: (state: NativeOpenAiVoicePlaybackState) => void,
+): () => void {
+  playbackListeners.add(listener);
+  listener(playbackState);
+  return () => {
+    playbackListeners.delete(listener);
+  };
 }
 
 export function isNativeOpenAiVoiceSupported(): boolean {
@@ -54,9 +91,7 @@ export function isNativeOpenAiVoiceSupported(): boolean {
 
 export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   if (!isNativeOpenAiVoiceSupported()) {
-    throw new Error(
-      "Native voice recording is only available on iPhone and Android builds.",
-    );
+    throw new Error("Native voice recording is only available on iPhone and Android builds.");
   }
 
   await stopActiveSound();
@@ -69,24 +104,20 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {}
+    } catch {
+    }
     activeRecording = null;
   }
 
   await configureRecordingMode();
 
   const recording = new Audio.Recording();
-  await recording.prepareToRecordAsync(
-    Audio.RecordingOptionsPresets.HIGH_QUALITY,
-  );
+  await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
   await recording.startAsync();
   activeRecording = recording;
 }
 
-async function playAudioReply(
-  audioBase64: string,
-  audioMimeType?: string,
-): Promise<void> {
+async function playAudioReply(audioBase64: string, audioMimeType?: string): Promise<void> {
   await stopActiveSound();
   await configurePlaybackMode();
 
@@ -106,21 +137,56 @@ async function playAudioReply(
     { shouldPlay: true },
   );
   activeSound = sound;
+  emitPlaybackState({ isPlaying: true, isPaused: false });
   sound.setOnPlaybackStatusUpdate((status) => {
-    if (!status.isLoaded || !status.didJustFinish) return;
-    sound.unloadAsync().catch(() => {});
-    FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
-    if (activeSound === sound) {
-      activeSound = null;
+    if (!status.isLoaded) return;
+    if (status.didJustFinish) {
+      sound.unloadAsync().catch(() => {});
+      FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+      if (activeSound === sound) {
+        activeSound = null;
+      }
+      emitPlaybackState({ isPlaying: false, isPaused: false });
+      return;
+    }
+
+    if (status.isPlaying) {
+      emitPlaybackState({ isPlaying: true, isPaused: false });
+      return;
+    }
+
+    if (activeSound === sound && status.positionMillis > 0) {
+      emitPlaybackState({ isPlaying: true, isPaused: true });
     }
   });
+}
+
+export async function playNativeOpenAiVoiceAudio(audioBase64: string, audioMimeType?: string): Promise<void> {
+  await playAudioReply(audioBase64, audioMimeType);
+}
+
+export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
+  if (!activeSound) return;
+  await activeSound.pauseAsync();
+  emitPlaybackState({ isPlaying: true, isPaused: true });
+}
+
+export async function resumeNativeOpenAiVoicePlayback(): Promise<void> {
+  if (!activeSound) return;
+  await activeSound.playAsync();
+  emitPlaybackState({ isPlaying: true, isPaused: false });
+}
+
+export async function stopNativeOpenAiVoicePlayback(): Promise<void> {
+  await stopActiveSound();
 }
 
 export async function stopNativeOpenAiVoice(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {}
+    } catch {
+    }
     activeRecording = null;
   }
 
@@ -128,13 +194,7 @@ export async function stopNativeOpenAiVoice(): Promise<void> {
   await configurePlaybackMode();
 }
 
-export async function stopNativeOpenAiVoiceRecordingAndSend({
-  patientContext,
-  voice,
-}: {
-  patientContext: string;
-  voice: string;
-}): Promise<NativeOpenAiVoiceTurnResult> {
+export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<NativeOpenAiVoiceTranscriptResult> {
   if (!activeRecording) {
     throw new Error("Voice recording has not started yet.");
   }
@@ -150,18 +210,16 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
     throw new Error("The recorded audio could not be found.");
   }
 
-  const fileName = `voice-turn-${Date.now()}.m4a`;
+  const fileName = `voice-transcript-${Date.now()}.m4a`;
   const formData = new FormData();
   formData.append("audio", {
     uri,
     name: fileName,
     type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
   } as never);
-  formData.append("patientContext", patientContext);
-  formData.append("voice", voice);
 
   const clientId = await getClientId();
-  const response = await fetch(`${apiBase()}/openai/mobile-voice-turn`, {
+  const response = await fetch(`${apiBase()}/openai/mobile-transcribe`, {
     method: "POST",
     headers: {
       x_client_id: clientId,
@@ -170,12 +228,9 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
   });
 
   if (!response.ok) {
-    let message = "Voice turn failed.";
+    let message = "Voice transcription failed.";
     try {
-      const data = (await response.json()) as {
-        error?: string;
-        message?: string;
-      };
+      const data = (await response.json()) as { error?: string; message?: string };
       message = data.error ?? data.message ?? message;
     } catch {
       const text = await response.text();
@@ -184,17 +239,61 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
     throw new Error(message);
   }
 
+  return (await response.json()) as NativeOpenAiVoiceTranscriptResult;
+}
+
+export async function speakNativeOpenAiVoiceText({
+  text,
+  voice,
+}: {
+  text: string;
+  voice: string;
+}): Promise<NativeOpenAiVoicePlaybackResult> {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { didAutoPlayAudio: false };
+  }
+
+  const clientId = await getClientId();
+  const response = await fetch(`${apiBase()}/openai/speak`, {
+    method: "POST",
+    headers: mergeJsonHeaders({ x_client_id: clientId }),
+    body: JSON.stringify({
+      text: trimmed,
+      voice,
+    }),
+  });
+
+  if (!response.ok) {
+    let message = "Ragna voice playback failed.";
+    try {
+      const data = (await response.json()) as { error?: string; message?: string };
+      message = data.error ?? data.message ?? message;
+    } catch {
+      const textResponse = await response.text();
+      if (textResponse) message = textResponse;
+    }
+    throw new Error(message);
+  }
+
   const payload = (await response.json()) as {
-    userTranscript: string;
-    assistantTranscript: string;
-    audioBase64: string;
+    audioBase64?: string;
     audioMimeType?: string;
   };
 
-  await playAudioReply(payload.audioBase64, payload.audioMimeType);
+  let didAutoPlayAudio = false;
+  if (payload.audioBase64) {
+    try {
+      await playAudioReply(payload.audioBase64, payload.audioMimeType);
+      didAutoPlayAudio = true;
+    } catch {
+      didAutoPlayAudio = false;
+    }
+  }
 
   return {
-    userTranscript: payload.userTranscript,
-    assistantTranscript: payload.assistantTranscript,
+    audioBase64: payload.audioBase64,
+    audioMimeType: payload.audioMimeType,
+    didAutoPlayAudio,
   };
 }

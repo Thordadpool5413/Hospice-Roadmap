@@ -151,6 +151,58 @@ router.post("/realtime/session", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, res: Response) => {
+  const clientId = requireClientId(req, res);
+  if (!clientId) return;
+
+  const apiKey = getOpenAiApiKey(res);
+  if (!apiKey) return;
+
+  const file = req.file;
+  if (!file?.buffer?.length) {
+    res.status(400).json({ error: "An audio recording is required." });
+    return;
+  }
+
+  try {
+    const transcriptionForm = new FormData();
+    transcriptionForm.set(
+      "file",
+      new Blob([file.buffer], { type: file.mimetype || "audio/m4a" }),
+      file.originalname || `voice-${Date.now()}.m4a`,
+    );
+    transcriptionForm.set("model", "gpt-4o-mini-transcribe");
+
+    const transcriptionResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: transcriptionForm,
+    });
+
+    const transcriptionPayload = (await transcriptionResponse.json()) as { text?: string; error?: { message?: string } };
+    const userTranscript = transcriptionPayload.text?.trim() ?? "";
+
+    if (!transcriptionResponse.ok || !userTranscript) {
+      console.error("OpenAI transcription error:", {
+        clientId,
+        status: transcriptionResponse.status,
+        body: transcriptionPayload,
+      });
+      res.status(502).json({
+        error: transcriptionPayload.error?.message || "Failed to transcribe the recorded audio.",
+      });
+      return;
+    }
+
+    res.json({ userTranscript });
+  } catch (error: unknown) {
+    console.error("OpenAI mobile transcription failure:", error);
+    res.status(500).json({ error: "Failed to transcribe mobile audio." });
+  }
+});
+
 router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, res: Response) => {
   const clientId = requireClientId(req, res);
   if (!clientId) return;
@@ -270,6 +322,62 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
   } catch (error: unknown) {
     console.error("OpenAI mobile voice turn failure:", error);
     res.status(500).json({ error: "Failed to process mobile voice turn." });
+  }
+});
+
+router.post("/speak", async (req: Request, res: Response) => {
+  const clientId = requireClientId(req, res);
+  if (!clientId) return;
+
+  const apiKey = getOpenAiApiKey(res);
+  if (!apiKey) return;
+
+  const { voice, text } = req.body as {
+    voice?: string;
+    text?: string;
+  };
+
+  const selectedVoice = normalizeVoice(voice);
+  const speakText = typeof text === "string" ? text.trim().slice(0, 4000) : "";
+  if (!speakText) {
+    res.status(400).json({ error: "text is required" });
+    return;
+  }
+
+  try {
+    const speechResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice: selectedVoice,
+        input: speakText,
+        format: "mp3",
+      }),
+    });
+
+    if (!speechResponse.ok) {
+      const speechError = await speechResponse.text();
+      console.error("OpenAI speech generation error:", {
+        clientId,
+        status: speechResponse.status,
+        body: speechError,
+      });
+      res.status(502).json({ error: speechError || "Failed to generate reply audio." });
+      return;
+    }
+
+    const audioBase64 = Buffer.from(await speechResponse.arrayBuffer()).toString("base64");
+    res.json({
+      audioBase64,
+      audioMimeType: "audio/mpeg",
+    });
+  } catch (error: unknown) {
+    console.error("OpenAI speak failure:", error);
+    res.status(500).json({ error: "Failed to generate reply audio." });
   }
 });
 

@@ -20,6 +20,7 @@ interface RagnaMessageListProps {
   suggestions: string[];
   onShareMessage: (content: string) => void;
   onSuggestionPress: (text: string) => void;
+  onPlayAudio?: (message: LocalMessage) => void;
 }
 
 export function RagnaMessageList({
@@ -29,6 +30,7 @@ export function RagnaMessageList({
   suggestions,
   onShareMessage,
   onSuggestionPress,
+  onPlayAudio,
 }: RagnaMessageListProps) {
   return (
     <View style={styles.messagesContainer}>
@@ -39,6 +41,11 @@ export function RagnaMessageList({
           onLongPress={
             msg.role === "assistant" && msg.content
               ? () => onShareMessage(msg.content)
+              : undefined
+          }
+          onPlayAudio={
+            msg.role === "assistant" && msg.audioBase64 && onPlayAudio
+              ? () => onPlayAudio(msg)
               : undefined
           }
         />
