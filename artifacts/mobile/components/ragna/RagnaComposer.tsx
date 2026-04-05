@@ -35,6 +35,10 @@ interface RagnaComposerProps {
   voiceOptions?: VoiceOption[];
   selectedVoiceId?: string;
   onVoiceOptionSelect?: (voiceId: string) => void;
+  isPlaybackActive?: boolean;
+  isPlaybackPaused?: boolean;
+  onPlaybackToggle?: () => void;
+  onPlaybackStop?: () => void;
 }
 
 export function RagnaComposer({
@@ -54,9 +58,14 @@ export function RagnaComposer({
   voiceOptions = [],
   selectedVoiceId,
   onVoiceOptionSelect,
+  isPlaybackActive = false,
+  isPlaybackPaused = false,
+  onPlaybackToggle,
+  onPlaybackStop,
 }: RagnaComposerProps) {
-  const voiceDisabled = !isOnline || isStreaming || (isVoiceBusy && !isVoiceRecording);
+  const voiceDisabled = !isOnline || isStreaming || isVoiceBusy;
   const showVoiceOptions = isVoiceAvailable && voiceOptions.length > 1 && !!onVoiceOptionSelect;
+  const showPlaybackControls = isPlaybackActive && !!onPlaybackToggle && !!onPlaybackStop;
 
   return (
     <View style={[styles.inputBar, { paddingBottom: Platform.OS === "web" ? 84 : 49 + insetsBottom }]}>
@@ -108,6 +117,18 @@ export function RagnaComposer({
           })}
         </ScrollView>
       ) : null}
+      {showPlaybackControls ? (
+        <View style={styles.playbackRow}>
+          <Pressable onPress={onPlaybackToggle} style={styles.playbackButton}>
+            <Feather name={isPlaybackPaused ? "play" : "pause"} size={14} color={Colors.primaryDark} />
+            <Text style={styles.playbackButtonText}>{isPlaybackPaused ? "Resume" : "Pause"}</Text>
+          </Pressable>
+          <Pressable onPress={onPlaybackStop} style={styles.playbackButton}>
+            <Feather name="square" size={14} color={Colors.primaryDark} />
+            <Text style={styles.playbackButtonText}>Stop</Text>
+          </Pressable>
+        </View>
+      ) : null}
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}
@@ -144,7 +165,7 @@ export function RagnaComposer({
               pressed && { opacity: 0.8 },
             ]}
           >
-            {isVoiceBusy && !isVoiceRecording ? (
+            {isVoiceBusy ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Feather name={isVoiceRecording ? "square" : "mic"} size={18} color="#FFFFFF" />
@@ -231,6 +252,27 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   voiceOptionTextSelected: {
+    color: Colors.primaryDark,
+  },
+  playbackRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  playbackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: Colors.primaryPale,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+  },
+  playbackButtonText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
     color: Colors.primaryDark,
   },
   inputRow: {
