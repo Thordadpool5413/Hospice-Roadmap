@@ -111,10 +111,24 @@ router.get("/speak/:audioId", (req: Request, res: Response) => {
     return;
   }
 
-  speechCache.delete(req.params.audioId);
   res.setHeader("Content-Type", entry.mimeType);
+  res.setHeader("Content-Length", String(entry.buffer.length));
   res.setHeader("Cache-Control", "no-store");
   res.status(200).send(entry.buffer);
+});
+
+router.head("/speak/:audioId", (req: Request, res: Response) => {
+  pruneSpeechCache();
+  const entry = speechCache.get(req.params.audioId);
+  if (!entry) {
+    res.status(404).end();
+    return;
+  }
+
+  res.setHeader("Content-Type", entry.mimeType);
+  res.setHeader("Content-Length", String(entry.buffer.length));
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).end();
 });
 
 router.post("/realtime/session", async (req: Request, res: Response) => {
