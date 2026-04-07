@@ -420,6 +420,7 @@ router.post("/speak", async (req: Request, res: Response) => {
 
     pruneSpeechCache();
     const audioBuffer = Buffer.from(await speechResponse.arrayBuffer());
+    const audioBase64 = audioBuffer.toString("base64");
     const audioId = randomUUID();
     speechCache.set(audioId, {
       buffer: audioBuffer,
@@ -428,6 +429,7 @@ router.post("/speak", async (req: Request, res: Response) => {
     });
 
     res.json({
+      audioBase64,
       audioUrl: `${buildPublicBaseUrl(req)}/api/openai/speak/${audioId}`,
       audioMimeType: "audio/mpeg",
     });

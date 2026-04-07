@@ -173,6 +173,34 @@ async function createAndPlaySound(source: { uri: string }): Promise<void> {
   }
 }
 
+async function playFromBase64(audioBase64: string, audioMimeType?: string): Promise<void> {
+  const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!baseDir) {
+    throw new Error("Unable to access local storage for audio playback.");
+  }
+
+  const mimeType = audioMimeType || "audio/mpeg";
+  const dataUri = `data:${mimeType};base64,${audioBase64}`;
+  try {
+    await createAndPlaySound({ uri: dataUri });
+    return;
+  } catch {
+  }
+
+  const extension = mimeType.includes("mpeg") ? "mp3" : "m4a";
+  const fileUri = `${baseDir}ragna-voice-reply-${Date.now()}.${extension}`;
+  await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  try {
+    await createAndPlaySound({ uri: fileUri });
+  } catch (error) {
+    FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+    throw error;
+  }
+}
+
 async function playAudioReply({
   audioBase64,
   audioMimeType,
@@ -185,28 +213,20 @@ async function playAudioReply({
   await stopActiveSound();
   await configurePlaybackMode();
 
+  if (audioBase64) {
+    try {
+      await playFromBase64(audioBase64, audioMimeType);
+      return;
+    } catch {
+    }
+  }
+
   if (audioUrl) {
     await createAndPlaySound({ uri: audioUrl });
     return;
   }
 
-  const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-  if (!baseDir || !audioBase64) {
-    throw new Error("Unable to access local storage for audio playback.");
-  }
-
-  const extension = audioMimeType?.includes("mpeg") ? "mp3" : "m4a";
-  const fileUri = `${baseDir}ragna-voice-reply-${Date.now()}.${extension}`;
-  await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
-  try {
-    await createAndPlaySound({ uri: fileUri });
-  } catch (error) {
-    FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
-    throw error;
-  }
+  throw new Error("Ragna's voice reply could not be played on this device.");
 }
 
 export async function playNativeOpenAiVoiceAudio({
@@ -339,7 +359,7 @@ export async function speakNativeOpenAiVoiceText({
   };
 
   let didAutoPlayAudio = false;
-  if (payload.audioUrl || payload.audioBase64) {
+  if (payload.audioBase64 || payload.audioUrl) {
     try {
       await playAudioReply({
         audioBase64: payload.audioBase64,
