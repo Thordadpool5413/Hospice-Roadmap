@@ -401,9 +401,13 @@ export default function HelpScreen() {
   }, []);
 
   const handlePlayAudio = useCallback(async (message: LocalMessage) => {
-    if (!message.audioBase64) return;
+    if (!message.audioBase64 && !message.audioUrl) return;
     try {
-      await playNativeOpenAiVoiceAudio(message.audioBase64, message.audioMimeType);
+      await playNativeOpenAiVoiceAudio({
+        audioBase64: message.audioBase64,
+        audioMimeType: message.audioMimeType,
+        audioUrl: message.audioUrl,
+      });
       setVoiceStatusText("Playing Ragna's voice reply.");
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Ragna's voice reply could not be played.";
@@ -442,7 +446,7 @@ export default function HelpScreen() {
         voice: selectedVoice,
       });
 
-      if (playback.audioBase64) {
+      if (playback.audioBase64 || playback.audioUrl) {
         setLocalMessages((prev) =>
           prev.map((message) =>
             message.id === assistantMessageId
@@ -450,6 +454,7 @@ export default function HelpScreen() {
                   ...message,
                   audioBase64: playback.audioBase64,
                   audioMimeType: playback.audioMimeType,
+                  audioUrl: playback.audioUrl,
                 }
               : message,
           ),

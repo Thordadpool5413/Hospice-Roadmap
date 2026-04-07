@@ -17,6 +17,7 @@ export interface LocalMessage {
   isStreaming?: boolean;
   audioBase64?: string;
   audioMimeType?: string;
+  audioUrl?: string;
 }
 
 function renderInline(text: string): React.ReactNode {
@@ -96,7 +97,7 @@ export function RagnaMessageBubble({
   const isUser = message.role === "user";
   const content = message.content;
   const isStreaming = message.isStreaming;
-  const hasAudio = !isUser && !!message.audioBase64;
+  const hasAudio = !isUser && (!!message.audioBase64 || !!message.audioUrl);
 
   return (
     <View style={[styles.messageRow, isUser && styles.messageRowUser]}>

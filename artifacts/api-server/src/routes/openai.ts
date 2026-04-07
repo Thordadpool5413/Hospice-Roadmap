@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 
@@ -26,6 +27,25 @@ const ALLOWED_VOICES = new Set([
 ]);
 const DEFAULT_PREVIEW_TEXT =
   "Hi, I’m Ragna. I’m here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
+const SPEECH_CACHE_TTL_MS = 10 * 60 * 1000;
+const speechCache = new Map<string, { buffer: Buffer; mimeType: string; expiresAt: number }>();
+
+function pruneSpeechCache(): void {
+  const now = Date.now();
+  for (const [key, value] of speechCache.entries()) {
+    if (value.expiresAt <= now) {
+      speechCache.delete(key);
+    }
+  }
+}
+
+function buildPublicBaseUrl(req: Request): string {
+  const forwardedProto = req.header("x-forwarded-proto")?.split(",")[0]?.trim();
+  const forwardedHost = req.header("x-forwarded-host")?.split(",")[0]?.trim();
+  const proto = forwardedProto || req.protocol || "https";
+  const host = forwardedHost || req.get("host") || "";
+  return `${proto}://${host}`;
+}
 
 function requireClientId(req: Request, res: Response): string | null {
   const raw = req.header("x_client_id");
@@ -82,6 +102,20 @@ function extractAssistantText(payload: unknown): string {
   }
   return "";
 }
+
+router.get("/speak/:audioId", (req: Request, res: Response) => {
+  pruneSpeechCache();
+  const entry = speechCache.get(req.params.audioId);
+  if (!entry) {
+    res.status(404).json({ error: "Spoken reply audio not found or expired." });
+    return;
+  }
+
+  speechCache.delete(req.params.audioId);
+  res.setHeader("Content-Type", entry.mimeType);
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).send(entry.buffer);
+});
 
 router.post("/realtime/session", async (req: Request, res: Response) => {
   const clientId = requireClientId(req, res);
@@ -370,9 +404,17 @@ router.post("/speak", async (req: Request, res: Response) => {
       return;
     }
 
-    const audioBase64 = Buffer.from(await speechResponse.arrayBuffer()).toString("base64");
+    pruneSpeechCache();
+    const audioBuffer = Buffer.from(await speechResponse.arrayBuffer());
+    const audioId = randomUUID();
+    speechCache.set(audioId, {
+      buffer: audioBuffer,
+      mimeType: "audio/mpeg",
+      expiresAt: Date.now() + SPEECH_CACHE_TTL_MS,
+    });
+
     res.json({
-      audioBase64,
+      audioUrl: `${buildPublicBaseUrl(req)}/api/openai/speak/${audioId}`,
       audioMimeType: "audio/mpeg",
     });
   } catch (error: unknown) {

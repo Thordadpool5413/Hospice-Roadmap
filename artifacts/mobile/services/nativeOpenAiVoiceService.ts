@@ -12,6 +12,7 @@ export interface NativeOpenAiVoiceTranscriptResult {
 export interface NativeOpenAiVoicePlaybackResult {
   audioBase64?: string;
   audioMimeType?: string;
+  audioUrl?: string;
   didAutoPlayAudio: boolean;
 }
 
@@ -117,23 +118,9 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   activeRecording = recording;
 }
 
-async function playAudioReply(audioBase64: string, audioMimeType?: string): Promise<void> {
-  await stopActiveSound();
-  await configurePlaybackMode();
-
-  const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-  if (!baseDir) {
-    throw new Error("Unable to access local storage for audio playback.");
-  }
-
-  const extension = audioMimeType?.includes("mpeg") ? "mp3" : "m4a";
-  const fileUri = `${baseDir}ragna-voice-reply-${Date.now()}.${extension}`;
-  await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
+async function createAndPlaySound(source: { uri: string }): Promise<void> {
   const createResult = await Audio.Sound.createAsync(
-    { uri: fileUri },
+    source,
     {
       shouldPlay: false,
       volume: 1,
@@ -148,7 +135,6 @@ async function playAudioReply(audioBase64: string, audioMimeType?: string): Prom
     if (!status.isLoaded) return;
     if (status.didJustFinish) {
       sound.unloadAsync().catch(() => {});
-      FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
       if (activeSound === sound) {
         activeSound = null;
       }
@@ -181,15 +167,58 @@ async function playAudioReply(audioBase64: string, audioMimeType?: string): Prom
         await sound.unloadAsync();
       } catch {
       }
-      FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
       emitPlaybackState({ isPlaying: false, isPaused: false });
       throw new Error("Ragna's voice reply could not be played on this device.");
     }
   }
 }
 
-export async function playNativeOpenAiVoiceAudio(audioBase64: string, audioMimeType?: string): Promise<void> {
-  await playAudioReply(audioBase64, audioMimeType);
+async function playAudioReply({
+  audioBase64,
+  audioMimeType,
+  audioUrl,
+}: {
+  audioBase64?: string;
+  audioMimeType?: string;
+  audioUrl?: string;
+}): Promise<void> {
+  await stopActiveSound();
+  await configurePlaybackMode();
+
+  if (audioUrl) {
+    await createAndPlaySound({ uri: audioUrl });
+    return;
+  }
+
+  const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!baseDir || !audioBase64) {
+    throw new Error("Unable to access local storage for audio playback.");
+  }
+
+  const extension = audioMimeType?.includes("mpeg") ? "mp3" : "m4a";
+  const fileUri = `${baseDir}ragna-voice-reply-${Date.now()}.${extension}`;
+  await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  try {
+    await createAndPlaySound({ uri: fileUri });
+  } catch (error) {
+    FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+    throw error;
+  }
+}
+
+export async function playNativeOpenAiVoiceAudio({
+  audioBase64,
+  audioMimeType,
+  audioUrl,
+}: {
+  audioBase64?: string;
+  audioMimeType?: string;
+  audioUrl?: string;
+}): Promise<void> {
+  await playAudioReply({ audioBase64, audioMimeType, audioUrl });
 }
 
 export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
@@ -306,12 +335,17 @@ export async function speakNativeOpenAiVoiceText({
   const payload = (await response.json()) as {
     audioBase64?: string;
     audioMimeType?: string;
+    audioUrl?: string;
   };
 
   let didAutoPlayAudio = false;
-  if (payload.audioBase64) {
+  if (payload.audioUrl || payload.audioBase64) {
     try {
-      await playAudioReply(payload.audioBase64, payload.audioMimeType);
+      await playAudioReply({
+        audioBase64: payload.audioBase64,
+        audioMimeType: payload.audioMimeType,
+        audioUrl: payload.audioUrl,
+      });
       didAutoPlayAudio = true;
     } catch {
       didAutoPlayAudio = false;
@@ -321,6 +355,7 @@ export async function speakNativeOpenAiVoiceText({
   return {
     audioBase64: payload.audioBase64,
     audioMimeType: payload.audioMimeType,
+    audioUrl: payload.audioUrl,
     didAutoPlayAudio,
   };
 }
