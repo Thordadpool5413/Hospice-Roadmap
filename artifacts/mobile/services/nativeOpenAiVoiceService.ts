@@ -132,12 +132,18 @@ async function playAudioReply(audioBase64: string, audioMimeType?: string): Prom
     encoding: FileSystem.EncodingType.Base64,
   });
 
-  const { sound } = await Audio.Sound.createAsync(
+  const createResult = await Audio.Sound.createAsync(
     { uri: fileUri },
-    { shouldPlay: true },
+    {
+      shouldPlay: false,
+      volume: 1,
+      progressUpdateIntervalMillis: 250,
+      isMuted: false,
+    },
   );
+
+  const sound = createResult.sound;
   activeSound = sound;
-  emitPlaybackState({ isPlaying: true, isPaused: false });
   sound.setOnPlaybackStatusUpdate((status) => {
     if (!status.isLoaded) return;
     if (status.didJustFinish) {
@@ -159,6 +165,27 @@ async function playAudioReply(audioBase64: string, audioMimeType?: string): Prom
       emitPlaybackState({ isPlaying: true, isPaused: true });
     }
   });
+
+  try {
+    await sound.playFromPositionAsync(0);
+    emitPlaybackState({ isPlaying: true, isPaused: false });
+  } catch {
+    try {
+      await sound.playAsync();
+      emitPlaybackState({ isPlaying: true, isPaused: false });
+    } catch {
+      if (activeSound === sound) {
+        activeSound = null;
+      }
+      try {
+        await sound.unloadAsync();
+      } catch {
+      }
+      FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+      emitPlaybackState({ isPlaying: false, isPaused: false });
+      throw new Error("Ragna's voice reply could not be played on this device.");
+    }
+  }
 }
 
 export async function playNativeOpenAiVoiceAudio(audioBase64: string, audioMimeType?: string): Promise<void> {
