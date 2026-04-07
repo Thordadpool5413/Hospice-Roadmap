@@ -37,10 +37,11 @@ function emitPlaybackState(nextState: NativeOpenAiVoicePlaybackState): void {
   playbackListeners.forEach((listener) => listener(nextState));
 }
 
-function isExpoGoStoreClient(): boolean {
+function shouldUseDeviceSpeechFirst(): boolean {
   return (
-    Constants.executionEnvironment === "storeClient" &&
-    Constants.appOwnership === "expo"
+    __DEV__ ||
+    Constants.appOwnership === "expo" ||
+    Constants.executionEnvironment === "storeClient"
   );
 }
 
@@ -273,7 +274,7 @@ export async function playNativeOpenAiVoiceAudio({
   audioUrl?: string;
   fallbackText?: string;
 }): Promise<void> {
-  if (isExpoGoStoreClient() && fallbackText?.trim()) {
+  if (shouldUseDeviceSpeechFirst() && fallbackText?.trim()) {
     await speakWithDeviceFallback(fallbackText.trim());
     return;
   }
@@ -378,7 +379,7 @@ export async function speakNativeOpenAiVoiceText({
     return { didAutoPlayAudio: false };
   }
 
-  if (isExpoGoStoreClient()) {
+  if (shouldUseDeviceSpeechFirst()) {
     await speakWithDeviceFallback(trimmed);
     return {
       didAutoPlayAudio: true,
