@@ -119,23 +119,28 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   activeRecording = recording;
 }
 
-async function createAndPlaySound(source: { uri: string }): Promise<void> {
-  const createResult = await Audio.Sound.createAsync(
-    source,
-    {
-      shouldPlay: false,
-      volume: 1,
-      progressUpdateIntervalMillis: 250,
-      isMuted: false,
-    },
-  );
+async function createAndAutoplaySound(
+  source: { uri: string },
+  cleanupUri?: string,
+): Promise<void> {
+  const { sound } = await Audio.Sound.createAsync(source, {
+    shouldPlay: true,
+    volume: 1,
+    isMuted: false,
+    progressUpdateIntervalMillis: 250,
+  });
 
-  const sound = createResult.sound;
   activeSound = sound;
+  emitPlaybackState({ isPlaying: true, isPaused: false });
+
   sound.setOnPlaybackStatusUpdate((status) => {
     if (!status.isLoaded) return;
+
     if (status.didJustFinish) {
       sound.unloadAsync().catch(() => {});
+      if (cleanupUri) {
+        FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(() => {});
+      }
       if (activeSound === sound) {
         activeSound = null;
       }
@@ -152,26 +157,6 @@ async function createAndPlaySound(source: { uri: string }): Promise<void> {
       emitPlaybackState({ isPlaying: true, isPaused: true });
     }
   });
-
-  try {
-    await sound.playFromPositionAsync(0);
-    emitPlaybackState({ isPlaying: true, isPaused: false });
-  } catch {
-    try {
-      await sound.playAsync();
-      emitPlaybackState({ isPlaying: true, isPaused: false });
-    } catch {
-      if (activeSound === sound) {
-        activeSound = null;
-      }
-      try {
-        await sound.unloadAsync();
-      } catch {
-      }
-      emitPlaybackState({ isPlaying: false, isPaused: false });
-      throw new Error("Ragna's voice reply could not be played on this device.");
-    }
-  }
 }
 
 async function playFromBase64(audioBase64: string, audioMimeType?: string): Promise<void> {
@@ -187,7 +172,7 @@ async function playFromBase64(audioBase64: string, audioMimeType?: string): Prom
   });
 
   try {
-    await createAndPlaySound({ uri: fileUri });
+    await createAndAutoplaySound({ uri: fileUri }, fileUri);
   } catch (error) {
     FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
     throw error;
@@ -212,7 +197,7 @@ async function playAudioReply({
   }
 
   if (audioUrl) {
-    await createAndPlaySound({ uri: audioUrl });
+    await createAndAutoplaySound({ uri: audioUrl });
     return;
   }
 
