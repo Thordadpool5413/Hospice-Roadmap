@@ -1,6 +1,12 @@
 import * as Haptics from "expo-haptics";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Alert,
   AppState,
@@ -48,7 +54,10 @@ import {
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
-import { getPreferredVoice, setPreferredVoice } from "@/services/voicePreferences";
+import {
+  getPreferredVoice,
+  setPreferredVoice,
+} from "@/services/voicePreferences";
 import { VeraEmotionalTone } from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
@@ -75,133 +84,178 @@ const VOICE_LABELS: Record<string, string> = {
   echo: "Echo",
 };
 
-const GUIDANCE_PROMPTS: { label: string; prompt: string; caregiverOnly?: boolean; patientPrompt?: string }[] = [
+const GUIDANCE_PROMPTS: {
+  label: string;
+  prompt: string;
+  caregiverOnly?: boolean;
+  patientPrompt?: string;
+}[] = [
   {
     label: "What changes near the end?",
-    prompt: "What physical changes are common as someone approaches the end of life? Help me understand what to watch for and what is normal.",
-    patientPrompt: "What physical changes happen near the end of life? I want to understand what is happening with my body.",
+    prompt:
+      "What physical changes are common as someone approaches the end of life? Help me understand what to watch for and what is normal.",
+    patientPrompt:
+      "What physical changes happen near the end of life? I want to understand what is happening with my body.",
   },
   {
     label: "How do I know if this is urgent?",
-    prompt: "I'm not sure if what I'm seeing with my patient is urgent enough to call hospice. Can you help me understand what changes require an immediate call versus what can wait?",
-    patientPrompt: "I'm not sure if what I'm feeling is urgent enough to ask for help. Can you help me understand what's an emergency and what can wait?",
+    prompt:
+      "I'm not sure if what I'm seeing with my patient is urgent enough to call hospice. Can you help me understand what changes require an immediate call versus what can wait?",
+    patientPrompt:
+      "I'm not sure if what I'm feeling is urgent enough to ask for help. Can you help me understand what's an emergency and what can wait?",
   },
   {
     label: "What do I say to the hospice nurse?",
-    prompt: "Help me organize what to say when I call the hospice nurse. I want to communicate clearly and make sure I ask for what we actually need.",
+    prompt:
+      "Help me organize what to say when I call the hospice nurse. I want to communicate clearly and make sure I ask for what we actually need.",
     caregiverOnly: true,
   },
   {
     label: "How do I talk to family?",
-    prompt: "I'm struggling to talk to family members about what is happening. Some people are in denial, some are grieving, and I'm in the middle. Can you help me with how to approach these conversations?",
+    prompt:
+      "I'm struggling to talk to family members about what is happening. Some people are in denial, some are grieving, and I'm in the middle. Can you help me with how to approach these conversations?",
   },
   {
     label: "How do I explain this to a child?",
-    prompt: "I need to explain what is happening to a child. Can you help me with honest, age-appropriate language that will not traumatize them?",
+    prompt:
+      "I need to explain what is happening to a child. Can you help me with honest, age-appropriate language that will not traumatize them?",
   },
   {
     label: "What do I do if death happens now?",
-    prompt: "I want to understand exactly what to do in the first moments and hours after my loved one dies at home. Who do I call, what is the order, and is it okay to take my time?",
+    prompt:
+      "I want to understand exactly what to do in the first moments and hours after my loved one dies at home. Who do I call, what is the order, and is it okay to take my time?",
     caregiverOnly: true,
   },
   {
     label: "What happens right after death?",
-    prompt: "Can you walk me through what happens in the hours and days after someone dies at home on hospice? I want to be prepared with the practical steps, the calls, and the process.",
+    prompt:
+      "Can you walk me through what happens in the hours and days after someone dies at home on hospice? I want to be prepared with the practical steps, the calls, and the process.",
     caregiverOnly: true,
   },
   {
     label: "Is hospice doing enough?",
-    prompt: "I'm not sure if we're getting the level of care we should be. What does good hospice care actually look like? And how do I advocate for better care if something feels wrong?",
+    prompt:
+      "I'm not sure if we're getting the level of care we should be. What does good hospice care actually look like? And how do I advocate for better care if something feels wrong?",
     caregiverOnly: true,
   },
   {
     label: "I'm carrying grief right now",
-    prompt: "I'm carrying a lot of grief, guilt, or fear right now. I don't need clinical advice. I just need to talk through what I'm feeling with someone who understands.",
+    prompt:
+      "I'm carrying a lot of grief, guilt, or fear right now. I don't need clinical advice. I just need to talk through what I'm feeling with someone who understands.",
   },
   {
     label: "No one has explained anything",
-    prompt: "No one from hospice has taken time to explain what is happening or what to expect. I feel completely in the dark. Can you help me understand our situation from the beginning?",
+    prompt:
+      "No one from hospice has taken time to explain what is happening or what to expect. I feel completely in the dark. Can you help me understand our situation from the beginning?",
     caregiverOnly: true,
   },
   {
     label: "How do I document care concerns?",
-    prompt: "I think there have been problems with our hospice care. How do I document this and what can I do about it?",
+    prompt:
+      "I think there have been problems with our hospice care. How do I document this and what can I do about it?",
     caregiverOnly: true,
   },
   {
     label: "What is a good death?",
-    prompt: "I want to understand what a good, peaceful death looks like. What can we do to create the conditions for that? What does comfort-focused care really mean in the final days?",
+    prompt:
+      "I want to understand what a good, peaceful death looks like. What can we do to create the conditions for that? What does comfort-focused care really mean in the final days?",
   },
 ];
 
 const URGENT_TILES = [
   {
     label: "Breathing difficulty",
-    icon: "wind", color: Colors.error,
-    prompt: "My patient is having breathing difficulty. What should I do right now?",
-    patientPrompt: "I'm having difficulty breathing. What can be done to help me right now?",
+    icon: "wind",
+    color: Colors.error,
+    prompt:
+      "My patient is having breathing difficulty. What should I do right now?",
+    patientPrompt:
+      "I'm having difficulty breathing. What can be done to help me right now?",
   },
   {
     label: "Pain or discomfort",
-    icon: "alert-circle", color: Colors.primaryLight,
-    prompt: "My patient seems to be in pain or discomfort. How can I help them?",
+    icon: "alert-circle",
+    color: Colors.primaryLight,
+    prompt:
+      "My patient seems to be in pain or discomfort. How can I help them?",
     patientPrompt: "I'm experiencing pain or discomfort. How can I get relief?",
   },
   {
     label: "Confusion or agitation",
-    icon: "alert-triangle", color: Colors.accentLight,
-    prompt: "My patient is confused or agitated. What is happening and what should I do?",
-    patientPrompt: "I'm feeling confused and very agitated. What might be causing this and what can I do?",
+    icon: "alert-triangle",
+    color: Colors.accentLight,
+    prompt:
+      "My patient is confused or agitated. What is happening and what should I do?",
+    patientPrompt:
+      "I'm feeling confused and very agitated. What might be causing this and what can I do?",
   },
   {
     label: "Not responding",
-    icon: "moon", color: Colors.journeyAfter,
-    prompt: "My patient is not responding or very hard to wake. What should I do?",
+    icon: "moon",
+    color: Colors.journeyAfter,
+    prompt:
+      "My patient is not responding or very hard to wake. What should I do?",
     caregiverOnly: true,
   },
   {
     label: "I think they died",
-    icon: "heart", color: Colors.navySub,
+    icon: "heart",
+    color: Colors.navySub,
     prompt: "I think my patient may have died. What do I do right now?",
     caregiverOnly: true,
   },
   {
     label: "Swallowing problems",
-    icon: "droplet", color: Colors.journeyBefore,
-    prompt: "My patient is having trouble swallowing medications or food. What should I do?",
-    patientPrompt: "I'm having trouble swallowing my medications or food. What should I do?",
+    icon: "droplet",
+    color: Colors.journeyBefore,
+    prompt:
+      "My patient is having trouble swallowing medications or food. What should I do?",
+    patientPrompt:
+      "I'm having trouble swallowing my medications or food. What should I do?",
   },
   {
     label: "Medication question",
-    icon: "package", color: Colors.success,
+    icon: "package",
+    color: Colors.success,
     prompt: "I have a question about a hospice medication.",
   },
   {
     label: "Equipment issue",
-    icon: "tool", color: Colors.journeyBefore,
+    icon: "tool",
+    color: Colors.journeyBefore,
     prompt: "I'm having a problem with medical equipment in the home.",
   },
   {
     label: "Caregiver task",
-    icon: "user-check", color: Colors.accentLight,
-    prompt: "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer.",
+    icon: "user-check",
+    color: Colors.accentLight,
+    prompt:
+      "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer.",
     caregiverOnly: true,
   },
   {
     label: "I'm overwhelmed",
-    icon: "cloud", color: Colors.journeyAfter,
-    prompt: "I'm feeling overwhelmed and exhausted as a caregiver. I need support.",
-    patientPrompt: "I'm feeling overwhelmed, scared, and exhausted. I'm the patient and I need emotional support.",
+    icon: "cloud",
+    color: Colors.journeyAfter,
+    prompt:
+      "I'm feeling overwhelmed and exhausted as a caregiver. I need support.",
+    patientPrompt:
+      "I'm feeling overwhelmed, scared, and exhausted. I'm the patient and I need emotional support.",
   },
   {
     label: "Prepare to call hospice",
-    icon: "phone-call", color: Colors.primary,
-    prompt: "I need to call my hospice nurse and want to be organized. Based on everything you know about our situation, give me a brief SBAR script I can read directly to the nurse.",
+    icon: "phone-call",
+    color: Colors.primary,
+    prompt:
+      "I need to call my hospice nurse and want to be organized. Based on everything you know about our situation, give me a brief SBAR script I can read directly to the nurse.",
     caregiverOnly: true,
   },
 ];
 
-function parseSuggestions(raw: string): { text: string; suggestions: string[] } {
+function parseSuggestions(raw: string): {
+  text: string;
+  suggestions: string[];
+} {
   const match = raw.match(/\[SUGGEST:([^\]]+)\]\s*$/);
   if (!match || !match[1]) return { text: raw, suggestions: [] };
   const suggestions = match[1]
@@ -216,12 +270,27 @@ function parseSuggestions(raw: string): { text: string; suggestions: string[] } 
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext, ragnaPrivacy } = useApp();
-  const { entries: symptomEntries, getTodayEntry, getRecentSummary } = useSymptoms();
+  const {
+    entries: symptomEntries,
+    getTodayEntry,
+    getRecentSummary,
+  } = useSymptoms();
   const { entries: journalEntries } = useJournal();
-  const { memories, addMemory, getMemorySummary, memoryCount, livingProfile, updateLivingProfile, recentTiles, recordTile } = useVeraMemory();
+  const {
+    memories,
+    addMemory,
+    getMemorySummary,
+    memoryCount,
+    livingProfile,
+    updateLivingProfile,
+    recentTiles,
+    recordTile,
+  } = useVeraMemory();
   const { getObservationContext } = useRagnaLearning();
   const { isOnline } = useAppNetwork();
-  const { initialMessage } = useLocalSearchParams<{ initialMessage?: string }>();
+  const { initialMessage } = useLocalSearchParams<{
+    initialMessage?: string;
+  }>();
   const lastInitialRef = useRef("");
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
@@ -229,19 +298,19 @@ export default function HelpScreen() {
   const isPatient = user?.role === "patient";
   const nativeVoiceSupported = isNativeOpenAiVoiceSupported();
 
-  const visibleTiles = URGENT_TILES
-    .filter((t) => !isPatient || !t.caregiverOnly)
-    .map((t) => ({
-      ...t,
-      activePrompt: isPatient && t.patientPrompt ? t.patientPrompt : t.prompt,
-    }));
+  const visibleTiles = URGENT_TILES.filter(
+    (t) => !isPatient || !t.caregiverOnly,
+  ).map((t) => ({
+    ...t,
+    activePrompt: isPatient && t.patientPrompt ? t.patientPrompt : t.prompt,
+  }));
 
-  const visibleGuidancePrompts = GUIDANCE_PROMPTS
-    .filter((p) => !isPatient || !p.caregiverOnly)
-    .map((p) => ({
-      label: p.label,
-      activePrompt: isPatient && p.patientPrompt ? p.patientPrompt : p.prompt,
-    }));
+  const visibleGuidancePrompts = GUIDANCE_PROMPTS.filter(
+    (p) => !isPatient || !p.caregiverOnly,
+  ).map((p) => ({
+    label: p.label,
+    activePrompt: isPatient && p.patientPrompt ? p.patientPrompt : p.prompt,
+  }));
 
   const [conversation, setConversation] = useState<AiConversation | null>(null);
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
@@ -257,17 +326,23 @@ export default function HelpScreen() {
   const [isPlaybackActive, setIsPlaybackActive] = useState(false);
   const [isPlaybackPaused, setIsPlaybackPaused] = useState(false);
 
-  const todayEntry = useMemo(() => getTodayEntry(), [symptomEntries, getTodayEntry]);
+  const todayEntry = useMemo(
+    () => getTodayEntry(),
+    [symptomEntries, getTodayEntry],
+  );
   const selectedVoiceLabel = VOICE_LABELS[selectedVoice] ?? "Marin";
 
   const symptomAlert = useMemo<{ text: string; prompt: string } | null>(() => {
     if (!todayEntry) return null;
     const alerts: string[] = [];
     if (todayEntry.pain >= 7) alerts.push(`pain at ${todayEntry.pain}/10`);
-    if (todayEntry.breathlessness >= 7) alerts.push(`breathlessness at ${todayEntry.breathlessness}/10`);
-    if (todayEntry.nausea >= 7) alerts.push(`nausea at ${todayEntry.nausea}/10`);
+    if (todayEntry.breathlessness >= 7)
+      alerts.push(`breathlessness at ${todayEntry.breathlessness}/10`);
+    if (todayEntry.nausea >= 7)
+      alerts.push(`nausea at ${todayEntry.nausea}/10`);
     const agitationLabels = ["", "mild", "moderate", "severe"];
-    if (todayEntry.agitation >= 2) alerts.push(`${agitationLabels[todayEntry.agitation]} agitation`);
+    if (todayEntry.agitation >= 2)
+      alerts.push(`${agitationLabels[todayEntry.agitation]} agitation`);
     if (alerts.length === 0) return null;
     const alertText = alerts.join(" and ");
     return {
@@ -276,14 +351,20 @@ export default function HelpScreen() {
     };
   }, [todayEntry]);
 
-  const proactiveOpener = useMemo<{ display: string; sendPrompt: string } | null>(() => {
+  const proactiveOpener = useMemo<{
+    display: string;
+    sendPrompt: string;
+  } | null>(() => {
     if (!livingProfile || memoryCount === 0) return null;
     const hour = new Date().getHours();
     const greeting =
-      hour < 6 ? "You're up late" :
-      hour < 12 ? "Good morning" :
-      hour < 17 ? "Good afternoon" :
-      "Good evening";
+      hour < 6
+        ? "You're up late"
+        : hour < 12
+          ? "Good morning"
+          : hour < 17
+            ? "Good afternoon"
+            : "Good evening";
     const lastMemory = memories[0];
     const topTopic = lastMemory?.mainTopics?.[0];
     const topTile = recentTiles[0];
@@ -313,8 +394,12 @@ export default function HelpScreen() {
     if (!ragnaPrivacy.personalizationEnabled) return "";
 
     const baseContext = buildPatientContext();
-    const symptomSummary = ragnaPrivacy.includeRecentSymptoms ? getRecentSummary(7) : "";
-    const memorySummary = ragnaPrivacy.includeConversationMemory ? getMemorySummary() : "";
+    const symptomSummary = ragnaPrivacy.includeRecentSymptoms
+      ? getRecentSummary(7)
+      : "";
+    const memorySummary = ragnaPrivacy.includeConversationMemory
+      ? getMemorySummary()
+      : "";
 
     const now = new Date();
     const timeContext = ragnaPrivacy.includeTimeContext
@@ -349,7 +434,9 @@ export default function HelpScreen() {
 
     return [
       baseContext,
-      symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
+      symptomSummary
+        ? `--- Recent Symptom Tracking ---\n${symptomSummary}`
+        : "",
       journalContext,
       getObservationContext(),
       memorySummary,
@@ -370,26 +457,29 @@ export default function HelpScreen() {
     ragnaPrivacy.personalizationEnabled,
   ]);
 
-  const loadConversation = useCallback(async (convId: number): Promise<boolean> => {
-    try {
-      const conv = await getConversation(convId);
-      setConversation(conv);
-      await setActiveConversationId(conv.id);
-      if (conv.messages) {
-        setLocalMessages(
-          conv.messages.map((m: AiMessage) => ({
-            id: String(m.id),
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          }))
-        );
-        scrollToBottom(200);
+  const loadConversation = useCallback(
+    async (convId: number): Promise<boolean> => {
+      try {
+        const conv = await getConversation(convId);
+        setConversation(conv);
+        await setActiveConversationId(conv.id);
+        if (conv.messages) {
+          setLocalMessages(
+            conv.messages.map((m: AiMessage) => ({
+              id: String(m.id),
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            })),
+          );
+          scrollToBottom(200);
+        }
+        return true;
+      } catch {
+        return false;
       }
-      return true;
-    } catch {
-      return false;
-    }
-  }, [scrollToBottom]);
+    },
+    [scrollToBottom],
+  );
 
   const startNewConversation = useCallback(async () => {
     setConversation(null);
@@ -410,7 +500,10 @@ export default function HelpScreen() {
       });
       setVoiceStatusText("Playing Ragna's voice reply.");
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : "Ragna's voice reply could not be played.";
+      const messageText =
+        error instanceof Error
+          ? error.message
+          : "Ragna's voice reply could not be played.";
       setVoiceStatusText(messageText);
       Alert.alert("Playback Error", messageText);
     }
@@ -426,7 +519,8 @@ export default function HelpScreen() {
         setVoiceStatusText("Paused Ragna's voice reply.");
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Playback control failed.";
+      const message =
+        error instanceof Error ? error.message : "Playback control failed.";
       setVoiceStatusText(message);
       Alert.alert("Playback Error", message);
     }
@@ -437,40 +531,48 @@ export default function HelpScreen() {
     setVoiceStatusText("Stopped Ragna's voice reply.");
   }, []);
 
-  const synthesizeAssistantVoice = useCallback(async (assistantMessageId: string, assistantText: string) => {
-    if (!nativeVoiceSupported || !assistantText.trim()) return;
+  const synthesizeAssistantVoice = useCallback(
+    async (assistantMessageId: string, assistantText: string) => {
+      if (!nativeVoiceSupported || !assistantText.trim()) return;
 
-    try {
-      const playback = await speakNativeOpenAiVoiceText({
-        text: assistantText,
-        voice: selectedVoice,
-      });
+      try {
+        const playback = await speakNativeOpenAiVoiceText({
+          text: assistantText,
+          voice: selectedVoice,
+        });
 
-      if (playback.audioBase64 || playback.audioUrl) {
-        setLocalMessages((prev) =>
-          prev.map((message) =>
-            message.id === assistantMessageId
-              ? {
-                  ...message,
-                  audioBase64: playback.audioBase64,
-                  audioMimeType: playback.audioMimeType,
-                  audioUrl: playback.audioUrl,
-                }
-              : message,
-          ),
+        if (playback.audioBase64 || playback.audioUrl) {
+          setLocalMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantMessageId
+                ? {
+                    ...message,
+                    audioBase64: playback.audioBase64,
+                    audioMimeType: playback.audioMimeType,
+                    audioUrl: playback.audioUrl,
+                  }
+                : message,
+            ),
+          );
+        }
+
+        setVoiceStatusText(
+          playback.didAutoPlayAudio
+            ? `Ragna replied with ${selectedVoiceLabel}.`
+            : playback.autoPlayErrorMessage
+              ? `Ragna replied with ${selectedVoiceLabel}, but playback could not start automatically. ${playback.autoPlayErrorMessage} Tap Play voice reply in the chat.`
+              : `Ragna replied with ${selectedVoiceLabel}. Tap Play voice reply in the chat if audio did not start.`,
         );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Ragna replied in text, but voice playback failed.";
+        setVoiceStatusText(message);
       }
-
-      setVoiceStatusText(
-        playback.didAutoPlayAudio
-          ? `Ragna replied with ${selectedVoiceLabel}.`
-          : `Ragna replied with ${selectedVoiceLabel}. Tap Play voice reply in the chat if audio did not start.`
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Ragna replied in text, but voice playback failed.";
-      setVoiceStatusText(message);
-    }
-  }, [nativeVoiceSupported, selectedVoice, selectedVoiceLabel]);
+    },
+    [nativeVoiceSupported, selectedVoice, selectedVoiceLabel],
+  );
 
   const sendMessage = useCallback(
     async (messageText: string) => {
@@ -488,7 +590,10 @@ export default function HelpScreen() {
           setConversation(activeConv);
           await setActiveConversationId(activeConv.id);
         } catch {
-          Alert.alert("Connection Error", "Could not connect to Ragna. Please check your connection.");
+          Alert.alert(
+            "Connection Error",
+            "Could not connect to Ragna. Please check your connection.",
+          );
           setIsLoading(false);
           return;
         } finally {
@@ -505,7 +610,12 @@ export default function HelpScreen() {
       setLocalMessages((prev) => [
         ...prev,
         { id: userMsgId, role: "user", content: text },
-        { id: assistantMsgId, role: "assistant", content: "", isStreaming: true },
+        {
+          id: assistantMsgId,
+          role: "assistant",
+          content: "",
+          isStreaming: true,
+        },
       ]);
       setInputText("");
       setIsStreaming(true);
@@ -522,8 +632,8 @@ export default function HelpScreen() {
             prev.map((m) =>
               m.id === assistantMsgId
                 ? { ...m, content: m.content + chunk }
-                : m
-            )
+                : m,
+            ),
           );
           scrollToBottom(50);
         },
@@ -532,11 +642,12 @@ export default function HelpScreen() {
           setLocalMessages((prev) =>
             prev.map((m) => {
               if (m.id !== assistantMsgId) return m;
-              const { text: parsedText, suggestions: parsed } = parseSuggestions(m.content);
+              const { text: parsedText, suggestions: parsed } =
+                parseSuggestions(m.content);
               if (parsed.length > 0) setSuggestions(parsed);
               finalAssistantText = parsedText;
               return { ...m, content: parsedText, isStreaming: false };
-            })
+            }),
           );
           setIsStreaming(false);
           scrollToBottom(150);
@@ -547,27 +658,42 @@ export default function HelpScreen() {
           setLocalMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
-                ? { ...m, content: `I'm sorry, something went wrong. Please try again.\n\n(${err})`, isStreaming: false }
-                : m
-            )
+                ? {
+                    ...m,
+                    content: `I'm sorry, something went wrong. Please try again.\n\n(${err})`,
+                    isStreaming: false,
+                  }
+                : m,
+            ),
           );
           setIsStreaming(false);
           setTimeout(() => inputRef.current?.focus(), 300);
-        }
+        },
       );
     },
-    [buildRagnaPatientContext, conversation, isStreaming, scrollToBottom, synthesizeAssistantVoice]
+    [
+      buildRagnaPatientContext,
+      conversation,
+      isStreaming,
+      scrollToBottom,
+      synthesizeAssistantVoice,
+    ],
   );
 
   const handleVoiceSelect = useCallback(async (voiceId: string) => {
     setSelectedVoice(voiceId);
     await setPreferredVoice(voiceId);
-    setVoiceStatusText(`Voice replies will use ${VOICE_LABELS[voiceId] ?? "Marin"}.`);
+    setVoiceStatusText(
+      `Voice replies will use ${VOICE_LABELS[voiceId] ?? "Marin"}.`,
+    );
   }, []);
 
   const handleVoicePress = useCallback(async () => {
     if (!nativeVoiceSupported) {
-      Alert.alert("Voice is available on the phone app", "Use the iPhone or Android app build to speak with Ragna in chat.");
+      Alert.alert(
+        "Voice is available on the phone app",
+        "Use the iPhone or Android app build to speak with Ragna in chat.",
+      );
       return;
     }
 
@@ -576,7 +702,9 @@ export default function HelpScreen() {
       await stopNativeOpenAiVoicePlayback();
 
       if (!isVoiceRecording) {
-        setVoiceStatusText(`Recording with ${selectedVoiceLabel}. Tap the mic again to stop.`);
+        setVoiceStatusText(
+          `Recording with ${selectedVoiceLabel}. Tap the mic again to stop.`,
+        );
         setIsVoiceBusy(false);
         await startNativeOpenAiVoiceRecording();
         setIsVoiceRecording(true);
@@ -588,11 +716,20 @@ export default function HelpScreen() {
       setVoiceStatusText(`Transcribing your words with ${selectedVoiceLabel}…`);
 
       const result = await stopNativeOpenAiVoiceRecordingAndTranscribe();
-      setInputText(result.userTranscript);
-      setVoiceStatusText("Review the transcript, edit if needed, then tap Send.");
-      setTimeout(() => inputRef.current?.focus(), 250);
+      const transcript = result.userTranscript.trim();
+
+      if (!transcript) {
+        setVoiceStatusText("I did not catch that. Please try again.");
+        return;
+      }
+
+      setVoiceStatusText(
+        `Sending your message to Ragna with ${selectedVoiceLabel}…`,
+      );
+      await sendMessage(transcript);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Voice chat could not start.";
+      const message =
+        error instanceof Error ? error.message : "Voice chat could not start.";
       setVoiceStatusText(message);
       Alert.alert("Voice Error", message);
       await stopNativeOpenAiVoice();
@@ -600,11 +737,7 @@ export default function HelpScreen() {
     } finally {
       setIsVoiceBusy(false);
     }
-  }, [
-    isVoiceRecording,
-    nativeVoiceSupported,
-    selectedVoiceLabel,
-  ]);
+  }, [isVoiceRecording, nativeVoiceSupported, selectedVoiceLabel, sendMessage]);
 
   const handleTilePress = useCallback(
     (tile: { label: string; activePrompt: string }) => {
@@ -612,7 +745,7 @@ export default function HelpScreen() {
       recordTile(tile.label);
       void sendMessage(tile.activePrompt);
     },
-    [sendMessage, recordTile]
+    [sendMessage, recordTile],
   );
 
   const handleClearConversation = useCallback(async () => {
@@ -646,31 +779,38 @@ export default function HelpScreen() {
                   conversationId: conversation.id,
                   summary: newMemory.summary,
                   keyFacts: newMemory.keyFacts,
-                  emotionalTone: (newMemory.emotionalTone as VeraEmotionalTone) ?? "calm",
+                  emotionalTone:
+                    (newMemory.emotionalTone as VeraEmotionalTone) ?? "calm",
                   mainTopics: newMemory.mainTopics,
                 });
                 const updatedProfile = await synthesizeProfile(
                   livingProfile,
                   newMemory,
-                  recentTiles
+                  recentTiles,
                 );
                 if (updatedProfile) {
                   await updateLivingProfile(updatedProfile);
                 }
               }
-            } catch {
-            }
+            } catch {}
           }
           try {
             await deleteConversation(conversation.id);
-          } catch {
-          }
+          } catch {}
           await clearActiveConversationId();
           startNewConversation();
         },
       },
     ]);
-  }, [conversation, ragnaPrivacy.includeConversationMemory, startNewConversation, addMemory, livingProfile, updateLivingProfile, recentTiles]);
+  }, [
+    conversation,
+    ragnaPrivacy.includeConversationMemory,
+    startNewConversation,
+    addMemory,
+    livingProfile,
+    updateLivingProfile,
+    recentTiles,
+  ]);
 
   const handleShareMessage = useCallback((content: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -712,7 +852,9 @@ export default function HelpScreen() {
     void getPreferredVoice().then((storedVoice) => {
       if (storedVoice) {
         setSelectedVoice(storedVoice);
-        setVoiceStatusText(`Voice replies will use ${VOICE_LABELS[storedVoice] ?? "Marin"}.`);
+        setVoiceStatusText(
+          `Voice replies will use ${VOICE_LABELS[storedVoice] ?? "Marin"}.`,
+        );
       }
     });
   }, []);
@@ -831,7 +973,9 @@ export default function HelpScreen() {
         isVoiceBusy={isVoiceBusy}
         isVoiceRecording={isVoiceRecording}
         voiceStatusText={voiceStatusText}
-        voiceOptions={VOICE_OPTIONS as unknown as { id: string; label: string }[]}
+        voiceOptions={
+          VOICE_OPTIONS as unknown as { id: string; label: string }[]
+        }
         selectedVoiceId={selectedVoice}
         onVoiceOptionSelect={(voiceId) => {
           void handleVoiceSelect(voiceId);

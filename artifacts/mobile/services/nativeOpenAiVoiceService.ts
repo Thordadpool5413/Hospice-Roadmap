@@ -14,6 +14,7 @@ export interface NativeOpenAiVoicePlaybackResult {
   audioMimeType?: string;
   audioUrl?: string;
   didAutoPlayAudio: boolean;
+  autoPlayErrorMessage?: string;
   usedSpeechFallback?: boolean;
 }
 
@@ -28,7 +29,9 @@ let playbackState: NativeOpenAiVoicePlaybackState = {
   isPlaying: false,
   isPaused: false,
 };
-const playbackListeners = new Set<(state: NativeOpenAiVoicePlaybackState) => void>();
+const playbackListeners = new Set<
+  (state: NativeOpenAiVoicePlaybackState) => void
+>();
 
 function emitPlaybackState(nextState: NativeOpenAiVoicePlaybackState): void {
   playbackState = nextState;
@@ -68,12 +71,10 @@ async function stopActiveSound(): Promise<void> {
   activeSound = null;
   try {
     await sound.stopAsync();
-  } catch {
-  }
+  } catch {}
   try {
     await sound.unloadAsync();
-  } catch {
-  }
+  } catch {}
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
@@ -93,7 +94,9 @@ export function isNativeOpenAiVoiceSupported(): boolean {
 
 export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   if (!isNativeOpenAiVoiceSupported()) {
-    throw new Error("Native voice recording is only available on iPhone and Android builds.");
+    throw new Error(
+      "Native voice recording is only available on iPhone and Android builds.",
+    );
   }
 
   await stopActiveSound();
@@ -106,15 +109,16 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {
-    }
+    } catch {}
     activeRecording = null;
   }
 
   await configureRecordingMode();
 
   const recording = new Audio.Recording();
-  await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+  await recording.prepareToRecordAsync(
+    Audio.RecordingOptionsPresets.HIGH_QUALITY,
+  );
   await recording.startAsync();
   activeRecording = recording;
 }
@@ -139,7 +143,9 @@ async function createAndAutoplaySound(
     if (status.didJustFinish) {
       sound.unloadAsync().catch(() => {});
       if (cleanupUri) {
-        FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(() => {});
+        FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(
+          () => {},
+        );
       }
       if (activeSound === sound) {
         activeSound = null;
@@ -159,13 +165,18 @@ async function createAndAutoplaySound(
   });
 }
 
-async function playFromBase64(audioBase64: string, audioMimeType?: string): Promise<void> {
+async function playFromBase64(
+  audioBase64: string,
+  audioMimeType?: string,
+): Promise<void> {
   const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
   if (!baseDir) {
     throw new Error("Unable to access local storage for audio playback.");
   }
 
-  const extension = (audioMimeType || "audio/mpeg").includes("mpeg") ? "mp3" : "m4a";
+  const extension = (audioMimeType || "audio/mpeg").includes("mpeg")
+    ? "mp3"
+    : "m4a";
   const fileUri = `${baseDir}ragna-voice-reply-${Date.now()}.${extension}`;
   await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
     encoding: FileSystem.EncodingType.Base64,
@@ -236,8 +247,7 @@ export async function stopNativeOpenAiVoice(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {
-    }
+    } catch {}
     activeRecording = null;
   }
 
@@ -281,7 +291,10 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
   if (!response.ok) {
     let message = "Voice transcription failed.";
     try {
-      const data = (await response.json()) as { error?: string; message?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
       message = data.error ?? data.message ?? message;
     } catch {
       const text = await response.text();
@@ -318,7 +331,10 @@ export async function speakNativeOpenAiVoiceText({
   if (!response.ok) {
     let message = "Ragna voice playback failed.";
     try {
-      const data = (await response.json()) as { error?: string; message?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
       message = data.error ?? data.message ?? message;
     } catch {
       const textResponse = await response.text();
@@ -334,6 +350,8 @@ export async function speakNativeOpenAiVoiceText({
   };
 
   let didAutoPlayAudio = false;
+  let autoPlayErrorMessage: string | undefined;
+
   if (payload.audioBase64 || payload.audioUrl) {
     try {
       await playAudioReply({
@@ -342,8 +360,12 @@ export async function speakNativeOpenAiVoiceText({
         audioUrl: payload.audioUrl,
       });
       didAutoPlayAudio = true;
-    } catch {
+    } catch (error) {
       didAutoPlayAudio = false;
+      autoPlayErrorMessage =
+        error instanceof Error
+          ? error.message
+          : "Ragna voice audio was generated, but playback could not start automatically.";
     }
   }
 
@@ -352,6 +374,7 @@ export async function speakNativeOpenAiVoiceText({
     audioMimeType: payload.audioMimeType,
     audioUrl: payload.audioUrl,
     didAutoPlayAudio,
+    autoPlayErrorMessage,
     usedSpeechFallback: false,
   };
 }

@@ -44,7 +44,9 @@ export function RagnaMessageList({
               : undefined
           }
           onPlayAudio={
-            msg.role === "assistant" && msg.audioBase64 && onPlayAudio
+            msg.role === "assistant" &&
+            (msg.audioBase64 || msg.audioUrl) &&
+            onPlayAudio
               ? () => onPlayAudio(msg)
               : undefined
           }
@@ -58,7 +60,7 @@ export function RagnaMessageList({
       )}
       {suggestions.length > 0 && !isStreaming && (
         <View style={styles.suggestionsContainer}>
-          <Text style={styles.suggestionsLabel}>Ask a follow-up</Text>
+          <Text style={styles.suggestionsLabel}>Ask a follow up</Text>
           <View style={styles.suggestionPills}>
             {suggestions.map((s, i) => (
               <Pressable
@@ -72,7 +74,12 @@ export function RagnaMessageList({
                   pressed && { opacity: 0.72, transform: [{ scale: 0.97 }] },
                 ]}
               >
-                <Feather name="message-circle" size={12} color={Colors.primary} style={{ marginRight: 5 }} />
+                <Feather
+                  name="message-circle"
+                  size={12}
+                  color={Colors.primary}
+                  style={{ marginRight: 5 }}
+                />
                 <Text style={styles.suggestionPillText}>{s}</Text>
               </Pressable>
             ))}
