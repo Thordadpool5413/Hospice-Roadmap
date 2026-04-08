@@ -1,7 +1,5 @@
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
-import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
-import * as Speech from "expo-speech";
 import { Platform } from "react-native";
 
 import { apiBase, mergeJsonHeaders } from "./apiClient";
@@ -37,14 +35,6 @@ function emitPlaybackState(nextState: NativeOpenAiVoicePlaybackState): void {
   playbackListeners.forEach((listener) => listener(nextState));
 }
 
-function shouldUseDeviceSpeechFirst(): boolean {
-  return (
-    __DEV__ ||
-    Constants.appOwnership === "expo" ||
-    Constants.executionEnvironment === "storeClient"
-  );
-}
-
 async function configureRecordingMode(): Promise<void> {
   await Audio.setAudioModeAsync({
     allowsRecordingIOS: true,
@@ -70,7 +60,6 @@ async function configurePlaybackMode(): Promise<void> {
 }
 
 async function stopActiveSound(): Promise<void> {
-  Speech.stop();
   if (!activeSound) {
     emitPlaybackState({ isPlaying: false, isPaused: false });
     return;
@@ -130,23 +119,28 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   activeRecording = recording;
 }
 
-async function createAndPlaySound(source: { uri: string }): Promise<void> {
-  const createResult = await Audio.Sound.createAsync(
-    source,
-    {
-      shouldPlay: false,
-      volume: 1,
-      progressUpdateIntervalMillis: 250,
-      isMuted: false,
-    },
-  );
+async function createAndAutoplaySound(
+  source: { uri: string },
+  cleanupUri?: string,
+): Promise<void> {
+  const { sound } = await Audio.Sound.createAsync(source, {
+    shouldPlay: true,
+    volume: 1,
+    isMuted: false,
+    progressUpdateIntervalMillis: 250,
+  });
 
-  const sound = createResult.sound;
   activeSound = sound;
+  emitPlaybackState({ isPlaying: true, isPaused: false });
+
   sound.setOnPlaybackStatusUpdate((status) => {
     if (!status.isLoaded) return;
+
     if (status.didJustFinish) {
       sound.unloadAsync().catch(() => {});
+      if (cleanupUri) {
+        FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(() => {});
+      }
       if (activeSound === sound) {
         activeSound = null;
       }
@@ -161,56 +155,6 @@ async function createAndPlaySound(source: { uri: string }): Promise<void> {
 
     if (activeSound === sound && status.positionMillis > 0) {
       emitPlaybackState({ isPlaying: true, isPaused: true });
-    }
-  });
-
-  try {
-    await sound.playFromPositionAsync(0);
-    emitPlaybackState({ isPlaying: true, isPaused: false });
-  } catch {
-    try {
-      await sound.playAsync();
-      emitPlaybackState({ isPlaying: true, isPaused: false });
-    } catch {
-      if (activeSound === sound) {
-        activeSound = null;
-      }
-      try {
-        await sound.unloadAsync();
-      } catch {
-      }
-      emitPlaybackState({ isPlaying: false, isPaused: false });
-      throw new Error("Ragna's voice reply could not be played on this device.");
-    }
-  }
-}
-
-async function speakWithDeviceFallback(text: string): Promise<void> {
-  await configurePlaybackMode();
-  Speech.stop();
-  emitPlaybackState({ isPlaying: true, isPaused: false });
-  await new Promise<void>((resolve, reject) => {
-    try {
-      Speech.speak(text, {
-        language: "en-US",
-        rate: 0.95,
-        pitch: 1.0,
-        onDone: () => {
-          emitPlaybackState({ isPlaying: false, isPaused: false });
-          resolve();
-        },
-        onStopped: () => {
-          emitPlaybackState({ isPlaying: false, isPaused: false });
-          resolve();
-        },
-        onError: () => {
-          emitPlaybackState({ isPlaying: false, isPaused: false });
-          reject(new Error("Ragna's voice reply could not be spoken on this device."));
-        },
-      });
-    } catch {
-      emitPlaybackState({ isPlaying: false, isPaused: false });
-      reject(new Error("Ragna's voice reply could not be spoken on this device."));
     }
   });
 }
@@ -228,7 +172,7 @@ async function playFromBase64(audioBase64: string, audioMimeType?: string): Prom
   });
 
   try {
-    await createAndPlaySound({ uri: fileUri });
+    await createAndAutoplaySound({ uri: fileUri }, fileUri);
   } catch (error) {
     FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
     throw error;
@@ -248,15 +192,12 @@ async function playAudioReply({
   await configurePlaybackMode();
 
   if (audioBase64) {
-    try {
-      await playFromBase64(audioBase64, audioMimeType);
-      return;
-    } catch {
-    }
+    await playFromBase64(audioBase64, audioMimeType);
+    return;
   }
 
   if (audioUrl) {
-    await createAndPlaySound({ uri: audioUrl });
+    await createAndAutoplaySound({ uri: audioUrl });
     return;
   }
 
@@ -267,27 +208,12 @@ export async function playNativeOpenAiVoiceAudio({
   audioBase64,
   audioMimeType,
   audioUrl,
-  fallbackText,
 }: {
   audioBase64?: string;
   audioMimeType?: string;
   audioUrl?: string;
-  fallbackText?: string;
 }): Promise<void> {
-  if (shouldUseDeviceSpeechFirst() && fallbackText?.trim()) {
-    await speakWithDeviceFallback(fallbackText.trim());
-    return;
-  }
-
-  try {
-    await playAudioReply({ audioBase64, audioMimeType, audioUrl });
-  } catch (error) {
-    if (fallbackText?.trim()) {
-      await speakWithDeviceFallback(fallbackText.trim());
-      return;
-    }
-    throw error;
-  }
+  await playAudioReply({ audioBase64, audioMimeType, audioUrl });
 }
 
 export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
@@ -379,14 +305,6 @@ export async function speakNativeOpenAiVoiceText({
     return { didAutoPlayAudio: false };
   }
 
-  if (shouldUseDeviceSpeechFirst()) {
-    await speakWithDeviceFallback(trimmed);
-    return {
-      didAutoPlayAudio: true,
-      usedSpeechFallback: true,
-    };
-  }
-
   const clientId = await getClientId();
   const response = await fetch(`${apiBase()}/openai/speak`, {
     method: "POST",
@@ -416,7 +334,6 @@ export async function speakNativeOpenAiVoiceText({
   };
 
   let didAutoPlayAudio = false;
-  let usedSpeechFallback = false;
   if (payload.audioBase64 || payload.audioUrl) {
     try {
       await playAudioReply({
@@ -426,14 +343,8 @@ export async function speakNativeOpenAiVoiceText({
       });
       didAutoPlayAudio = true;
     } catch {
-      await speakWithDeviceFallback(trimmed);
-      didAutoPlayAudio = true;
-      usedSpeechFallback = true;
+      didAutoPlayAudio = false;
     }
-  } else {
-    await speakWithDeviceFallback(trimmed);
-    didAutoPlayAudio = true;
-    usedSpeechFallback = true;
   }
 
   return {
@@ -441,6 +352,6 @@ export async function speakNativeOpenAiVoiceText({
     audioMimeType: payload.audioMimeType,
     audioUrl: payload.audioUrl,
     didAutoPlayAudio,
-    usedSpeechFallback,
+    usedSpeechFallback: false,
   };
 }
