@@ -9,14 +9,6 @@ export interface NativeOpenAiVoiceTranscriptResult {
   userTranscript: string;
 }
 
-export interface NativeOpenAiVoiceTurnResult {
-  userTranscript: string;
-  assistantTranscript: string;
-  audioBase64?: string;
-  audioMimeType?: string;
-  audioUrl?: string;
-}
-
 export interface NativeOpenAiVoicePlaybackResult {
   audioBase64?: string;
   audioMimeType?: string;
@@ -312,68 +304,6 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
   }
 
   return (await response.json()) as NativeOpenAiVoiceTranscriptResult;
-}
-
-export async function stopNativeOpenAiVoiceRecordingAndCompleteTurn({
-  patientContext,
-  voice,
-}: {
-  patientContext?: string;
-  voice: string;
-}): Promise<NativeOpenAiVoiceTurnResult> {
-  if (!activeRecording) {
-    throw new Error("Voice recording has not started yet.");
-  }
-
-  const recording = activeRecording;
-  activeRecording = null;
-
-  await recording.stopAndUnloadAsync();
-  await configurePlaybackMode();
-
-  const uri = recording.getURI();
-  if (!uri) {
-    throw new Error("The recorded audio could not be found.");
-  }
-
-  const fileName = `voice-turn-${Date.now()}.m4a`;
-  const formData = new FormData();
-  formData.append("audio", {
-    uri,
-    name: fileName,
-    type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
-  } as never);
-
-  formData.append("voice", voice);
-  if (patientContext?.trim()) {
-    formData.append("patientContext", patientContext.trim());
-  }
-
-  const clientId = await getClientId();
-  const response = await fetch(`${apiBase()}/openai/mobile-voice-turn`, {
-    method: "POST",
-    headers: {
-      x_client_id: clientId,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    let message = "Voice turn failed.";
-    try {
-      const data = (await response.json()) as {
-        error?: string;
-        message?: string;
-      };
-      message = data.error ?? data.message ?? message;
-    } catch {
-      const text = await response.text();
-      if (text) message = text;
-    }
-    throw new Error(message);
-  }
-
-  return (await response.json()) as NativeOpenAiVoiceTurnResult;
 }
 
 export async function speakNativeOpenAiVoiceText({
