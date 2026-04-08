@@ -401,12 +401,13 @@ export default function HelpScreen() {
   }, []);
 
   const handlePlayAudio = useCallback(async (message: LocalMessage) => {
-    if (!message.audioBase64 && !message.audioUrl) return;
+    if (!message.audioBase64 && !message.audioUrl && !message.content.trim()) return;
     try {
       await playNativeOpenAiVoiceAudio({
         audioBase64: message.audioBase64,
         audioMimeType: message.audioMimeType,
         audioUrl: message.audioUrl,
+        fallbackText: message.content,
       });
       setVoiceStatusText("Playing Ragna's voice reply.");
     } catch (error) {
@@ -441,6 +442,12 @@ export default function HelpScreen() {
     if (!nativeVoiceSupported || !assistantText.trim()) return;
 
     try {
+      if (__DEV__) {
+        await playNativeOpenAiVoiceAudio({ fallbackText: assistantText });
+        setVoiceStatusText(`Ragna replied out loud using your device voice for development.`);
+        return;
+      }
+
       const playback = await speakNativeOpenAiVoiceText({
         text: assistantText,
         voice: selectedVoice,
@@ -462,7 +469,9 @@ export default function HelpScreen() {
       }
 
       setVoiceStatusText(
-        playback.didAutoPlayAudio
+        playback.usedSpeechFallback
+          ? `Ragna replied out loud using your device voice.`
+          : playback.didAutoPlayAudio
           ? `Ragna replied with ${selectedVoiceLabel}.`
           : `Ragna replied with ${selectedVoiceLabel}. Tap Play voice reply in the chat if audio did not start.`
       );
