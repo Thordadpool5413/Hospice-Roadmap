@@ -46,7 +46,7 @@ import {
   startNativeOpenAiVoiceRecording,
   stopNativeOpenAiVoice,
   stopNativeOpenAiVoicePlayback,
-  stopNativeOpenAiVoiceRecordingAndTranscribe,
+  stopNativeOpenAiVoiceRecordingAndCompleteTurn,
   subscribeNativeOpenAiVoicePlayback,
 } from "@/services/nativeOpenAiVoiceService";
 import {
@@ -118,7 +118,7 @@ const GUIDANCE_PROMPTS: {
   {
     label: "How do I explain this to a child?",
     prompt:
-      "I need to explain what is happening to a child. Can you help me with honest, age-appropriate language that will not traumatize them?",
+      "I need to explain what is happening to a child. Can you help me with honest, age appropriate language that will not traumatize them?",
   },
   {
     label: "What do I do if death happens now?",
@@ -158,7 +158,7 @@ const GUIDANCE_PROMPTS: {
   {
     label: "What is a good death?",
     prompt:
-      "I want to understand what a good, peaceful death looks like. What can we do to create the conditions for that? What does comfort-focused care really mean in the final days?",
+      "I want to understand what a good, peaceful death looks like. What can we do to create the conditions for that? What does comfort focused care really mean in the final days?",
   },
 ];
 
@@ -230,7 +230,7 @@ const URGENT_TILES = [
     icon: "user-check",
     color: Colors.accentLight,
     prompt:
-      "I need help with a hands-on caregiving task like bathing, repositioning, or a transfer.",
+      "I need help with a hands on caregiving task like bathing, repositioning, or a transfer.",
     caregiverOnly: true,
   },
   {
@@ -346,7 +346,7 @@ export default function HelpScreen() {
     if (alerts.length === 0) return null;
     const alertText = alerts.join(" and ");
     return {
-      text: `Today's symptom check-in shows ${alertText}.`,
+      text: `Today's symptom check in shows ${alertText}.`,
       prompt: `My symptom tracker shows ${alertText} today. What can I do right now to help and should I call the hospice team?`,
     };
   }, [todayEntry]);
@@ -713,20 +713,87 @@ export default function HelpScreen() {
 
       setIsVoiceRecording(false);
       setIsVoiceBusy(true);
-      setVoiceStatusText(`Transcribing your words with ${selectedVoiceLabel}…`);
+      setVoiceStatusText(
+        `Sending your voice question to Ragna with ${selectedVoiceLabel}…`,
+      );
 
-      const result = await stopNativeOpenAiVoiceRecordingAndTranscribe();
-      const transcript = result.userTranscript.trim();
+      const patientContext = buildRagnaPatientContext();
+      const result = await stopNativeOpenAiVoiceRecordingAndCompleteTurn({
+        patientContext,
+        voice: selectedVoice,
+      });
 
-      if (!transcript) {
-        setVoiceStatusText("I did not catch that. Please try again.");
+      const userTranscript = result.userTranscript?.trim() ?? "";
+      const assistantTranscript = result.assistantTranscript?.trim() ?? "";
+
+      if (!userTranscript || !assistantTranscript) {
+        setVoiceStatusText(
+          "Ragna did not return a complete voice reply. Please try again.",
+        );
         return;
       }
 
-      setVoiceStatusText(
-        `Sending your message to Ragna with ${selectedVoiceLabel}…`,
-      );
-      await sendMessage(transcript);
+      let activeConv = conversation;
+      if (!activeConv) {
+        try {
+          setIsLoading(true);
+          activeConv = await createConversation(userTranscript.slice(0, 60));
+          setConversation(activeConv);
+          await setActiveConversationId(activeConv.id);
+        } catch {
+          Alert.alert(
+            "Connection Error",
+            "Could not connect to Ragna. Please check your connection.",
+          );
+          return;
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        void setActiveConversationId(activeConv.id);
+      }
+
+      setSuggestions([]);
+      setInputText("");
+
+      const userMsgId = `user-${Date.now()}`;
+      const assistantMsgId = `asst-${Date.now()}`;
+
+      setLocalMessages((prev) => [
+        ...prev,
+        { id: userMsgId, role: "user", content: userTranscript },
+        {
+          id: assistantMsgId,
+          role: "assistant",
+          content: assistantTranscript,
+          audioBase64: result.audioBase64,
+          audioMimeType: result.audioMimeType,
+          audioUrl: result.audioUrl,
+        },
+      ]);
+
+      scrollToBottom(150);
+
+      if (result.audioBase64 || result.audioUrl) {
+        try {
+          await playNativeOpenAiVoiceAudio({
+            audioBase64: result.audioBase64,
+            audioMimeType: result.audioMimeType,
+            audioUrl: result.audioUrl,
+          });
+          setVoiceStatusText(`Ragna replied with ${selectedVoiceLabel}.`);
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Ragna replied, but the audio could not be played automatically.";
+          setVoiceStatusText(`${message} Tap Play voice reply in the chat.`);
+        }
+      } else {
+        setVoiceStatusText(
+          "Ragna replied in text, but no voice audio was returned.",
+        );
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Voice chat could not start.";
@@ -737,7 +804,15 @@ export default function HelpScreen() {
     } finally {
       setIsVoiceBusy(false);
     }
-  }, [isVoiceRecording, nativeVoiceSupported, selectedVoiceLabel, sendMessage]);
+  }, [
+    buildRagnaPatientContext,
+    conversation,
+    isVoiceRecording,
+    nativeVoiceSupported,
+    scrollToBottom,
+    selectedVoice,
+    selectedVoiceLabel,
+  ]);
 
   const handleTilePress = useCallback(
     (tile: { label: string; activePrompt: string }) => {
