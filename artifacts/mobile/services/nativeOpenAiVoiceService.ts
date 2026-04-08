@@ -1,4 +1,5 @@
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
+import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Speech from "expo-speech";
 import { Platform } from "react-native";
@@ -34,6 +35,14 @@ const playbackListeners = new Set<(state: NativeOpenAiVoicePlaybackState) => voi
 function emitPlaybackState(nextState: NativeOpenAiVoicePlaybackState): void {
   playbackState = nextState;
   playbackListeners.forEach((listener) => listener(nextState));
+}
+
+function shouldUseDeviceSpeechFirst(): boolean {
+  return (
+    __DEV__ ||
+    Constants.appOwnership === "expo" ||
+    Constants.executionEnvironment === "storeClient"
+  );
 }
 
 async function configureRecordingMode(): Promise<void> {
@@ -265,6 +274,11 @@ export async function playNativeOpenAiVoiceAudio({
   audioUrl?: string;
   fallbackText?: string;
 }): Promise<void> {
+  if (shouldUseDeviceSpeechFirst() && fallbackText?.trim()) {
+    await speakWithDeviceFallback(fallbackText.trim());
+    return;
+  }
+
   try {
     await playAudioReply({ audioBase64, audioMimeType, audioUrl });
   } catch (error) {
@@ -363,6 +377,14 @@ export async function speakNativeOpenAiVoiceText({
   const trimmed = text.trim();
   if (!trimmed) {
     return { didAutoPlayAudio: false };
+  }
+
+  if (shouldUseDeviceSpeechFirst()) {
+    await speakWithDeviceFallback(trimmed);
+    return {
+      didAutoPlayAudio: true,
+      usedSpeechFallback: true,
+    };
   }
 
   const clientId = await getClientId();
