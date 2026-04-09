@@ -64,11 +64,26 @@ export function RagnaComposer({
   onPlaybackStop,
 }: RagnaComposerProps) {
   const voiceDisabled = !isOnline || isStreaming || isVoiceBusy;
-  const showVoiceOptions = isVoiceAvailable && voiceOptions.length > 1 && !!onVoiceOptionSelect;
-  const showPlaybackControls = isPlaybackActive && !!onPlaybackToggle && !!onPlaybackStop;
+  const showVoiceOptions =
+    isVoiceAvailable && voiceOptions.length > 1 && !!onVoiceOptionSelect;
+  const showPlaybackControls =
+    isVoiceAvailable && hasMessages && !!onPlaybackToggle && !!onPlaybackStop;
+  const playbackPrimaryIcon =
+    !isPlaybackActive || isPlaybackPaused ? "play" : "pause";
+  const playbackPrimaryLabel = !isPlaybackActive
+    ? "Play"
+    : isPlaybackPaused
+      ? "Resume"
+      : "Pause";
+  const playbackStopDisabled = !isPlaybackActive && !isPlaybackPaused;
 
   return (
-    <View style={[styles.inputBar, { paddingBottom: Platform.OS === "web" ? 84 : 49 + insetsBottom }]}>
+    <View
+      style={[
+        styles.inputBar,
+        { paddingBottom: Platform.OS === "web" ? 84 : 49 + insetsBottom },
+      ]}
+    >
       {!isOnline && (
         <View style={styles.offlineInputNotice}>
           <Feather name="wifi-off" size={15} color={Colors.amber} />
@@ -94,7 +109,11 @@ export function RagnaComposer({
         </View>
       ) : null}
       {showVoiceOptions ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.voiceOptionsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.voiceOptionsRow}
+        >
           {voiceOptions.map((option) => {
             const selected = option.id === selectedVoiceId;
             return (
@@ -109,7 +128,12 @@ export function RagnaComposer({
                   pressed && !voiceDisabled ? { opacity: 0.8 } : null,
                 ]}
               >
-                <Text style={[styles.voiceOptionText, selected && styles.voiceOptionTextSelected]}>
+                <Text
+                  style={[
+                    styles.voiceOptionText,
+                    selected && styles.voiceOptionTextSelected,
+                  ]}
+                >
                   {option.label}
                 </Text>
               </Pressable>
@@ -119,11 +143,31 @@ export function RagnaComposer({
       ) : null}
       {showPlaybackControls ? (
         <View style={styles.playbackRow}>
-          <Pressable onPress={onPlaybackToggle} style={styles.playbackButton}>
-            <Feather name={isPlaybackPaused ? "play" : "pause"} size={14} color={Colors.primaryDark} />
-            <Text style={styles.playbackButtonText}>{isPlaybackPaused ? "Resume" : "Pause"}</Text>
+          <Pressable
+            onPress={onPlaybackToggle}
+            disabled={isVoiceBusy}
+            style={({ pressed }) => [
+              styles.playbackButton,
+              isVoiceBusy && styles.playbackButtonDisabled,
+              pressed && !isVoiceBusy ? { opacity: 0.8 } : null,
+            ]}
+          >
+            <Feather
+              name={playbackPrimaryIcon}
+              size={14}
+              color={Colors.primaryDark}
+            />
+            <Text style={styles.playbackButtonText}>{playbackPrimaryLabel}</Text>
           </Pressable>
-          <Pressable onPress={onPlaybackStop} style={styles.playbackButton}>
+          <Pressable
+            onPress={onPlaybackStop}
+            disabled={playbackStopDisabled}
+            style={({ pressed }) => [
+              styles.playbackButton,
+              playbackStopDisabled && styles.playbackButtonDisabled,
+              pressed && !playbackStopDisabled ? { opacity: 0.8 } : null,
+            ]}
+          >
             <Feather name="square" size={14} color={Colors.primaryDark} />
             <Text style={styles.playbackButtonText}>Stop</Text>
           </Pressable>
@@ -143,10 +187,10 @@ export function RagnaComposer({
             !isOnline
               ? "Reconnecting to Ragna…"
               : isStreaming
-              ? "Ragna is responding…"
-              : hasMessages
-              ? "Reply to Ragna…"
-              : "Describe what's happening or ask anything…"
+                ? "Ragna is responding…"
+                : hasMessages
+                  ? "Reply to Ragna…"
+                  : "Describe what's happening or ask anything…"
           }
           placeholderTextColor={Colors.textMuted}
           multiline
@@ -168,7 +212,11 @@ export function RagnaComposer({
             {isVoiceBusy ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Feather name={isVoiceRecording ? "square" : "mic"} size={18} color="#FFFFFF" />
+              <Feather
+                name={isVoiceRecording ? "square" : "mic"}
+                size={18}
+                color="#FFFFFF"
+              />
             )}
           </Pressable>
         ) : null}
@@ -177,7 +225,8 @@ export function RagnaComposer({
           disabled={!inputText.trim() || isStreaming || !isOnline}
           style={({ pressed }) => [
             styles.sendBtn,
-            (!inputText.trim() || isStreaming || !isOnline) && styles.sendBtnDisabled,
+            (!inputText.trim() || isStreaming || !isOnline) &&
+              styles.sendBtnDisabled,
             pressed && { opacity: 0.8 },
           ]}
         >
@@ -269,6 +318,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryPale,
     borderWidth: 1,
     borderColor: Colors.primary + "30",
+  },
+  playbackButtonDisabled: {
+    opacity: 0.45,
   },
   playbackButtonText: {
     fontSize: 12,

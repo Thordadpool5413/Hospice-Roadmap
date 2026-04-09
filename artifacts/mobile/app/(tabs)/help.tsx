@@ -498,20 +498,84 @@ export default function HelpScreen() {
 
   const handlePlaybackToggle = useCallback(async () => {
     try {
-      if (isPlaybackPaused) {
-        await resumeNativeOpenAiVoicePlayback();
-        setVoiceStatusText("Resumed Ragna's voice reply.");
-      } else {
-        await pauseNativeOpenAiVoicePlayback();
-        setVoiceStatusText("Paused Ragna's voice reply.");
+      if (isPlaybackActive) {
+        if (isPlaybackPaused) {
+          await resumeNativeOpenAiVoicePlayback();
+          setVoiceStatusText("Resumed Ragna's voice reply.");
+        } else {
+          await pauseNativeOpenAiVoicePlayback();
+          setVoiceStatusText("Paused Ragna's voice reply.");
+        }
+        return;
       }
+
+      const latestAssistantMessage = [...localMessages]
+        .reverse()
+        .find(
+          (message) =>
+            message.role === "assistant" && message.content.trim().length > 0,
+        );
+
+      if (!latestAssistantMessage) {
+        setVoiceStatusText("Ask Ragna a question first, then tap Play.");
+        return;
+      }
+
+      if (latestAssistantMessage.audioBase64 || latestAssistantMessage.audioUrl) {
+        await playNativeOpenAiVoiceAudio({
+          audioBase64: latestAssistantMessage.audioBase64,
+          audioMimeType: latestAssistantMessage.audioMimeType,
+          audioUrl: latestAssistantMessage.audioUrl,
+        });
+        setVoiceStatusText("Playing Ragna's voice reply.");
+        return;
+      }
+
+      if (!nativeVoiceSupported || !latestAssistantMessage.content.trim()) {
+        setVoiceStatusText("Voice playback is not available on this device.");
+        return;
+      }
+
+      setVoiceStatusText(`Generating ${selectedVoiceLabel} voice reply…`);
+      const playback = await speakNativeOpenAiVoiceText({
+        text: latestAssistantMessage.content,
+        voice: selectedVoice,
+      });
+
+      if (playback.audioBase64 || playback.audioUrl) {
+        setLocalMessages((prev) =>
+          prev.map((message) =>
+            message.id === latestAssistantMessage.id
+              ? {
+                  ...message,
+                  audioBase64: playback.audioBase64,
+                  audioMimeType: playback.audioMimeType,
+                  audioUrl: playback.audioUrl,
+                }
+              : message,
+          ),
+        );
+      }
+
+      setVoiceStatusText(
+        playback.didAutoPlayAudio
+          ? `Ragna replied with ${selectedVoiceLabel}.`
+          : `Ragna replied with ${selectedVoiceLabel}. Tap Play voice reply in the chat if audio did not start.`,
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Playback control failed.";
       setVoiceStatusText(message);
       Alert.alert("Playback Error", message);
     }
-  }, [isPlaybackPaused]);
+  }, [
+    isPlaybackActive,
+    isPlaybackPaused,
+    localMessages,
+    nativeVoiceSupported,
+    selectedVoice,
+    selectedVoiceLabel,
+  ]);
 
   const handlePlaybackStop = useCallback(async () => {
     await stopNativeOpenAiVoicePlayback();
