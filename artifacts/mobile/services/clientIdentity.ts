@@ -4,7 +4,10 @@ const STORAGE_KEY = "ragna_client_id";
 
 function generateClientId(): string {
   const ts = Date.now();
-  const rand = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 10);
+  const rand = Math.random()
+    .toString(36)
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 10);
   return `client_${ts}_${rand}`;
 }
 

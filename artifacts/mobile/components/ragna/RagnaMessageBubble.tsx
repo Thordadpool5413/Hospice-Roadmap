@@ -1,12 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import {
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
 
@@ -38,7 +32,13 @@ function renderInline(text: string): React.ReactNode {
   );
 }
 
-function RenderedMessage({ content, isUser }: { content: string; isUser: boolean }) {
+function RenderedMessage({
+  content,
+  isUser,
+}: {
+  content: string;
+  isUser: boolean;
+}) {
   if (isUser) {
     return <Text style={styles.bubbleTextUser}>{content}</Text>;
   }
@@ -53,15 +53,17 @@ function RenderedMessage({ content, isUser }: { content: string; isUser: boolean
     } else if (/^#{1,3}\s/.test(line)) {
       const text = line.replace(/^#{1,3}\s/, "");
       elements.push(
-        <Text key={key++} style={styles.msgHeading}>{text}</Text>
+        <Text key={key++} style={styles.msgHeading}>
+          {text}
+        </Text>,
       );
-    } else if (/^[•\-\*]\s/.test(line)) {
-      const text = line.replace(/^[•\-\*]\s/, "");
+    } else if (/^[•\-*]\s/.test(line)) {
+      const text = line.replace(/^[•\-*]\s/, "");
       elements.push(
         <View key={key++} style={styles.msgBulletRow}>
           <Text style={styles.msgBulletDot}>•</Text>
           <Text style={styles.msgBulletText}>{renderInline(text)}</Text>
-        </View>
+        </View>,
       );
     } else if (/^\d+\.\s/.test(line)) {
       const match = line.match(/^(\d+)\.\s(.+)/);
@@ -70,14 +72,16 @@ function RenderedMessage({ content, isUser }: { content: string; isUser: boolean
           <View key={key++} style={styles.msgBulletRow}>
             <Text style={styles.msgStepNum}>{match[1]}.</Text>
             <Text style={styles.msgBulletText}>{renderInline(match[2])}</Text>
-          </View>
+          </View>,
         );
       }
     } else if (/^═+$/.test(line.trim())) {
       elements.push(<View key={key++} style={styles.msgDivider} />);
     } else {
       elements.push(
-        <Text key={key++} style={styles.msgBody}>{renderInline(line)}</Text>
+        <Text key={key++} style={styles.msgBody}>
+          {renderInline(line)}
+        </Text>,
       );
     }
   }

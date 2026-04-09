@@ -49,7 +49,7 @@ export const DEFAULT_TIMEOUT_MS = 12_000;
  * Cleans up the timer when the signal aborts to avoid memory leaks.
  */
 export function makeRequestTimeoutSignal(
-  timeoutMs: number = DEFAULT_TIMEOUT_MS
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): AbortSignal {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -65,7 +65,7 @@ export function makeRequestTimeoutSignal(
  * Pass x_client_id or other custom headers via `extra`.
  */
 export function mergeJsonHeaders(
-  extra?: Record<string, string>
+  extra?: Record<string, string>,
 ): Record<string, string> {
   return {
     Accept: "application/json",
@@ -117,10 +117,14 @@ export async function parseJsonResponse<T>(res: Response): Promise<T> {
  */
 export async function fetchJson<T>(
   url: string,
-  options?: RequestInit & { timeoutMs?: number }
+  options?: RequestInit & { timeoutMs?: number },
 ): Promise<T> {
-  const { timeoutMs, headers: callerHeaders, signal: callerSignal, ...rest } =
-    options ?? {};
+  const {
+    timeoutMs,
+    headers: callerHeaders,
+    signal: callerSignal,
+    ...rest
+  } = options ?? {};
 
   // Prefer caller's signal (e.g. from a component unmount controller).
   // Fall back to a timeout signal so requests never hang indefinitely.
