@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -54,10 +54,7 @@ import {
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
-import {
-  getPreferredVoice,
-  setPreferredVoice,
-} from "@/services/voicePreferences";
+import { setPreferredVoice } from "@/services/voicePreferences";
 import { VeraEmotionalTone } from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
@@ -324,13 +321,15 @@ export default function HelpScreen() {
     if (!todayEntry) return null;
     const alerts: string[] = [];
     if (todayEntry.pain >= 7) alerts.push(`pain at ${todayEntry.pain}/10`);
-    if (todayEntry.breathlessness >= 7)
+    if (todayEntry.breathlessness >= 7) {
       alerts.push(`breathlessness at ${todayEntry.breathlessness}/10`);
+    }
     if (todayEntry.nausea >= 7)
       alerts.push(`nausea at ${todayEntry.nausea}/10`);
     const agitationLabels = ["", "mild", "moderate", "severe"];
-    if (todayEntry.agitation >= 2)
+    if (todayEntry.agitation >= 2) {
       alerts.push(`${agitationLabels[todayEntry.agitation]} agitation`);
+    }
     if (alerts.length === 0) return null;
     const alertText = alerts.join(" and ");
     return {
@@ -829,14 +828,11 @@ export default function HelpScreen() {
   }, [conversation, localMessages.length, loadConversation]);
 
   useEffect(() => {
-    void getPreferredVoice().then((storedVoice) => {
-      if (storedVoice) {
-        setSelectedVoice(storedVoice);
-        setVoiceStatusText(
-          `Voice replies will use ${VOICE_LABELS[storedVoice] ?? "Ragna"}.`,
-        );
-      }
-    });
+    void (async () => {
+      await setPreferredVoice("marin");
+      setSelectedVoice("marin");
+      setVoiceStatusText("Voice replies will use Ragna.");
+    })();
   }, []);
 
   useEffect(() => {
