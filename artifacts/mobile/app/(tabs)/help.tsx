@@ -607,12 +607,14 @@ export default function HelpScreen() {
       scrollToBottom(150);
 
       const patientContext = buildRagnaPatientContext();
+      let streamedAssistantText = "";
 
       await streamMessage(
         activeConv.id,
         text,
         patientContext,
         (chunk) => {
+          streamedAssistantText += chunk;
           setLocalMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
@@ -623,21 +625,24 @@ export default function HelpScreen() {
           scrollToBottom(50);
         },
         () => {
-          let finalAssistantText = "";
+          const { text: parsedText, suggestions: parsed } =
+            parseSuggestions(streamedAssistantText);
+
+          if (parsed.length > 0) {
+            setSuggestions(parsed);
+          }
+
           setLocalMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== assistantMsgId) return m;
-              const { text: parsedText, suggestions: parsed } =
-                parseSuggestions(m.content);
-              if (parsed.length > 0) setSuggestions(parsed);
-              finalAssistantText = parsedText;
-              return { ...m, content: parsedText, isStreaming: false };
-            }),
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? { ...m, content: parsedText, isStreaming: false }
+                : m,
+            ),
           );
           setIsStreaming(false);
           scrollToBottom(150);
           setTimeout(() => inputRef.current?.focus(), 500);
-          void synthesizeAssistantVoice(assistantMsgId, finalAssistantText);
+          void synthesizeAssistantVoice(assistantMsgId, parsedText);
         },
         (err) => {
           setLocalMessages((prev) =>
