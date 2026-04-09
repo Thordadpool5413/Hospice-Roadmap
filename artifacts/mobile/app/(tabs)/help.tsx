@@ -66,22 +66,10 @@ import { RagnaHeader } from "@/components/ragna/RagnaHeader";
 import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
 import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
 
-const VOICE_OPTIONS = [
-  { id: "marin", label: "Marin" },
-  { id: "cedar", label: "Cedar" },
-  { id: "alloy", label: "Alloy" },
-  { id: "sage", label: "Sage" },
-  { id: "shimmer", label: "Shimmer" },
-  { id: "echo", label: "Echo" },
-] as const;
+const VOICE_OPTIONS = [{ id: "marin", label: "Ragna" }] as const;
 
 const VOICE_LABELS: Record<string, string> = {
-  marin: "Marin",
-  cedar: "Cedar",
-  alloy: "Alloy",
-  sage: "Sage",
-  shimmer: "Shimmer",
-  echo: "Echo",
+  marin: "Ragna",
 };
 
 const GUIDANCE_PROMPTS: {
@@ -330,7 +318,7 @@ export default function HelpScreen() {
     () => getTodayEntry(),
     [symptomEntries, getTodayEntry],
   );
-  const selectedVoiceLabel = VOICE_LABELS[selectedVoice] ?? "Marin";
+  const selectedVoiceLabel = VOICE_LABELS[selectedVoice] ?? "Ragna";
 
   const symptomAlert = useMemo<{ text: string; prompt: string } | null>(() => {
     if (!todayEntry) return null;
@@ -682,7 +670,7 @@ export default function HelpScreen() {
     setSelectedVoice(voiceId);
     await setPreferredVoice(voiceId);
     setVoiceStatusText(
-      `Voice replies will use ${VOICE_LABELS[voiceId] ?? "Marin"}.`,
+      `Voice replies will use ${VOICE_LABELS[voiceId] ?? "Ragna"}.`,
     );
   }, []);
 
@@ -845,7 +833,7 @@ export default function HelpScreen() {
       if (storedVoice) {
         setSelectedVoice(storedVoice);
         setVoiceStatusText(
-          `Voice replies will use ${VOICE_LABELS[storedVoice] ?? "Marin"}.`,
+          `Voice replies will use ${VOICE_LABELS[storedVoice] ?? "Ragna"}.`,
         );
       }
     });
