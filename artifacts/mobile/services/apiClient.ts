@@ -15,43 +15,49 @@ import { Platform } from "react-native";
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 
-function getExpoRuntimeHost(): string | null {
+function getExpoExtraConfig(): { apiUrl?: string; domain?: string } {
   const constants = Constants as unknown as {
-    expoConfig?: { hostUri?: string | null } | null;
-    expoGoConfig?: { debuggerHost?: string | null } | null;
+    expoConfig?: {
+      extra?: {
+        apiUrl?: string | null;
+        domain?: string | null;
+      } | null;
+    } | null;
     manifest?: {
-      debuggerHost?: string | null;
-      hostUri?: string | null;
+      extra?: {
+        apiUrl?: string | null;
+        domain?: string | null;
+      } | null;
     } | null;
     manifest2?: {
       extra?: {
         expoClient?: {
           hostUri?: string | null;
         } | null;
+        apiUrl?: string | null;
+        domain?: string | null;
       } | null;
     } | null;
   };
 
-  const candidates = [
-    constants.expoConfig?.hostUri,
-    constants.expoGoConfig?.debuggerHost,
-    constants.manifest?.debuggerHost,
-    constants.manifest?.hostUri,
-    constants.manifest2?.extra?.expoClient?.hostUri,
-  ];
+  return {
+    apiUrl:
+      constants.expoConfig?.extra?.apiUrl ??
+      constants.manifest?.extra?.apiUrl ??
+      constants.manifest2?.extra?.apiUrl ??
+      undefined,
+    domain:
+      constants.expoConfig?.extra?.domain ??
+      constants.manifest?.extra?.domain ??
+      constants.manifest2?.extra?.domain ??
+      undefined,
+  };
+}
 
-  for (const candidate of candidates) {
-    if (!candidate || typeof candidate !== "string") continue;
-    const normalized = candidate.trim();
-    if (!normalized) continue;
-    const hostPort = normalized.split("/")[0] ?? "";
-    const host = hostPort.split(":")[0] ?? "";
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return host;
-    }
-  }
-
-  return null;
+function normalizeApiUrl(value?: string | null): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return trimmed.replace(/\/+$/, "");
 }
 
 /**
@@ -60,27 +66,35 @@ function getExpoRuntimeHost(): string | null {
  * Priority:
  *  1. EXPO_PUBLIC_API_URL — set by the Expo workflow in Replit dev and by
  *     EAS builds. This is the primary signal.
- *  2. Expo runtime host metadata on native — used as a safety net for Expo Go
- *     when the env var was not baked into the bundle.
- *  3. window.location — web fallback for Replit iframe preview when the env
+ *  2. Expo config extra.apiUrl — runtime-safe fallback for Expo Go when the
+ *     EXPO_PUBLIC value was not baked into the JS bundle.
+ *  3. Expo config extra.domain — build the API URL from the known Replit host.
+ *  4. window.location — web fallback for Replit iframe preview when the env
  *     var is unavailable.
- *  4. localhost fallback for local non-Expo dev.
+ *  5. localhost fallback for local non-Expo dev.
  */
 export function apiBase(): string {
-  const envUrl = process.env["EXPO_PUBLIC_API_URL"];
+  const envUrl = normalizeApiUrl(process.env["EXPO_PUBLIC_API_URL"]);
   if (envUrl) return envUrl;
 
-  if (Platform.OS !== "web") {
-    const expoHost = getExpoRuntimeHost();
-    if (expoHost) {
-      return `https://${expoHost}/api`;
-    }
+  const expoExtra = getExpoExtraConfig();
+  const extraApiUrl = normalizeApiUrl(expoExtra.apiUrl);
+  if (extraApiUrl) return extraApiUrl;
+
+  const domain = expoExtra.domain?.trim();
+  if (domain) {
+    return `https://${domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/api`;
   }
 
   if (typeof window !== "undefined" && window.location?.hostname) {
-    // Strip the Expo sub-domain prefix so the API host resolves correctly.
     const host = window.location.hostname.replace(".expo.", ".");
     return `https://${host}/api`;
+  }
+
+  if (Platform.OS !== "web") {
+    console.warn(
+      "[apiClient] Falling back to localhost API on native. Expo config is missing apiUrl/domain.",
+    );
   }
 
   return "http://localhost:8080/api";
@@ -177,11 +191,7 @@ export async function fetchJson<T>(
     ...rest
   } = options ?? {};
 
-  // Prefer caller's signal (e.g. from a component unmount controller).
-  // Fall back to a timeout signal so requests never hang indefinitely.
   const signal = callerSignal ?? makeRequestTimeoutSignal(timeoutMs);
-
-  // Only inject JSON headers when the caller did not supply their own.
   const headers = callerHeaders ?? mergeJsonHeaders();
 
   const res = await fetch(url, { headers, signal, ...rest });
