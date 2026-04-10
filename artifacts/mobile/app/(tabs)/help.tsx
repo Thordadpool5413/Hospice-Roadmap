@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import * as Speech from "expo-speech";
 import React, {
   useCallback,
   useEffect,
@@ -252,6 +253,34 @@ function parseSuggestions(raw: string): {
   return { text, suggestions };
 }
 
+function extractLiveSpeechSegments(buffer: string): {
+  segments: string[];
+  remainder: string;
+} {
+  const normalized = buffer.replace(/\r/g, " ");
+  const parts = normalized.split(/(?<=[.!?])\s+|\n+/);
+  const completeSegments = parts.slice(0, -1).map((part) => part.trim()).filter(Boolean);
+  let remainder = parts.at(-1)?.trimStart() ?? "";
+
+  if (completeSegments.length === 0 && remainder.length >= 120) {
+    const commaIndex = remainder.lastIndexOf(",", Math.min(remainder.length - 1, 140));
+    const spaceIndex = remainder.lastIndexOf(" ", Math.min(remainder.length - 1, 140));
+    const cutoff = Math.max(commaIndex, spaceIndex);
+
+    if (cutoff >= 50) {
+      return {
+        segments: [remainder.slice(0, cutoff + 1).trim()],
+        remainder: remainder.slice(cutoff + 1).trimStart(),
+      };
+    }
+  }
+
+  return {
+    segments: completeSegments,
+    remainder,
+  };
+}
+
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const { user, buildPatientContext, ragnaPrivacy } = useApp();
@@ -279,9 +308,14 @@ export default function HelpScreen() {
   const lastInitialRef = useRef("");
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+  const liveSpeechQueueRef = useRef<string[]>([]);
+  const liveSpeechBufferRef = useRef("");
+  const liveSpeechSpeakingRef = useRef(false);
+  const liveSpeechStreamingRef = useRef(false);
 
   const isPatient = user?.role === "patient";
   const nativeVoiceSupported = isNativeOpenAiVoiceSupported();
+  const liveSpeechPreviewEnabled = nativeVoiceSupported && Platform.OS === "ios";
 
   const visibleTiles = URGENT_TILES.filter(
     (t) => !isPatient || !t.caregiverOnly,
@@ -310,12 +344,100 @@ export default function HelpScreen() {
   const [voiceStatusText, setVoiceStatusText] = useState<string | null>(null);
   const [isPlaybackActive, setIsPlaybackActive] = useState(false);
   const [isPlaybackPaused, setIsPlaybackPaused] = useState(false);
+  const [isLiveSpeechActive, setIsLiveSpeechActive] = useState(false);
 
   const todayEntry = useMemo(
     () => getTodayEntry(),
     [symptomEntries, getTodayEntry],
   );
   const selectedVoiceLabel = VOICE_LABELS[selectedVoice] ?? "Ragna";
+  const effectivePlaybackActive = isPlaybackActive || isLiveSpeechActive;
+  const effectivePlaybackPaused = isPlaybackActive ? isPlaybackPaused : false;
+
+  const stopLiveSpeechPreview = useCallback((clearBuffer = true) => {
+    Speech.stop();
+    liveSpeechQueueRef.current = [];
+    liveSpeechSpeakingRef.current = false;
+    liveSpeechStreamingRef.current = false;
+    if (clearBuffer) {
+      liveSpeechBufferRef.current = "";
+    }
+    setIsLiveSpeechActive(false);
+  }, []);
+
+  const processLiveSpeechQueue = useCallback(() => {
+    if (!liveSpeechPreviewEnabled || liveSpeechSpeakingRef.current) return;
+
+    const nextSegment = liveSpeechQueueRef.current.shift();
+    if (!nextSegment) {
+      if (!liveSpeechStreamingRef.current) {
+        setIsLiveSpeechActive(false);
+      }
+      return;
+    }
+
+    liveSpeechSpeakingRef.current = true;
+    setIsLiveSpeechActive(true);
+    setVoiceStatusText("Ragna is speaking live.");
+
+    Speech.speak(nextSegment, {
+      language: "en-US",
+      onDone: () => {
+        liveSpeechSpeakingRef.current = false;
+        if (liveSpeechQueueRef.current.length === 0 && !liveSpeechStreamingRef.current) {
+          setIsLiveSpeechActive(false);
+        }
+        processLiveSpeechQueue();
+      },
+      onStopped: () => {
+        liveSpeechSpeakingRef.current = false;
+        setIsLiveSpeechActive(false);
+      },
+      onError: () => {
+        liveSpeechSpeakingRef.current = false;
+        setIsLiveSpeechActive(false);
+      },
+    });
+  }, [liveSpeechPreviewEnabled]);
+
+  const enqueueLiveSpeechPreview = useCallback(
+    (incomingText: string) => {
+      if (!liveSpeechPreviewEnabled) return;
+
+      liveSpeechStreamingRef.current = true;
+      liveSpeechBufferRef.current += incomingText;
+
+      const { segments, remainder } = extractLiveSpeechSegments(
+        liveSpeechBufferRef.current,
+      );
+      liveSpeechBufferRef.current = remainder;
+
+      if (segments.length === 0) return;
+
+      liveSpeechQueueRef.current.push(...segments);
+      processLiveSpeechQueue();
+    },
+    [liveSpeechPreviewEnabled, processLiveSpeechQueue],
+  );
+
+  const finalizeLiveSpeechPreview = useCallback(() => {
+    if (!liveSpeechPreviewEnabled) return false;
+
+    liveSpeechStreamingRef.current = false;
+    const finalRemainder = liveSpeechBufferRef.current.trim();
+    liveSpeechBufferRef.current = "";
+
+    if (finalRemainder) {
+      liveSpeechQueueRef.current.push(finalRemainder);
+    }
+
+    if (liveSpeechQueueRef.current.length > 0 || liveSpeechSpeakingRef.current) {
+      processLiveSpeechQueue();
+      return true;
+    }
+
+    return false;
+  }, [liveSpeechPreviewEnabled, processLiveSpeechQueue]);
 
   const symptomAlert = useMemo<{ text: string; prompt: string } | null>(() => {
     if (!todayEntry) return null;
@@ -469,17 +591,20 @@ export default function HelpScreen() {
   );
 
   const startNewConversation = useCallback(async () => {
+    stopLiveSpeechPreview(true);
+    await stopNativeOpenAiVoicePlayback();
     setConversation(null);
     setLocalMessages([]);
     setInputText("");
     setSuggestions([]);
     setVoiceStatusText(null);
     await clearActiveConversationId();
-  }, []);
+  }, [stopLiveSpeechPreview]);
 
   const handlePlayAudio = useCallback(async (message: LocalMessage) => {
     if (!message.audioBase64 && !message.audioUrl) return;
     try {
+      stopLiveSpeechPreview(true);
       await playNativeOpenAiVoiceAudio({
         audioBase64: message.audioBase64,
         audioMimeType: message.audioMimeType,
@@ -494,10 +619,16 @@ export default function HelpScreen() {
       setVoiceStatusText(messageText);
       Alert.alert("Playback Error", messageText);
     }
-  }, []);
+  }, [stopLiveSpeechPreview]);
 
   const handlePlaybackToggle = useCallback(async () => {
     try {
+      if (isLiveSpeechActive) {
+        stopLiveSpeechPreview(true);
+        setVoiceStatusText("Stopped live voice reply.");
+        return;
+      }
+
       if (isPlaybackActive) {
         if (isPlaybackPaused) {
           await resumeNativeOpenAiVoicePlayback();
@@ -569,18 +700,21 @@ export default function HelpScreen() {
       Alert.alert("Playback Error", message);
     }
   }, [
+    isLiveSpeechActive,
     isPlaybackActive,
     isPlaybackPaused,
     localMessages,
     nativeVoiceSupported,
     selectedVoice,
     selectedVoiceLabel,
+    stopLiveSpeechPreview,
   ]);
 
   const handlePlaybackStop = useCallback(async () => {
+    stopLiveSpeechPreview(true);
     await stopNativeOpenAiVoicePlayback();
     setVoiceStatusText("Stopped Ragna's voice reply.");
-  }, []);
+  }, [stopLiveSpeechPreview]);
 
   const synthesizeAssistantVoice = useCallback(
     async (assistantMessageId: string, assistantText: string) => {
@@ -629,6 +763,7 @@ export default function HelpScreen() {
       if (!text || isStreaming) return;
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      stopLiveSpeechPreview(true);
       await stopNativeOpenAiVoicePlayback();
 
       let activeConv = conversation;
@@ -654,6 +789,7 @@ export default function HelpScreen() {
 
       const userMsgId = `user-${Date.now()}`;
       const assistantMsgId = `asst-${Date.now()}`;
+      const shouldSpeakLive = liveSpeechPreviewEnabled;
 
       setSuggestions([]);
       setLocalMessages((prev) => [
@@ -679,6 +815,9 @@ export default function HelpScreen() {
         patientContext,
         (chunk) => {
           streamedAssistantText += chunk;
+          if (shouldSpeakLive) {
+            enqueueLiveSpeechPreview(chunk);
+          }
           setLocalMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
@@ -706,9 +845,19 @@ export default function HelpScreen() {
           setIsStreaming(false);
           scrollToBottom(150);
           setTimeout(() => inputRef.current?.focus(), 500);
+
+          if (shouldSpeakLive) {
+            const isSpeakingLive = finalizeLiveSpeechPreview();
+            if (!isSpeakingLive) {
+              setVoiceStatusText(`Ragna replied with ${selectedVoiceLabel}.`);
+            }
+            return;
+          }
+
           void synthesizeAssistantVoice(assistantMsgId, parsedText);
         },
         (err) => {
+          stopLiveSpeechPreview(true);
           setLocalMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
@@ -728,8 +877,13 @@ export default function HelpScreen() {
     [
       buildRagnaPatientContext,
       conversation,
+      enqueueLiveSpeechPreview,
+      finalizeLiveSpeechPreview,
       isStreaming,
+      liveSpeechPreviewEnabled,
       scrollToBottom,
+      selectedVoiceLabel,
+      stopLiveSpeechPreview,
       synthesizeAssistantVoice,
     ],
   );
@@ -753,6 +907,7 @@ export default function HelpScreen() {
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      stopLiveSpeechPreview(true);
       await stopNativeOpenAiVoicePlayback();
 
       if (!isVoiceRecording) {
@@ -785,7 +940,12 @@ export default function HelpScreen() {
     } finally {
       setIsVoiceBusy(false);
     }
-  }, [isVoiceRecording, nativeVoiceSupported, selectedVoiceLabel]);
+  }, [
+    isVoiceRecording,
+    nativeVoiceSupported,
+    selectedVoiceLabel,
+    stopLiveSpeechPreview,
+  ]);
 
   const handleTilePress = useCallback(
     (tile: { label: string; activePrompt: string }) => {
@@ -846,7 +1006,7 @@ export default function HelpScreen() {
             await deleteConversation(conversation.id);
           } catch {}
           await clearActiveConversationId();
-          startNewConversation();
+          await startNewConversation();
         },
       },
     ]);
@@ -915,27 +1075,30 @@ export default function HelpScreen() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active") {
+        stopLiveSpeechPreview(true);
         void stopNativeOpenAiVoice();
       }
     });
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [stopLiveSpeechPreview]);
 
   useFocusEffect(
     useCallback(() => {
       return () => {
+        stopLiveSpeechPreview(true);
         void stopNativeOpenAiVoice();
       };
-    }, []),
+    }, [stopLiveSpeechPreview]),
   );
 
   useEffect(() => {
     return () => {
+      stopLiveSpeechPreview(true);
       void stopNativeOpenAiVoice();
     };
-  }, []);
+  }, [stopLiveSpeechPreview]);
 
   const hasMessages = localMessages.length > 0;
 
@@ -1025,8 +1188,8 @@ export default function HelpScreen() {
         onVoiceOptionSelect={(voiceId) => {
           void handleVoiceSelect(voiceId);
         }}
-        isPlaybackActive={isPlaybackActive}
-        isPlaybackPaused={isPlaybackPaused}
+        isPlaybackActive={effectivePlaybackActive}
+        isPlaybackPaused={effectivePlaybackPaused}
         onPlaybackToggle={() => {
           void handlePlaybackToggle();
         }}
