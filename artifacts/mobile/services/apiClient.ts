@@ -10,7 +10,49 @@
  * these patterns.
  */
 
+import Constants from "expo-constants";
+import { Platform } from "react-native";
+
 // ─── Base URL ────────────────────────────────────────────────────────────────
+
+function getExpoRuntimeHost(): string | null {
+  const constants = Constants as unknown as {
+    expoConfig?: { hostUri?: string | null } | null;
+    expoGoConfig?: { debuggerHost?: string | null } | null;
+    manifest?: {
+      debuggerHost?: string | null;
+      hostUri?: string | null;
+    } | null;
+    manifest2?: {
+      extra?: {
+        expoClient?: {
+          hostUri?: string | null;
+        } | null;
+      } | null;
+    } | null;
+  };
+
+  const candidates = [
+    constants.expoConfig?.hostUri,
+    constants.expoGoConfig?.debuggerHost,
+    constants.manifest?.debuggerHost,
+    constants.manifest?.hostUri,
+    constants.manifest2?.extra?.expoClient?.hostUri,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "string") continue;
+    const normalized = candidate.trim();
+    if (!normalized) continue;
+    const hostPort = normalized.split("/")[0] ?? "";
+    const host = hostPort.split(":")[0] ?? "";
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      return host;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Resolve the API base URL for the current environment.
@@ -18,13 +60,22 @@
  * Priority:
  *  1. EXPO_PUBLIC_API_URL — set by the Expo workflow in Replit dev and by
  *     EAS builds. This is the primary signal.
- *  2. window.location — web fallback for Replit iframe preview when the env
+ *  2. Expo runtime host metadata on native — used as a safety net for Expo Go
+ *     when the env var was not baked into the bundle.
+ *  3. window.location — web fallback for Replit iframe preview when the env
  *     var is unavailable.
- *  3. localhost fallback for local non-Expo dev.
+ *  4. localhost fallback for local non-Expo dev.
  */
 export function apiBase(): string {
   const envUrl = process.env["EXPO_PUBLIC_API_URL"];
   if (envUrl) return envUrl;
+
+  if (Platform.OS !== "web") {
+    const expoHost = getExpoRuntimeHost();
+    if (expoHost) {
+      return `https://${expoHost}/api`;
+    }
+  }
 
   if (typeof window !== "undefined" && window.location?.hostname) {
     // Strip the Expo sub-domain prefix so the API host resolves correctly.
