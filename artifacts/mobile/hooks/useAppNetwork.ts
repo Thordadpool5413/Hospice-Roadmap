@@ -9,11 +9,12 @@
  *   isOnline            — false only when connectivity is clearly absent.
  *                         Defaults to true until proven otherwise so the app
  *                         doesn't incorrectly block features on startup.
- *   isInternetReachable — mirrors isOnline; null before the first check.
+ *   isInternetReachable — mirrors internet reachability on native and web.
+ *                         null before the first check.
  *   hasCheckedNetwork   — true after the first network probe completes.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppState, AppStateStatus, Platform } from "react-native";
 
 import { apiBase } from "@/services/apiClient";
@@ -21,22 +22,11 @@ import { apiBase } from "@/services/apiClient";
 const CHECK_INTERVAL_MS = 5_000;
 const OFFLINE_RETRY_MS = 3_000;
 const PROBE_TIMEOUT_MS = 8_000;
-
-async function checkServerReachable(): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
-    const res = await fetch(`${apiBase()}/healthz`, {
-      method: "GET",
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    clearTimeout(id);
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+const GENERIC_PROBE_URLS = [
+  "https://captive.apple.com/hotspot-detect.html",
+  "https://www.gstatic.com/generate_204",
+];
+const LOCAL_API_PATTERN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api/i;
 
 export interface AppNetworkState {
   isOnline: boolean;
@@ -44,14 +34,71 @@ export interface AppNetworkState {
   hasCheckedNetwork: boolean;
 }
 
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+async function checkServerReachable(): Promise<boolean> {
+  try {
+    const baseUrl = apiBase();
+    if (Platform.OS !== "web" && LOCAL_API_PATTERN.test(baseUrl)) {
+      return false;
+    }
+    const res = await fetchWithTimeout(`${baseUrl}/healthz`);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function checkInternetReachable(): Promise<boolean> {
+  for (const url of GENERIC_PROBE_URLS) {
+    try {
+      const res = await fetchWithTimeout(url);
+      if (res.ok || res.status === 204) {
+        return true;
+      }
+    } catch {
+      // Try the next probe URL.
+    }
+  }
+  return false;
+}
+
+async function getNativeNetworkState(): Promise<AppNetworkState> {
+  const apiReachable = await checkServerReachable();
+  if (apiReachable) {
+    return {
+      isOnline: true,
+      isInternetReachable: true,
+      hasCheckedNetwork: true,
+    };
+  }
+
+  const internetReachable = await checkInternetReachable();
+  return {
+    isOnline: internetReachable,
+    isInternetReachable: internetReachable,
+    hasCheckedNetwork: true,
+  };
+}
+
 export function useAppNetwork(): AppNetworkState {
   const [state, setState] = useState<AppNetworkState>({
-    isOnline: true,       // Optimistic default — avoids false-negatives on launch.
+    isOnline: true,
     isInternetReachable: null,
     hasCheckedNetwork: false,
   });
-
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const check = useCallback(async () => {
     if (Platform.OS === "web") {
@@ -64,22 +111,27 @@ export function useAppNetwork(): AppNetworkState {
       });
       return;
     }
-    const reachable = await checkServerReachable();
-    setState({
-      isOnline: reachable,
-      isInternetReachable: reachable,
-      hasCheckedNetwork: true,
-    });
+
+    const nextState = await getNativeNetworkState();
+    setState(nextState);
   }, []);
 
   useEffect(() => {
-    check();
+    void check();
 
     if (Platform.OS === "web") {
       const onOnline = () =>
-        setState({ isOnline: true, isInternetReachable: true, hasCheckedNetwork: true });
+        setState({
+          isOnline: true,
+          isInternetReachable: true,
+          hasCheckedNetwork: true,
+        });
       const onOffline = () =>
-        setState({ isOnline: false, isInternetReachable: false, hasCheckedNetwork: true });
+        setState({
+          isOnline: false,
+          isInternetReachable: false,
+          hasCheckedNetwork: true,
+        });
       window.addEventListener("online", onOnline);
       window.addEventListener("offline", onOffline);
       return () => {
@@ -88,33 +140,28 @@ export function useAppNetwork(): AppNetworkState {
       };
     }
 
-    // When offline, retry every OFFLINE_RETRY_MS; when online, every CHECK_INTERVAL_MS.
-    // This recovers quickly from a cold-start probe failure without hammering the server.
     let scheduled: ReturnType<typeof setTimeout> | null = null;
     function schedule(online: boolean) {
       if (scheduled) clearTimeout(scheduled);
       scheduled = setTimeout(async () => {
-        const reachable = await checkServerReachable();
-        setState({
-          isOnline: reachable,
-          isInternetReachable: reachable,
-          hasCheckedNetwork: true,
-        });
-        schedule(reachable);
+        const nextState = await getNativeNetworkState();
+        setState(nextState);
+        schedule(nextState.isOnline);
       }, online ? CHECK_INTERVAL_MS : OFFLINE_RETRY_MS);
     }
 
-    // Kick off the adaptive schedule after the first check resolves.
-    checkServerReachable().then((reachable) => {
-      setState({ isOnline: reachable, isInternetReachable: reachable, hasCheckedNetwork: true });
-      schedule(reachable);
+    void getNativeNetworkState().then((nextState) => {
+      setState(nextState);
+      schedule(nextState.isOnline);
     });
 
     const sub = AppState.addEventListener(
       "change",
       (status: AppStateStatus) => {
-        if (status === "active") check();
-      }
+        if (status === "active") {
+          void check();
+        }
+      },
     );
 
     return () => {
