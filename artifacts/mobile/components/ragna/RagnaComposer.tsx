@@ -67,7 +67,15 @@ export function RagnaComposer({
   const showVoiceOptions =
     isVoiceAvailable && voiceOptions.length > 1 && !!onVoiceOptionSelect;
   const showPlaybackControls =
-    isPlaybackActive && !!onPlaybackToggle && !!onPlaybackStop;
+    isVoiceAvailable && hasMessages && !!onPlaybackToggle && !!onPlaybackStop;
+  const playbackPrimaryIcon =
+    !isPlaybackActive || isPlaybackPaused ? "play" : "pause";
+  const playbackPrimaryLabel = !isPlaybackActive
+    ? "Play"
+    : isPlaybackPaused
+      ? "Resume"
+      : "Pause";
+  const playbackStopDisabled = !isPlaybackActive && !isPlaybackPaused;
 
   return (
     <View
@@ -135,17 +143,31 @@ export function RagnaComposer({
       ) : null}
       {showPlaybackControls ? (
         <View style={styles.playbackRow}>
-          <Pressable onPress={onPlaybackToggle} style={styles.playbackButton}>
+          <Pressable
+            onPress={onPlaybackToggle}
+            disabled={isVoiceBusy}
+            style={({ pressed }) => [
+              styles.playbackButton,
+              isVoiceBusy && styles.playbackButtonDisabled,
+              pressed && !isVoiceBusy ? { opacity: 0.8 } : null,
+            ]}
+          >
             <Feather
-              name={isPlaybackPaused ? "play" : "pause"}
+              name={playbackPrimaryIcon}
               size={14}
               color={Colors.primaryDark}
             />
-            <Text style={styles.playbackButtonText}>
-              {isPlaybackPaused ? "Resume" : "Pause"}
-            </Text>
+            <Text style={styles.playbackButtonText}>{playbackPrimaryLabel}</Text>
           </Pressable>
-          <Pressable onPress={onPlaybackStop} style={styles.playbackButton}>
+          <Pressable
+            onPress={onPlaybackStop}
+            disabled={playbackStopDisabled}
+            style={({ pressed }) => [
+              styles.playbackButton,
+              playbackStopDisabled && styles.playbackButtonDisabled,
+              pressed && !playbackStopDisabled ? { opacity: 0.8 } : null,
+            ]}
+          >
             <Feather name="square" size={14} color={Colors.primaryDark} />
             <Text style={styles.playbackButtonText}>Stop</Text>
           </Pressable>
@@ -296,6 +318,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryPale,
     borderWidth: 1,
     borderColor: Colors.primary + "30",
+  },
+  playbackButtonDisabled: {
+    opacity: 0.45,
   },
   playbackButtonText: {
     fontSize: 12,
