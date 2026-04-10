@@ -193,20 +193,19 @@ async function createAndAutoplaySound(
   source: { uri: string },
   cleanupUri?: string,
 ): Promise<void> {
-  const { sound } = await Audio.Sound.createAsync(source, {
-    shouldPlay: true,
+  const { sound, status } = await Audio.Sound.createAsync(source, {
+    shouldPlay: false,
     volume: 1,
     isMuted: false,
     progressUpdateIntervalMillis: 250,
   });
 
   activeSound = sound;
-  emitPlaybackState({ isPlaying: true, isPaused: false });
 
-  sound.setOnPlaybackStatusUpdate((status) => {
-    if (!status.isLoaded) return;
+  sound.setOnPlaybackStatusUpdate((playbackStatus) => {
+    if (!playbackStatus.isLoaded) return;
 
-    if (status.didJustFinish) {
+    if (playbackStatus.didJustFinish) {
       sound.unloadAsync().catch(() => {});
       if (cleanupUri) {
         FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(
@@ -220,15 +219,44 @@ async function createAndAutoplaySound(
       return;
     }
 
-    if (status.isPlaying) {
+    if (playbackStatus.isPlaying) {
       emitPlaybackState({ isPlaying: true, isPaused: false });
       return;
     }
 
-    if (activeSound === sound && status.positionMillis > 0) {
+    if (activeSound === sound && playbackStatus.positionMillis > 0) {
       emitPlaybackState({ isPlaying: true, isPaused: true });
     }
   });
+
+  try {
+    let playbackStatus = status;
+
+    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
+      playbackStatus = await sound.playAsync();
+    }
+
+    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
+      playbackStatus = await sound.getStatusAsync();
+    }
+
+    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
+      throw new Error("Audio playback did not start.");
+    }
+
+    emitPlaybackState({ isPlaying: true, isPaused: false });
+  } catch (error) {
+    if (activeSound === sound) {
+      activeSound = null;
+    }
+    try {
+      await sound.unloadAsync();
+    } catch {}
+    if (cleanupUri) {
+      FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(() => {});
+    }
+    throw error;
+  }
 }
 
 async function playFromBase64(
@@ -327,7 +355,7 @@ export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
     }
     controls.stop?.();
     isUsingSpeechFallback = false;
-    emitPlaybackState({ isPlaying: false, isPaused: true });
+    emitPlaybackState({ isPlaying: false, isPaused: false });
   }
 }
 
