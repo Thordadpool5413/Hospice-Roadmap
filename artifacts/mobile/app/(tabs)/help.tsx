@@ -49,6 +49,7 @@ import {
   stopNativeOpenAiVoicePlayback,
   stopNativeOpenAiVoiceRecordingAndTranscribe,
   subscribeNativeOpenAiVoicePlayback,
+  updateNativeOpenAiVoiceReplySummary,
 } from "@/services/nativeOpenAiVoiceService";
 import {
   clearActiveConversationId,
@@ -821,6 +822,23 @@ export default function HelpScreen() {
 
       const patientContext = buildRagnaPatientContext();
       let streamedAssistantText = "";
+      let lockScreenSummaryTimer: ReturnType<typeof setTimeout> | null = null;
+      const flushLockScreenSummary = (finalText?: string) => {
+        if (lockScreenSummaryTimer) {
+          clearTimeout(lockScreenSummaryTimer);
+          lockScreenSummaryTimer = null;
+        }
+        updateNativeOpenAiVoiceReplySummary(
+          finalText ?? streamedAssistantText,
+        );
+      };
+      const scheduleLockScreenSummary = () => {
+        if (lockScreenSummaryTimer) return;
+        lockScreenSummaryTimer = setTimeout(() => {
+          lockScreenSummaryTimer = null;
+          updateNativeOpenAiVoiceReplySummary(streamedAssistantText);
+        }, 300);
+      };
 
       await streamMessage(
         activeConv.id,
@@ -838,6 +856,7 @@ export default function HelpScreen() {
                 : m,
             ),
           );
+          scheduleLockScreenSummary();
           scrollToBottom(50);
         },
         () => {
@@ -856,6 +875,7 @@ export default function HelpScreen() {
             ),
           );
           setIsStreaming(false);
+          flushLockScreenSummary(parsedText);
           scrollToBottom(150);
           setTimeout(() => inputRef.current?.focus(), 500);
 
@@ -870,6 +890,10 @@ export default function HelpScreen() {
           void synthesizeAssistantVoice(assistantMsgId, parsedText);
         },
         (err) => {
+          if (lockScreenSummaryTimer) {
+            clearTimeout(lockScreenSummaryTimer);
+            lockScreenSummaryTimer = null;
+          }
           stopLiveSpeechPreview(true);
           setLocalMessages((prev) =>
             prev.map((m) =>
