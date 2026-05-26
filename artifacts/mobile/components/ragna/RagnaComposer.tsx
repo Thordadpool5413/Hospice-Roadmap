@@ -143,7 +143,7 @@ export function RagnaComposer({
           })}
         </ScrollView>
       ) : null}
-      {showPlaybackControls && replyPreviewText ? (
+      {(showPlaybackControls || isStreaming) && replyPreviewText ? (
         <View style={styles.replyPreview}>
           <Feather
             name="message-circle"
