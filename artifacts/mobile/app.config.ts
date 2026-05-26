@@ -39,6 +39,7 @@ const config: ExpoConfig = {
     ],
     "expo-font",
     "expo-web-browser",
+    "expo-audio",
   ],
   experiments: {
     typedRoutes: true,

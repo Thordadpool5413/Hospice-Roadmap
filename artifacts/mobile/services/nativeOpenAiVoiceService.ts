@@ -1,4 +1,12 @@
-import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
+import {
+  AudioModule,
+  RecordingPresets,
+  createAudioPlayer,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioStatus,
+} from "expo-audio";
 import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Speech from "expo-speech";
@@ -37,8 +45,11 @@ export interface NativeOpenAiVoicePlaybackState {
   isPaused: boolean;
 }
 
-let activeRecording: Audio.Recording | null = null;
-let activeSound: Audio.Sound | null = null;
+type ActiveRecorder = InstanceType<typeof AudioModule.AudioRecorder>;
+
+let activeRecording: ActiveRecorder | null = null;
+let activeSound: AudioPlayer | null = null;
+let activeSoundSubscription: { remove: () => void } | null = null;
 let fallbackSpeechText: string | null = null;
 let isUsingSpeechFallback = false;
 let playbackState: NativeOpenAiVoicePlaybackState = {
@@ -74,26 +85,20 @@ function getSpeechControls(): {
 }
 
 async function configureRecordingMode(): Promise<void> {
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: true,
-    playsInSilentModeIOS: true,
-    interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-    interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-    shouldDuckAndroid: true,
-    playThroughEarpieceAndroid: false,
-    staysActiveInBackground: false,
+  await setAudioModeAsync({
+    allowsRecording: true,
+    playsInSilentMode: true,
+    interruptionMode: "doNotMix",
+    shouldPlayInBackground: false,
   });
 }
 
 async function configurePlaybackMode(): Promise<void> {
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: false,
-    playsInSilentModeIOS: true,
-    interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-    interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-    shouldDuckAndroid: true,
-    playThroughEarpieceAndroid: false,
-    staysActiveInBackground: false,
+  await setAudioModeAsync({
+    allowsRecording: false,
+    playsInSilentMode: true,
+    interruptionMode: "doNotMix",
+    shouldPlayInBackground: false,
   });
 }
 
@@ -145,16 +150,23 @@ async function stopActiveSound(): Promise<void> {
     return;
   }
   const sound = activeSound;
+  const subscription = activeSoundSubscription;
   activeSound = null;
+  activeSoundSubscription = null;
   try {
-    await sound.stopAsync();
+    sound.pause();
   } catch (err) {
-    console.warn("[voice] sound.stopAsync failed", err);
+    console.warn("[voice] sound.pause failed", err);
   }
   try {
-    await sound.unloadAsync();
+    subscription?.remove();
   } catch (err) {
-    console.warn("[voice] sound.unloadAsync failed", err);
+    console.warn("[voice] sound listener remove failed", err);
+  }
+  try {
+    sound.remove();
+  } catch (err) {
+    console.warn("[voice] sound.remove failed", err);
   }
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
@@ -183,94 +195,103 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   await stopActiveSound();
   stopSpeechFallback(true);
 
-  const permission = await Audio.requestPermissionsAsync();
+  const permission = await requestRecordingPermissionsAsync();
   if (!permission.granted) {
     throw new Error("Microphone permission is required to use voice chat.");
   }
 
   if (activeRecording) {
     try {
-      await activeRecording.stopAndUnloadAsync();
+      await activeRecording.stop();
     } catch (err) {
-      console.warn("[voice] stopAndUnload previous recording failed", err);
+      console.warn("[voice] stop previous recording failed", err);
     }
     activeRecording = null;
   }
 
   await configureRecordingMode();
 
-  const recording = new Audio.Recording();
-  await recording.prepareToRecordAsync(
-    Audio.RecordingOptionsPresets.HIGH_QUALITY,
-  );
-  await recording.startAsync();
-  activeRecording = recording;
+  const recorder = new AudioModule.AudioRecorder(RecordingPresets.HIGH_QUALITY);
+  await recorder.prepareToRecordAsync();
+  recorder.record();
+  activeRecording = recorder;
 }
 
 async function createAndAutoplaySound(
   source: { uri: string },
   cleanupUri?: string,
 ): Promise<void> {
-  const { sound, status } = await Audio.Sound.createAsync(source, {
-    shouldPlay: false,
-    volume: 1,
-    isMuted: false,
-    progressUpdateIntervalMillis: 250,
-  });
+  const player = createAudioPlayer(source);
+  activeSound = player;
 
-  activeSound = sound;
+  const subscription = player.addListener(
+    "playbackStatusUpdate",
+    (status: AudioStatus) => {
+      if (!status.isLoaded) return;
 
-  sound.setOnPlaybackStatusUpdate((playbackStatus) => {
-    if (!playbackStatus.isLoaded) return;
-
-    if (playbackStatus.didJustFinish) {
-      sound.unloadAsync().catch(() => {});
-      if (cleanupUri) {
-        FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(
-          () => {},
-        );
+      if (status.didJustFinish) {
+        if (activeSound === player) {
+          activeSound = null;
+          activeSoundSubscription = null;
+        }
+        try {
+          subscription.remove();
+        } catch {
+          // ignore
+        }
+        try {
+          player.remove();
+        } catch (err) {
+          console.warn("[voice] sound.remove after finish failed", err);
+        }
+        if (cleanupUri) {
+          FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(
+            () => {},
+          );
+        }
+        emitPlaybackState({ isPlaying: false, isPaused: false });
+        return;
       }
-      if (activeSound === sound) {
-        activeSound = null;
+
+      if (status.playing) {
+        emitPlaybackState({ isPlaying: true, isPaused: false });
+        return;
       }
-      emitPlaybackState({ isPlaying: false, isPaused: false });
-      return;
-    }
 
-    if (playbackStatus.isPlaying) {
-      emitPlaybackState({ isPlaying: true, isPaused: false });
-      return;
-    }
-
-    if (activeSound === sound && playbackStatus.positionMillis > 0) {
-      emitPlaybackState({ isPlaying: true, isPaused: true });
-    }
-  });
+      if (activeSound === player && status.currentTime > 0) {
+        emitPlaybackState({ isPlaying: true, isPaused: true });
+      }
+    },
+  );
+  activeSoundSubscription = subscription;
 
   try {
-    let playbackStatus = status;
+    player.volume = 1;
+    player.play();
 
-    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
-      playbackStatus = await sound.playAsync();
+    if (!player.playing) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 150));
     }
 
-    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
-      playbackStatus = await sound.getStatusAsync();
-    }
-
-    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
+    if (!player.playing) {
       throw new Error("Audio playback did not start.");
     }
 
     emitPlaybackState({ isPlaying: true, isPaused: false });
   } catch (error) {
-    if (activeSound === sound) {
+    if (activeSound === player) {
       activeSound = null;
+      activeSoundSubscription = null;
     }
     try {
-      await sound.unloadAsync();
+      subscription.remove();
+    } catch {
+      // ignore
+    }
+    try {
+      player.remove();
     } catch (err) {
-      console.warn("[voice] sound.unloadAsync after error failed", err);
+      console.warn("[voice] sound.remove after error failed", err);
     }
     if (cleanupUri) {
       FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(() => {});
@@ -361,7 +382,7 @@ export async function playNativeOpenAiVoiceAudio({
 
 export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
   if (activeSound) {
-    await activeSound.pauseAsync();
+    activeSound.pause();
     emitPlaybackState({ isPlaying: true, isPaused: true });
     return;
   }
@@ -381,7 +402,7 @@ export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
 
 export async function resumeNativeOpenAiVoicePlayback(): Promise<void> {
   if (activeSound) {
-    await activeSound.playAsync();
+    activeSound.play();
     emitPlaybackState({ isPlaying: true, isPaused: false });
     return;
   }
@@ -405,9 +426,9 @@ export async function stopNativeOpenAiVoicePlayback(): Promise<void> {
 export async function stopNativeOpenAiVoice(): Promise<void> {
   if (activeRecording) {
     try {
-      await activeRecording.stopAndUnloadAsync();
+      await activeRecording.stop();
     } catch (err) {
-      console.warn("[voice] stopAndUnload on shutdown failed", err);
+      console.warn("[voice] stop on shutdown failed", err);
     }
     activeRecording = null;
   }
@@ -424,15 +445,15 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
 
   const recording = activeRecording;
   try {
-    await recording.stopAndUnloadAsync();
+    await recording.stop();
   } catch (err) {
-    console.warn("[voice] stopAndUnload failed during transcribe", err);
+    console.warn("[voice] stop failed during transcribe", err);
   } finally {
     activeRecording = null;
   }
   await configurePlaybackMode();
 
-  const uri = recording.getURI();
+  const uri = recording.uri;
   if (!uri) {
     throw new Error("The recorded audio could not be found.");
   }
@@ -482,15 +503,15 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
 
   const recording = activeRecording;
   try {
-    await recording.stopAndUnloadAsync();
+    await recording.stop();
   } catch (err) {
-    console.warn("[voice] stopAndUnload failed during send", err);
+    console.warn("[voice] stop failed during send", err);
   } finally {
     activeRecording = null;
   }
   await configurePlaybackMode();
 
-  const uri = recording.getURI();
+  const uri = recording.uri;
   if (!uri) {
     throw new Error("The recorded audio could not be found.");
   }
