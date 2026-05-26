@@ -18,6 +18,7 @@ interface CacheEntry<T> {
 
 const cache = new Map<string, CacheEntry<unknown>>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_CACHE_SIZE = 500;
 
 function getCached<T>(key: string): T | null {
   const entry = cache.get(key);
@@ -30,6 +31,18 @@ function getCached<T>(key: string): T | null {
 }
 
 function setCache<T>(key: string, data: T): void {
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const now = Date.now();
+    for (const [k, v] of cache.entries()) {
+      if (v.expiresAt <= now) {
+        cache.delete(k);
+      }
+    }
+    if (cache.size >= MAX_CACHE_SIZE) {
+      const firstKey = cache.keys().next().value;
+      if (firstKey !== undefined) cache.delete(firstKey);
+    }
+  }
   cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
@@ -156,7 +169,7 @@ router.get("/cms/providers", async (req: Request, res: Response) => {
     res.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("CMS providers error:", message);
+    req.log.error({ err, message }, "CMS providers error");
     res.status(502).json({
       error: "Unable to fetch data from CMS. Please try again later.",
       detail: message,
@@ -264,7 +277,7 @@ router.get("/cms/quality/:ccn", async (req: Request, res: Response) => {
     res.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("CMS quality error:", message);
+    req.log.error({ err, message }, "CMS quality error");
     res.status(502).json({
       error: "Unable to fetch quality data from CMS. Please try again later.",
       detail: message,
@@ -332,7 +345,7 @@ router.get("/cms/quality-summary", async (req: Request, res: Response) => {
     res.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("CMS quality summary error:", message);
+    req.log.error({ err, message }, "CMS quality summary error");
     res.status(502).json({
       error: "Unable to fetch quality summaries from CMS.",
       detail: message,
@@ -431,7 +444,7 @@ router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
     res.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("CMS spending error:", message);
+    req.log.error({ err, message }, "CMS spending error");
     res.status(502).json({
       error: "Unable to fetch spending data from CMS. Please try again later.",
       detail: message,

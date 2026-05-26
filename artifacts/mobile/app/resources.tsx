@@ -17,7 +17,7 @@ import { ResourceCard } from "@/components/ResourceCard";
 import { Colors } from "@/constants/colors";
 import { CATEGORY_META } from "@/constants/resourceCategories";
 import { useApp } from "@/context/AppContext";
-import { mockResources } from "@/data/mockResources";
+import { resources as mockResources } from "@/data/resources";
 import { ResourceCategory } from "@/types";
 
 export { CATEGORY_META };

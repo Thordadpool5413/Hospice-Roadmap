@@ -1,6 +1,6 @@
 import { Resource } from "@/types";
 
-export const mockResources: Resource[] = [
+export const resources: Resource[] = [
   // ─── UNDERSTANDING HOSPICE ───────────────────────────────────────────────────
   {
     id: "res-001",

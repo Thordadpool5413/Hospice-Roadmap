@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Colors } from "@/constants/colors";
 
 interface LegalSearchBarProps {
   value: string;
@@ -11,13 +12,13 @@ interface LegalSearchBarProps {
 export function LegalSearchBar({ value, onChangeText, placeholder }: LegalSearchBarProps) {
   return (
     <View style={s.wrap}>
-      <Feather name="search" size={16} color="#4A6090" style={s.icon} />
+      <Feather name="search" size={16} color={Colors.textSubtle} style={s.icon} />
       <TextInput
         style={s.input}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? "Search by state, POLST, DNR, proxy, advance directive…"}
-        placeholderTextColor="#4A6090"
+        placeholderTextColor={Colors.textSubtle}
         autoCapitalize="none"
         autoCorrect={false}
         clearButtonMode="while-editing"
@@ -25,7 +26,7 @@ export function LegalSearchBar({ value, onChangeText, placeholder }: LegalSearch
       />
       {value.length > 0 && (
         <Pressable onPress={() => onChangeText("")} style={s.clear} hitSlop={8}>
-          <Feather name="x" size={14} color="#4A6090" />
+          <Feather name="x" size={14} color={Colors.textSubtle} />
         </Pressable>
       )}
     </View>

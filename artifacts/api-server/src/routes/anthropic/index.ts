@@ -5,6 +5,7 @@ import { conversations, messages } from "@workspace/db/schema";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { HOSPICE_SYSTEM_PROMPT } from "./systemPrompt.js";
 import { buildResponsePlan } from "../../intelligence/hospice/planner.js";
+import { MODELS } from "../../config/models.js";
 
 const router: IRouter = Router();
 
@@ -20,6 +21,20 @@ function requireClientId(req: Request, res: Response): string | null {
   return clientId;
 }
 
+function safeParseJson(raw: string): unknown | null {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const match = raw.match(/\{[\s\S]+\}/);
+    if (!match) return null;
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+}
+
 router.get("/conversations", async (req: Request, res: Response) => {
   const clientId = requireClientId(req, res);
   if (!clientId) return;
@@ -31,7 +46,7 @@ router.get("/conversations", async (req: Request, res: Response) => {
       .orderBy(conversations.createdAt);
     res.json(all);
   } catch (err: unknown) {
-    console.error("Error listing conversations:", err);
+    req.log.error({ err }, "Error listing conversations");
     res.status(500).json({ error: "Failed to list conversations" });
   }
 });
@@ -51,7 +66,7 @@ router.post("/conversations", async (req: Request, res: Response) => {
       .returning();
     res.status(201).json(conv);
   } catch (err: unknown) {
-    console.error("Error creating conversation:", err);
+    req.log.error({ err }, "Error creating conversation");
     res.status(500).json({ error: "Failed to create conversation" });
   }
 });
@@ -76,7 +91,7 @@ router.get("/conversations/:id", async (req: Request, res: Response) => {
       .orderBy(messages.createdAt);
     res.json({ ...conv, messages: msgs });
   } catch (err: unknown) {
-    console.error("Error getting conversation:", err);
+    req.log.error({ err }, "Error getting conversation");
     res.status(500).json({ error: "Failed to get conversation" });
   }
 });
@@ -97,7 +112,7 @@ router.delete("/conversations/:id", async (req: Request, res: Response) => {
     await db.delete(conversations).where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
     res.status(204).send();
   } catch (err: unknown) {
-    console.error("Error deleting conversation:", err);
+    req.log.error({ err }, "Error deleting conversation");
     res.status(500).json({ error: "Failed to delete conversation" });
   }
 });
@@ -122,7 +137,7 @@ router.get("/conversations/:id/messages", async (req: Request, res: Response) =>
       .orderBy(messages.createdAt);
     res.json(msgs);
   } catch (err: unknown) {
-    console.error("Error listing messages:", err);
+    req.log.error({ err }, "Error listing messages");
     res.status(500).json({ error: "Failed to list messages" });
   }
 });
@@ -140,6 +155,8 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
     res.status(400).json({ error: "content is required" });
     return;
   }
+
+  let fullResponse = "";
 
   try {
     const [conv] = await db
@@ -169,13 +186,12 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
         content: m.content,
       }));
 
-    // Build intelligence response plan — deterministic retrieval + planner
     let responsePlanKnowledge = "";
     try {
       const plan = buildResponsePlan(content, patientContext ?? "");
       responsePlanKnowledge = plan.injectedKnowledge;
     } catch (planErr) {
-      console.warn("Intelligence planner failed (using base prompt):", planErr);
+      req.log.warn({ err: planErr }, "Intelligence planner failed — serving base prompt only");
     }
 
     const systemPrompt = [
@@ -195,35 +211,37 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
     res.setHeader("Connection", "keep-alive");
     res.setHeader("Access-Control-Allow-Origin", "*");
 
-    let fullResponse = "";
+    try {
+      const stream = anthropic.messages.stream({
+        model: MODELS.claude.smart,
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: chatMessages,
+      });
 
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: chatMessages,
-    });
+      for await (const event of stream) {
+        if (
+          event.type === "content_block_delta" &&
+          event.delta.type === "text_delta"
+        ) {
+          fullResponse += event.delta.text;
+          res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+        }
+      }
 
-    for await (const event of stream) {
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        fullResponse += event.delta.text;
-        res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } finally {
+      if (fullResponse) {
+        await db.insert(messages).values({
+          conversationId: id,
+          role: "assistant",
+          content: fullResponse,
+        });
       }
     }
-
-    await db.insert(messages).values({
-      conversationId: id,
-      role: "assistant",
-      content: fullResponse,
-    });
-
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-    res.end();
   } catch (err: unknown) {
-    console.error("Error sending message:", err);
+    req.log.error({ err }, "Error sending message");
     if (!res.headersSent) {
       res.status(500).json({ error: "Failed to send message" });
     } else {
@@ -279,7 +297,7 @@ router.post("/conversations/:id/voice-exchange", async (req: Request, res: Respo
 
     res.status(204).send();
   } catch (err: unknown) {
-    console.error("Error saving voice exchange:", err);
+    req.log.error({ err }, "Error saving voice exchange");
     res.status(500).json({ error: "Failed to save voice exchange" });
   }
 });
@@ -327,7 +345,7 @@ Output ONLY the 3-5 sentence paragraph. No preamble, no labels, no explanation.`
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
+      model: MODELS.claude.fast,
       max_tokens: 450,
       messages: [{ role: "user", content: prompt }],
     });
@@ -335,7 +353,7 @@ Output ONLY the 3-5 sentence paragraph. No preamble, no labels, no explanation.`
     const profile = response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
     res.json({ profile });
   } catch (err: unknown) {
-    console.error("Error synthesizing profile:", err);
+    req.log.error({ err }, "Error synthesizing profile");
     res.status(500).json({ error: "Failed to synthesize profile" });
   }
 });
@@ -389,27 +407,22 @@ Transcript:
 ${transcript.slice(0, 12000)}`;
 
     const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
+      model: MODELS.claude.fast,
       max_tokens: 400,
       messages: [{ role: "user", content: memoryPrompt }],
     });
 
     const raw = response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
-    let memory: unknown;
-    try {
-      memory = JSON.parse(raw);
-    } catch {
-      const jsonMatch = raw.match(/\{[\s\S]+\}/);
-      if (!jsonMatch) {
-        res.status(500).json({ error: "Failed to parse memory" });
-        return;
-      }
-      memory = JSON.parse(jsonMatch[0]);
+    const memory = safeParseJson(raw);
+    if (!memory) {
+      req.log.error({ raw }, "Failed to parse memory JSON from LLM response");
+      res.status(500).json({ error: "Failed to parse memory" });
+      return;
     }
 
     res.json(memory);
   } catch (err: unknown) {
-    console.error("Error generating memory:", err);
+    req.log.error({ err }, "Error generating memory");
     res.status(500).json({ error: "Failed to generate memory" });
   }
 });
@@ -458,26 +471,21 @@ Scoring rules:
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: MODELS.claude.smart,
       max_tokens: 1800,
       messages: [{ role: "user", content: scoringPrompt }],
     });
 
     const raw = response.content[0]?.type === "text" ? response.content[0].text.trim() : "";
-    let result: unknown;
-    try {
-      result = JSON.parse(raw);
-    } catch {
-      const match = raw.match(/\{[\s\S]+\}/);
-      if (!match) {
-        res.status(500).json({ error: "Failed to parse scoring result" });
-        return;
-      }
-      result = JSON.parse(match[0]);
+    const result = safeParseJson(raw);
+    if (!result) {
+      req.log.error({ raw }, "Failed to parse scoring result JSON from LLM response");
+      res.status(500).json({ error: "Failed to parse scoring result" });
+      return;
     }
     res.json(result);
   } catch (err: unknown) {
-    console.error("Error scoring hospice:", err);
+    req.log.error({ err }, "Error scoring hospice");
     res.status(500).json({ error: "Failed to score hospice interview" });
   }
 });

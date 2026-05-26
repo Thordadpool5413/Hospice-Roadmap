@@ -908,7 +908,9 @@ export default function HospiceInterviewScreen() {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       if (raw) setSaved(JSON.parse(raw) as SavedInterview[]);
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn("[HospiceInterview] Failed to load saved interviews:", e);
+    }
   };
 
   const persistInterview = async (record: SavedInterview) => {
@@ -916,7 +918,9 @@ export default function HospiceInterviewScreen() {
       const updated = [...saved, record];
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       setSaved(updated);
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn("[HospiceInterview] Failed to persist interview:", e);
+    }
   };
 
   const setField = (k: keyof InterviewData, v: string) => setData((prev) => ({ ...prev, [k]: v }));
