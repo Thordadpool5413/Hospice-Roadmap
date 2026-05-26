@@ -623,6 +623,17 @@ export default function HelpScreen() {
 
   const handlePlaybackToggle = useCallback(async () => {
     try {
+      if (isPlaybackActive) {
+        if (isPlaybackPaused) {
+          await resumeNativeOpenAiVoicePlayback();
+          setVoiceStatusText("Resumed Ragna's voice reply.");
+        } else {
+          await pauseNativeOpenAiVoicePlayback();
+          setVoiceStatusText("Paused Ragna's voice reply.");
+        }
+        return;
+      }
+
       if (isLiveSpeechActive) {
         stopLiveSpeechPreview(true);
         setVoiceStatusText("Stopped live voice reply.");
