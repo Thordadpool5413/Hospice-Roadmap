@@ -107,7 +107,15 @@ const config: ExpoConfig = {
   },
   web: {
     favicon: "./assets/images/app-icon.png",
-  },
+    bundler: "metro",
+    name: "Hospice Roadmap",
+    shortName: "Hospice Roadmap",
+    lang: "en",
+    themeColor: "#030A18",
+    backgroundColor: "#030A18",
+    description:
+      "Guidance for patients and caregivers before, during, and after hospice care.",
+  } as ExpoConfig["web"],
   plugins: [
     [
       "expo-router",
