@@ -98,8 +98,32 @@ async function configurePlaybackMode(): Promise<void> {
     allowsRecording: false,
     playsInSilentMode: true,
     interruptionMode: "doNotMix",
-    shouldPlayInBackground: false,
+    shouldPlayInBackground: true,
   });
+}
+
+const LOCK_SCREEN_METADATA = {
+  title: "Ragna",
+  artist: "Hospice Roadmap",
+} as const;
+
+function activateLockScreenControls(player: AudioPlayer): void {
+  try {
+    player.setActiveForLockScreen(true, { ...LOCK_SCREEN_METADATA }, {
+      showSeekForward: false,
+      showSeekBackward: false,
+    });
+  } catch (err) {
+    console.warn("[voice] setActiveForLockScreen failed", err);
+  }
+}
+
+function deactivateLockScreenControls(player: AudioPlayer): void {
+  try {
+    player.clearLockScreenControls();
+  } catch (err) {
+    console.warn("[voice] clearLockScreenControls failed", err);
+  }
 }
 
 function stopSpeechFallback(clearText = false): void {
@@ -163,6 +187,7 @@ async function stopActiveSound(): Promise<void> {
   } catch (err) {
     console.warn("[voice] sound listener remove failed", err);
   }
+  deactivateLockScreenControls(sound);
   try {
     sound.remove();
   } catch (err) {
@@ -239,6 +264,7 @@ async function createAndAutoplaySound(
         } catch {
           // ignore
         }
+        deactivateLockScreenControls(player);
         try {
           player.remove();
         } catch (err) {
@@ -277,6 +303,7 @@ async function createAndAutoplaySound(
       throw new Error("Audio playback did not start.");
     }
 
+    activateLockScreenControls(player);
     emitPlaybackState({ isPlaying: true, isPaused: false });
   } catch (error) {
     if (activeSound === player) {
@@ -288,6 +315,7 @@ async function createAndAutoplaySound(
     } catch {
       // ignore
     }
+    deactivateLockScreenControls(player);
     try {
       player.remove();
     } catch (err) {

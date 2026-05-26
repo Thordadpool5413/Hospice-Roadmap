@@ -22,6 +22,7 @@ const config: ExpoConfig = {
     infoPlist: {
       NSMicrophoneUsageDescription:
         "Hospice Roadmap uses your microphone so you can speak with Ragna.",
+      UIBackgroundModes: ["audio"],
     },
   },
   android: {
