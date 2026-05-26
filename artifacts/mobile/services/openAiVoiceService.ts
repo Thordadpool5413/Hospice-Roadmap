@@ -40,7 +40,7 @@ type RealtimeEvent =
 function createManagedRemoteAudio(): HTMLAudioElement {
   const audio = document.createElement("audio");
   audio.autoplay = true;
-  audio.playsInline = true;
+  audio.setAttribute("playsinline", "");
   audio.controls = false;
   audio.preload = "auto";
   audio.style.position = "fixed";
@@ -151,24 +151,33 @@ export async function startOpenAiVoiceSession({
         case "output_audio_buffer.stopped":
           onStatusChange?.("ready");
           break;
-        case "conversation.item.input_audio_transcription.completed":
-          if (data.transcript) {
-            onTranscript?.(`You: ${data.transcript}`);
-            onUserTranscript?.(data.transcript);
+        case "conversation.item.input_audio_transcription.completed": {
+          const transcript = typeof data.transcript === "string" ? data.transcript : "";
+          if (transcript) {
+            onTranscript?.(`You: ${transcript}`);
+            onUserTranscript?.(transcript);
           }
           onStatusChange?.("listening");
           break;
-        case "response.audio_transcript.done":
-          if (data.transcript) {
-            onTranscript?.(`Ragna: ${data.transcript}`);
-            onAssistantTranscript?.(data.transcript);
+        }
+        case "response.audio_transcript.done": {
+          const transcript = typeof data.transcript === "string" ? data.transcript : "";
+          if (transcript) {
+            onTranscript?.(`Ragna: ${transcript}`);
+            onAssistantTranscript?.(transcript);
           }
           onStatusChange?.("ready");
           break;
-        case "error":
-          onError?.(data.error?.message ?? "Voice chat encountered an error.");
+        }
+        case "error": {
+          const errorInfo = data.error as { message?: unknown } | undefined;
+          const message = typeof errorInfo?.message === "string"
+            ? errorInfo.message
+            : "Voice chat encountered an error.";
+          onError?.(message);
           onStatusChange?.("error");
           break;
+        }
         default:
           break;
       }
