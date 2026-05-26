@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -596,6 +597,33 @@ export default function SymptomTrackerScreen() {
     ]);
   }, [deleteEntry]);
 
+  const handleShare = useCallback(async () => {
+    if (allRecent.length === 0) {
+      Alert.alert("No Data", "Log at least one symptom check-in before sharing.");
+      return;
+    }
+    const header = `SYMPTOM REPORT — Hospice Roadmap\nGenerated: ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}\n\n${allRecent.length} check-in${allRecent.length !== 1 ? "s" : ""} recorded\n`;
+    const divider = "─".repeat(36);
+    const rows = allRecent.map((e) => {
+      const ag = AGITATION_OPTS[e.agitation]?.label ?? "None";
+      const ap = APPETITE_OPTS[e.appetite ?? 2]?.label ?? "Fair";
+      const lines = [
+        `${longDate(e.date)}  ${e.time}`,
+        `  Pain: ${e.pain}/10 · Breathlessness: ${e.breathlessness}/10 · Nausea: ${e.nausea}/10`,
+        `  Agitation: ${ag} · Appetite: ${ap}${e.restlessness ? " · Restless" : ""}`,
+        e.notes ? `  Notes: "${e.notes}"` : null,
+      ];
+      return lines.filter(Boolean).join("\n");
+    });
+    const body = rows.join(`\n${divider}\n`);
+    const footer = "\n\nShared from Hospice Roadmap — helping families navigate the hospice journey.";
+    try {
+      await Share.share({ message: `${header}\n${divider}\n${body}${footer}` });
+    } catch {
+      // User cancelled or share sheet not available — no action needed.
+    }
+  }, [allRecent]);
+
   const openRagna = useCallback((entry: {
     pain: number; breathlessness: number; nausea: number; agitation: number; notes?: string;
   }) => {
@@ -628,7 +656,13 @@ export default function SymptomTrackerScreen() {
           <Text style={sc.headerTitle}>Symptom Tracker</Text>
           <Text style={sc.headerSub}>{allRecent.length} check-in{allRecent.length !== 1 ? "s" : ""} recorded</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <Pressable
+          onPress={handleShare}
+          style={({ pressed }) => [sc.shareBtn, pressed && { opacity: 0.6 }]}
+          accessibilityLabel="Share symptom report"
+        >
+          <Feather name="share" size={19} color={Colors.primary} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -842,6 +876,12 @@ const sc = StyleSheet.create({
     backgroundColor: "rgba(3, 10, 24, 0.97)",
   },
   backBtn: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: "rgba(14, 22, 55, 0.90)",
+    borderWidth: 1, borderColor: "rgba(60, 90, 170, 0.25)",
+    alignItems: "center", justifyContent: "center",
+  },
+  shareBtn: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: "rgba(14, 22, 55, 0.90)",
     borderWidth: 1, borderColor: "rgba(60, 90, 170, 0.25)",

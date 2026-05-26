@@ -19,7 +19,8 @@ export async function getActiveConversationId(): Promise<number | null> {
     const parsed = Number(stored);
     cachedConversationId = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
     return cachedConversationId;
-  } catch {
+  } catch (e) {
+    console.warn("[RagnaState] Failed to read active conversation from storage:", e);
     cachedConversationId = null;
     return null;
   }
@@ -29,8 +30,9 @@ export async function setActiveConversationId(conversationId: number): Promise<v
   cachedConversationId = conversationId;
   try {
     await AsyncStorage.setItem(STORAGE_KEY, String(conversationId));
-  } catch {
-    // Ignore persistence failures — the in-memory cache still helps for this session.
+  } catch (e) {
+    // In-memory cache still serves this session; persistence failure is non-critical.
+    console.warn("[RagnaState] Failed to persist active conversation ID:", e);
   }
 }
 
@@ -38,7 +40,8 @@ export async function clearActiveConversationId(): Promise<void> {
   cachedConversationId = null;
   try {
     await AsyncStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore persistence failures.
+  } catch (e) {
+    // In-memory cache still reflects the cleared state.
+    console.warn("[RagnaState] Failed to clear active conversation ID from storage:", e);
   }
 }

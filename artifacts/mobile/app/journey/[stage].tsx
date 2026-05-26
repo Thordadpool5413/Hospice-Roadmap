@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ResourceCard } from "@/components/ResourceCard";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { mockResources } from "@/data/mockResources";
+import { resources as mockResources } from "@/data/resources";
 import { bereavementResources } from "@/data/mockBereavementResources";
 import { JourneyStage } from "@/types";
 

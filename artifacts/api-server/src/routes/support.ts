@@ -69,7 +69,7 @@ router.post("/support-requests", async (req, res) => {
       createdAt: inserted.createdAt,
     });
   } catch (err) {
-    console.error("Support request error:", err);
+    req.log.error({ err }, "Support request error");
     res.status(500).json({ error: "Failed to submit support request" });
   }
 });

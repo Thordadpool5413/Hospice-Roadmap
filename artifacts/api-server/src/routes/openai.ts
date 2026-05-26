@@ -3,6 +3,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 
 import { HOSPICE_SYSTEM_PROMPT } from "./anthropic/systemPrompt.js";
+import { MODELS } from "../config/models.js";
 
 const router: IRouter = Router();
 const upload = multer({
@@ -26,7 +27,7 @@ const ALLOWED_VOICES = new Set([
   "verse",
 ]);
 const DEFAULT_PREVIEW_TEXT =
-  "Hi, I’m Ragna. I’m here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
+  "Hi, I'm Ragna. I'm here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
 const SPEECH_CACHE_TTL_MS = 10 * 60 * 1000;
 const speechCache = new Map<string, { buffer: Buffer; mimeType: string; expiresAt: number }>();
 
@@ -181,11 +182,7 @@ router.post("/realtime/session", async (req: Request, res: Response) => {
     const answerSdp = await openAiResponse.text();
 
     if (!openAiResponse.ok) {
-      console.error("OpenAI realtime session error:", {
-        clientId,
-        status: openAiResponse.status,
-        body: answerSdp,
-      });
+      req.log.error({ clientId, status: openAiResponse.status, body: answerSdp }, "OpenAI realtime session error");
       res
         .status(openAiResponse.status >= 400 && openAiResponse.status < 500 ? openAiResponse.status : 502)
         .json({ error: answerSdp || "Failed to create realtime voice session." });
@@ -194,7 +191,7 @@ router.post("/realtime/session", async (req: Request, res: Response) => {
 
     res.type("application/sdp").send(answerSdp);
   } catch (error: unknown) {
-    console.error("Realtime voice session failure:", error);
+    req.log.error({ err: error }, "Realtime voice session failure");
     res.status(500).json({ error: "Failed to create realtime voice session." });
   }
 });
@@ -219,7 +216,7 @@ router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, r
       new Blob([file.buffer], { type: file.mimetype || "audio/m4a" }),
       file.originalname || `voice-${Date.now()}.m4a`,
     );
-    transcriptionForm.set("model", "gpt-4o-mini-transcribe");
+    transcriptionForm.set("model", MODELS.openai.transcription);
 
     const transcriptionResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -233,11 +230,7 @@ router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, r
     const userTranscript = transcriptionPayload.text?.trim() ?? "";
 
     if (!transcriptionResponse.ok || !userTranscript) {
-      console.error("OpenAI transcription error:", {
-        clientId,
-        status: transcriptionResponse.status,
-        body: transcriptionPayload,
-      });
+      req.log.error({ clientId, status: transcriptionResponse.status, body: transcriptionPayload }, "OpenAI transcription error");
       res.status(502).json({
         error: transcriptionPayload.error?.message || "Failed to transcribe the recorded audio.",
       });
@@ -246,7 +239,7 @@ router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, r
 
     res.json({ userTranscript });
   } catch (error: unknown) {
-    console.error("OpenAI mobile transcription failure:", error);
+    req.log.error({ err: error }, "OpenAI mobile transcription failure");
     res.status(500).json({ error: "Failed to transcribe mobile audio." });
   }
 });
@@ -274,7 +267,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
       new Blob([file.buffer], { type: file.mimetype || "audio/m4a" }),
       file.originalname || `voice-${Date.now()}.m4a`,
     );
-    transcriptionForm.set("model", "gpt-4o-mini-transcribe");
+    transcriptionForm.set("model", MODELS.openai.transcription);
 
     const transcriptionResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -288,11 +281,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
     const userTranscript = transcriptionPayload.text?.trim() ?? "";
 
     if (!transcriptionResponse.ok || !userTranscript) {
-      console.error("OpenAI transcription error:", {
-        clientId,
-        status: transcriptionResponse.status,
-        body: transcriptionPayload,
-      });
+      req.log.error({ clientId, status: transcriptionResponse.status, body: transcriptionPayload }, "OpenAI transcription error");
       res.status(502).json({
         error: transcriptionPayload.error?.message || "Failed to transcribe the recorded audio.",
       });
@@ -306,7 +295,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: MODELS.openai.chat,
         temperature: 0.5,
         messages: [
           {
@@ -325,11 +314,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
     const assistantTranscript = extractAssistantText(completionPayload);
 
     if (!completionResponse.ok || !assistantTranscript) {
-      console.error("OpenAI chat completion error:", {
-        clientId,
-        status: completionResponse.status,
-        body: completionPayload,
-      });
+      req.log.error({ clientId, status: completionResponse.status, body: completionPayload }, "OpenAI chat completion error");
       res.status(502).json({ error: "Failed to generate a spoken response." });
       return;
     }
@@ -341,7 +326,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini-tts",
+        model: MODELS.openai.tts,
         voice: selectedVoice,
         input: assistantTranscript,
         format: "mp3",
@@ -350,11 +335,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
 
     if (!speechResponse.ok) {
       const speechError = await speechResponse.text();
-      console.error("OpenAI speech generation error:", {
-        clientId,
-        status: speechResponse.status,
-        body: speechError,
-      });
+      req.log.error({ clientId, status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
       res.status(502).json({ error: speechError || "Failed to generate reply audio." });
       return;
     }
@@ -368,7 +349,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
       audioMimeType: "audio/mpeg",
     });
   } catch (error: unknown) {
-    console.error("OpenAI mobile voice turn failure:", error);
+    req.log.error({ err: error }, "OpenAI mobile voice turn failure");
     res.status(500).json({ error: "Failed to process mobile voice turn." });
   }
 });
@@ -400,7 +381,7 @@ router.post("/speak", async (req: Request, res: Response) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini-tts",
+        model: MODELS.openai.tts,
         voice: selectedVoice,
         input: speakText,
         format: "mp3",
@@ -409,11 +390,7 @@ router.post("/speak", async (req: Request, res: Response) => {
 
     if (!speechResponse.ok) {
       const speechError = await speechResponse.text();
-      console.error("OpenAI speech generation error:", {
-        clientId,
-        status: speechResponse.status,
-        body: speechError,
-      });
+      req.log.error({ clientId, status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
       res.status(502).json({ error: speechError || "Failed to generate reply audio." });
       return;
     }
@@ -434,7 +411,7 @@ router.post("/speak", async (req: Request, res: Response) => {
       audioMimeType: "audio/mpeg",
     });
   } catch (error: unknown) {
-    console.error("OpenAI speak failure:", error);
+    req.log.error({ err: error }, "OpenAI speak failure");
     res.status(500).json({ error: "Failed to generate reply audio." });
   }
 });
@@ -465,7 +442,7 @@ router.post("/preview", async (req: Request, res: Response) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini-tts",
+        model: MODELS.openai.tts,
         voice: selectedVoice,
         input: previewText,
         format: "mp3",
@@ -474,11 +451,7 @@ router.post("/preview", async (req: Request, res: Response) => {
 
     if (!openAiResponse.ok) {
       const errorBody = await openAiResponse.text();
-      console.error("OpenAI voice preview error:", {
-        clientId,
-        status: openAiResponse.status,
-        body: errorBody,
-      });
+      req.log.error({ clientId, status: openAiResponse.status, body: errorBody }, "OpenAI voice preview error");
       res
         .status(openAiResponse.status >= 400 && openAiResponse.status < 500 ? openAiResponse.status : 502)
         .json({ error: errorBody || "Failed to generate voice preview." });
@@ -490,7 +463,7 @@ router.post("/preview", async (req: Request, res: Response) => {
     res.setHeader("Cache-Control", "no-store");
     res.status(200).send(audioBuffer);
   } catch (error: unknown) {
-    console.error("OpenAI voice preview failure:", error);
+    req.log.error({ err: error }, "OpenAI voice preview failure");
     res.status(500).json({ error: "Failed to generate voice preview." });
   }
 });
