@@ -11,6 +11,18 @@ export interface NativeOpenAiVoiceTranscriptResult {
   userTranscript: string;
 }
 
+export interface NativeOpenAiVoiceTurnResult {
+  userTranscript: string;
+  assistantTranscript: string;
+  didAutoPlayAudio: boolean;
+  autoPlayErrorMessage?: string;
+}
+
+interface StopNativeOpenAiVoiceRecordingAndSendOptions {
+  patientContext?: string;
+  voice?: string;
+}
+
 export interface NativeOpenAiVoicePlaybackResult {
   audioBase64?: string;
   audioMimeType?: string;
@@ -411,9 +423,13 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
   }
 
   const recording = activeRecording;
-  activeRecording = null;
-
-  await recording.stopAndUnloadAsync();
+  try {
+    await recording.stopAndUnloadAsync();
+  } catch (err) {
+    console.warn("[voice] stopAndUnload failed during transcribe", err);
+  } finally {
+    activeRecording = null;
+  }
   await configurePlaybackMode();
 
   const uri = recording.getURI();
@@ -454,6 +470,117 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
   }
 
   return (await response.json()) as NativeOpenAiVoiceTranscriptResult;
+}
+
+export async function stopNativeOpenAiVoiceRecordingAndSend({
+  patientContext = "",
+  voice = "marin",
+}: StopNativeOpenAiVoiceRecordingAndSendOptions = {}): Promise<NativeOpenAiVoiceTurnResult> {
+  if (!activeRecording) {
+    throw new Error("Voice recording has not started yet.");
+  }
+
+  const recording = activeRecording;
+  try {
+    await recording.stopAndUnloadAsync();
+  } catch (err) {
+    console.warn("[voice] stopAndUnload failed during send", err);
+  } finally {
+    activeRecording = null;
+  }
+  await configurePlaybackMode();
+
+  const uri = recording.getURI();
+  if (!uri) {
+    throw new Error("The recorded audio could not be found.");
+  }
+
+  const fileName = `voice-turn-${Date.now()}.m4a`;
+  const formData = new FormData();
+  formData.append("audio", {
+    uri,
+    name: fileName,
+    type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
+  } as never);
+  if (patientContext) {
+    formData.append("patientContext", patientContext);
+  }
+  formData.append("voice", voice);
+
+  const clientId = await getClientId();
+  const response = await fetch(`${apiBase()}/openai/mobile-voice-turn`, {
+    method: "POST",
+    headers: {
+      x_client_id: clientId,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let message = "Voice turn failed.";
+    try {
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+      message = data.error ?? data.message ?? message;
+    } catch {
+      const text = await response.text();
+      if (text) message = text;
+    }
+    throw new Error(message);
+  }
+
+  const payload = (await response.json()) as {
+    userTranscript?: string;
+    assistantTranscript?: string;
+    audioBase64?: string;
+    audioMimeType?: string;
+    audioUrl?: string;
+  };
+
+  const userTranscript = payload.userTranscript?.trim() ?? "";
+  const assistantTranscript = payload.assistantTranscript?.trim() ?? "";
+
+  if (!userTranscript || !assistantTranscript) {
+    throw new Error("Ragna did not return a complete voice reply.");
+  }
+
+  let didAutoPlayAudio = false;
+  let autoPlayErrorMessage: string | undefined;
+
+  if (payload.audioBase64 || payload.audioUrl) {
+    try {
+      await playAudioReply({
+        audioBase64: payload.audioBase64,
+        audioMimeType: payload.audioMimeType,
+        audioUrl: payload.audioUrl,
+      });
+      didAutoPlayAudio = true;
+    } catch (error) {
+      autoPlayErrorMessage =
+        error instanceof Error
+          ? error.message
+          : "Ragna's reply was generated, but playback could not start automatically.";
+
+      if (Platform.OS === "ios") {
+        try {
+          await startSpeechFallback(assistantTranscript);
+          didAutoPlayAudio = true;
+          autoPlayErrorMessage = undefined;
+        } catch (fallbackErr) {
+          console.warn("[voice] iOS speech fallback failed", fallbackErr);
+        }
+      }
+    }
+  }
+
+  return {
+    userTranscript,
+    assistantTranscript,
+    didAutoPlayAudio,
+    autoPlayErrorMessage,
+  };
 }
 
 export async function speakNativeOpenAiVoiceText({
