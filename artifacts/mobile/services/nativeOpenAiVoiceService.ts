@@ -136,10 +136,14 @@ async function stopActiveSound(): Promise<void> {
   activeSound = null;
   try {
     await sound.stopAsync();
-  } catch {}
+  } catch (err) {
+    console.warn("[voice] sound.stopAsync failed", err);
+  }
   try {
     await sound.unloadAsync();
-  } catch {}
+  } catch (err) {
+    console.warn("[voice] sound.unloadAsync failed", err);
+  }
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
@@ -175,7 +179,9 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {}
+    } catch (err) {
+      console.warn("[voice] stopAndUnload previous recording failed", err);
+    }
     activeRecording = null;
   }
 
@@ -251,7 +257,9 @@ async function createAndAutoplaySound(
     }
     try {
       await sound.unloadAsync();
-    } catch {}
+    } catch (err) {
+      console.warn("[voice] sound.unloadAsync after error failed", err);
+    }
     if (cleanupUri) {
       FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(() => {});
     }
@@ -386,7 +394,9 @@ export async function stopNativeOpenAiVoice(): Promise<void> {
   if (activeRecording) {
     try {
       await activeRecording.stopAndUnloadAsync();
-    } catch {}
+    } catch (err) {
+      console.warn("[voice] stopAndUnload on shutdown failed", err);
+    }
     activeRecording = null;
   }
 
@@ -514,7 +524,9 @@ export async function speakNativeOpenAiVoiceText({
           didAutoPlayAudio = true;
           usedSpeechFallback = true;
           autoPlayErrorMessage = undefined;
-        } catch {}
+        } catch (fallbackErr) {
+          console.warn("[voice] iOS speech fallback failed", fallbackErr);
+        }
       }
     }
   }

@@ -17,7 +17,7 @@ import { CosmicBackground } from "@/components/CosmicBackground";
 import { ResourceCard } from "@/components/ResourceCard";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { resources as mockResources } from "@/data/resources";
+import { resources } from "@/data/resources";
 import { Resource, ResourceCategory } from "@/types";
 
 const categoryLabels: Record<ResourceCategory, string> = {
@@ -46,7 +46,7 @@ export default function ResourcesScreen() {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
-  const filtered = mockResources.filter((r) => {
+  const filtered = resources.filter((r) => {
     const matchesSearch =
       !search ||
       r.title.toLowerCase().includes(search.toLowerCase()) ||
