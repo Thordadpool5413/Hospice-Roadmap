@@ -37,6 +37,7 @@ import {
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
+import { probeIosSilentSwitch } from "../../modules/silent-switch";
 import {
   isOpenAiVoiceSupported,
   OpenAiVoiceSession,
@@ -285,6 +286,23 @@ export default function VoiceScreen() {
     setSilentHintVisible(false);
   }, []);
 
+  // Ask the native probe whether the iOS silent switch is on right now and
+  // sync the hint banner accordingly. Unlike `maybeSuggestSilentMode`, this
+  // can both show *and* hide the banner based on the real device state so
+  // caregivers get a proactive warning before they record, instead of only
+  // after the first failed playback.
+  const checkIosSilentSwitch = useCallback(async () => {
+    if (Platform.OS !== "ios") return;
+    const muted = await probeIosSilentSwitch();
+    if (muted === null) return; // probe unavailable — keep existing inferred hint
+    if (muted) {
+      if (silentHintDismissedRef.current) return;
+      setSilentHintVisible(true);
+    } else {
+      setSilentHintVisible(false);
+    }
+  }, []);
+
   const handleDismissSilentHint = useCallback(() => {
     silentHintDismissedRef.current = true;
     setSilentHintVisible(false);
@@ -300,8 +318,11 @@ export default function VoiceScreen() {
       if (stored === "dismissed") {
         silentHintDismissedRef.current = true;
       }
+      // Run the proactive probe after we know whether the user already
+      // dismissed the hint so a previous "Got it" still suppresses it.
+      void checkIosSilentSwitch();
     });
-  }, []);
+  }, [checkIosSilentSwitch]);
 
   const handleReplayLastReply = useCallback(async () => {
     if (!lastAssistantReply || isReplaying) return;
@@ -352,6 +373,9 @@ export default function VoiceScreen() {
           setVoiceTranscript(null);
           setPlaybackFailureMessage(null);
           setLastAssistantReply(null);
+          // Probe the iOS silent switch *before* recording so the warning
+          // fires up front, not after the first failed playback.
+          void checkIosSilentSwitch();
           setSharedThreadStatus(`Recording with ${selectedVoiceMeta.label}. Tap again when you are done speaking.`);
           setVoiceStatus("requesting-mic");
           await startNativeOpenAiVoiceRecording();
@@ -461,6 +485,7 @@ export default function VoiceScreen() {
     }
   }, [
     buildRagnaPatientContext,
+    checkIosSilentSwitch,
     ensureSharedConversation,
     hideSilentHintOnCleanPlayback,
     isNativeVoiceMode,
