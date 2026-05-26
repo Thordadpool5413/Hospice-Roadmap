@@ -130,7 +130,7 @@ function getRagnaArtworkUrl(): string | undefined {
   if (ragnaArtworkUrl !== undefined) return ragnaArtworkUrl || undefined;
   try {
     const resolved = Image.resolveAssetSource(
-      require("../assets/images/ragna-icon.png"),
+      require("../assets/images/ragna-lockscreen.png"),
     );
     ragnaArtworkUrl = resolved?.uri ?? "";
     return ragnaArtworkUrl || undefined;
