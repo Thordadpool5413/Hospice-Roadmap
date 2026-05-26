@@ -53,6 +53,10 @@ let activeSound: AudioPlayer | null = null;
 let activeSoundSubscription: { remove: () => void } | null = null;
 let fallbackSpeechText: string | null = null;
 let isUsingSpeechFallback = false;
+let speechCarrierPlayer: AudioPlayer | null = null;
+let speechCarrierSubscription: { remove: () => void } | null = null;
+let silentCarrierUri: string | null = null;
+let suppressSpeechCarrierBridge = false;
 let playbackState: NativeOpenAiVoicePlaybackState = {
   isPlaying: false,
   isPaused: false,
@@ -127,6 +131,171 @@ function deactivateLockScreenControls(player: AudioPlayer): void {
   }
 }
 
+// A tiny silent WAV used as a "carrier" audio track so the lock-screen,
+// CarPlay, and Android Auto media session stay attached to a real
+// AudioPlayer while we are speaking through expo-speech as a fallback.
+// Expo-audio's native MediaController wires MPRemoteCommandCenter (iOS) and
+// MediaSession (Android) directly to whichever AudioPlayer is currently
+// active for lock screen, so giving the fallback path its own carrier lets
+// AirPods / Bluetooth / car head-units drive it the same way they drive the
+// real audio path.
+function buildSilentWavBase64(seconds: number): string {
+  const sampleRate = 8000;
+  const numSamples = Math.max(1, Math.floor(sampleRate * seconds));
+  const bytesPerSample = 2;
+  const dataSize = numSamples * bytesPerSample;
+  const totalSize = 44 + dataSize;
+
+  const buf = new Uint8Array(totalSize);
+  const dv = new DataView(buf.buffer);
+  // "RIFF"
+  buf[0] = 0x52; buf[1] = 0x49; buf[2] = 0x46; buf[3] = 0x46;
+  dv.setUint32(4, totalSize - 8, true);
+  // "WAVE"
+  buf[8] = 0x57; buf[9] = 0x41; buf[10] = 0x56; buf[11] = 0x45;
+  // "fmt "
+  buf[12] = 0x66; buf[13] = 0x6d; buf[14] = 0x74; buf[15] = 0x20;
+  dv.setUint32(16, 16, true);
+  dv.setUint16(20, 1, true); // PCM
+  dv.setUint16(22, 1, true); // mono
+  dv.setUint32(24, sampleRate, true);
+  dv.setUint32(28, sampleRate * bytesPerSample, true);
+  dv.setUint16(32, bytesPerSample, true);
+  dv.setUint16(34, 16, true);
+  // "data"
+  buf[36] = 0x64; buf[37] = 0x61; buf[38] = 0x74; buf[39] = 0x61;
+  dv.setUint32(40, dataSize, true);
+  // Sample data already zero-filled = silence for signed 16-bit PCM.
+
+  let binary = "";
+  for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+  const encoder = (
+    globalThis as unknown as { btoa?: (input: string) => string }
+  ).btoa;
+  if (!encoder) {
+    throw new Error("Base64 encoder not available on this runtime.");
+  }
+  return encoder(binary);
+}
+
+async function ensureSilentCarrierUri(): Promise<string> {
+  if (silentCarrierUri) return silentCarrierUri;
+  const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!baseDir) {
+    throw new Error("Unable to access local storage for silent carrier.");
+  }
+  const uri = `${baseDir}ragna-silent-carrier.wav`;
+  const base64 = buildSilentWavBase64(1);
+  await FileSystem.writeAsStringAsync(uri, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  silentCarrierUri = uri;
+  return uri;
+}
+
+async function stopSpeechCarrier(): Promise<void> {
+  const player = speechCarrierPlayer;
+  const sub = speechCarrierSubscription;
+  speechCarrierPlayer = null;
+  speechCarrierSubscription = null;
+  if (!player) return;
+  try {
+    sub?.remove();
+  } catch {
+    // ignore
+  }
+  try {
+    deactivateLockScreenControls(player);
+  } catch {
+    // ignore
+  }
+  try {
+    player.pause();
+  } catch {
+    // ignore
+  }
+  try {
+    player.remove();
+  } catch {
+    // ignore
+  }
+}
+
+async function startSpeechCarrier(): Promise<void> {
+  await stopSpeechCarrier();
+  try {
+    const uri = await ensureSilentCarrierUri();
+    const carrier = createAudioPlayer(
+      { uri },
+      { keepAudioSessionActive: true },
+    );
+    carrier.loop = true;
+    carrier.volume = 0;
+    speechCarrierPlayer = carrier;
+
+    const subscription = carrier.addListener(
+      "playbackStatusUpdate",
+      (status: AudioStatus) => {
+        if (!status.isLoaded) return;
+        if (suppressSpeechCarrierBridge) return;
+        if (!isUsingSpeechFallback) return;
+        if (speechCarrierPlayer !== carrier) return;
+
+        const controls = getSpeechControls();
+        if (status.playing && playbackState.isPaused && fallbackSpeechText) {
+          // Remote command (AirPods / BT / lock screen / Android Auto) said
+          // "play" — resume speech to match.
+          if (controls.resume) {
+            controls.resume();
+            emitPlaybackState({ isPlaying: true, isPaused: false });
+          } else {
+            // Older expo-speech builds lack pause/resume. Re-speak from the
+            // beginning so the caregiver still gets the reply.
+            startSpeechFallback(fallbackSpeechText).catch(() => {});
+          }
+        } else if (!status.playing && !playbackState.isPaused) {
+          // Remote command said "pause" — mirror that on the speech engine.
+          controls.pause?.();
+          emitPlaybackState({ isPlaying: true, isPaused: true });
+        }
+      },
+    );
+    speechCarrierSubscription = subscription;
+
+    carrier.play();
+    activateLockScreenControls(carrier);
+  } catch (err) {
+    console.warn("[voice] silent speech carrier failed", err);
+    await stopSpeechCarrier();
+  }
+}
+
+function pauseSpeechCarrier(): void {
+  const carrier = speechCarrierPlayer;
+  if (!carrier) return;
+  suppressSpeechCarrierBridge = true;
+  try {
+    carrier.pause();
+  } catch {
+    // ignore
+  } finally {
+    suppressSpeechCarrierBridge = false;
+  }
+}
+
+function resumeSpeechCarrier(): void {
+  const carrier = speechCarrierPlayer;
+  if (!carrier) return;
+  suppressSpeechCarrierBridge = true;
+  try {
+    carrier.play();
+  } catch {
+    // ignore
+  } finally {
+    suppressSpeechCarrierBridge = false;
+  }
+}
+
 function stopSpeechFallback(clearText = false): void {
   const controls = getSpeechControls();
   controls.stop?.();
@@ -134,6 +303,7 @@ function stopSpeechFallback(clearText = false): void {
   if (clearText) {
     fallbackSpeechText = null;
   }
+  void stopSpeechCarrier();
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
@@ -150,18 +320,26 @@ async function startSpeechFallback(text: string): Promise<void> {
   isUsingSpeechFallback = true;
   emitPlaybackState({ isPlaying: true, isPaused: false });
 
+  // Start the silent carrier first so AirPods / Bluetooth / lock-screen /
+  // CarPlay / Android Auto transport buttons have something registered to
+  // talk to while expo-speech is reading the reply.
+  await startSpeechCarrier();
+
   Speech.speak(trimmed, {
     language: "en-US",
     onDone: () => {
       isUsingSpeechFallback = false;
+      void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
     onStopped: () => {
       isUsingSpeechFallback = false;
+      void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
     onError: () => {
       isUsingSpeechFallback = false;
+      void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
   });
@@ -247,7 +425,11 @@ async function createAndAutoplaySound(
   source: { uri: string },
   cleanupUri?: string,
 ): Promise<void> {
-  const player = createAudioPlayer(source);
+  // keepAudioSessionActive keeps the audio session (and the iOS
+  // MPRemoteCommandCenter / Android MediaSession wiring) alive across short
+  // pauses, so an AirPods or CarPlay "play" after a pause still resumes the
+  // same player instead of being dropped.
+  const player = createAudioPlayer(source, { keepAudioSessionActive: true });
   activeSound = player;
 
   const subscription = player.addListener(
@@ -420,11 +602,13 @@ export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
     const controls = getSpeechControls();
     if (controls.pause) {
       controls.pause();
+      pauseSpeechCarrier();
       emitPlaybackState({ isPlaying: true, isPaused: true });
       return;
     }
     controls.stop?.();
     isUsingSpeechFallback = false;
+    void stopSpeechCarrier();
     emitPlaybackState({ isPlaying: false, isPaused: false });
   }
 }
@@ -440,6 +624,7 @@ export async function resumeNativeOpenAiVoicePlayback(): Promise<void> {
     const controls = getSpeechControls();
     if (isUsingSpeechFallback && controls.resume) {
       controls.resume();
+      resumeSpeechCarrier();
       emitPlaybackState({ isPlaying: true, isPaused: false });
       return;
     }
