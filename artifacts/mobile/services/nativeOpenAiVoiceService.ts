@@ -10,7 +10,7 @@ import {
 import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Speech from "expo-speech";
-import { Platform } from "react-native";
+import { Image, Platform } from "react-native";
 
 import { apiBase, mergeJsonHeaders } from "./apiClient";
 import { getClientId } from "./clientIdentity";
@@ -107,19 +107,98 @@ async function configurePlaybackMode(): Promise<void> {
   });
 }
 
-const LOCK_SCREEN_METADATA = {
+interface LockScreenMetadata {
+  title: string;
+  artist: string;
+  albumTitle?: string;
+  artworkUrl?: string;
+}
+
+const LOCK_SCREEN_DEFAULTS = {
   title: "Ragna",
   artist: "Hospice Roadmap",
 } as const;
 
+let ragnaArtworkUrl: string | undefined;
+function getRagnaArtworkUrl(): string | undefined {
+  if (ragnaArtworkUrl !== undefined) return ragnaArtworkUrl || undefined;
+  try {
+    const resolved = Image.resolveAssetSource(
+      require("../assets/images/ragna-icon.png"),
+    );
+    ragnaArtworkUrl = resolved?.uri ?? "";
+    return ragnaArtworkUrl || undefined;
+  } catch (err) {
+    console.warn("[voice] resolve ragna artwork failed", err);
+    ragnaArtworkUrl = "";
+    return undefined;
+  }
+}
+
+// Strip markdown noise then take the first sentence (or a hard-trimmed
+// prefix) so the lock-screen subtitle stays glanceable.
+function summarizeReplyForLockScreen(text: string | null | undefined): string | undefined {
+  if (!text) return undefined;
+  const cleaned = text
+    .replace(/[#*_`>~]+/g, "")
+    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return undefined;
+  const sentenceMatch = cleaned.match(/^(.+?[.!?])(\s|$)/);
+  let summary = sentenceMatch ? sentenceMatch[1] : cleaned;
+  const MAX = 120;
+  if (summary.length > MAX) {
+    summary = summary.slice(0, MAX - 1).trimEnd() + "…";
+  }
+  return summary;
+}
+
+let currentReplySummary: string | undefined;
+
+function buildLockScreenMetadata(summary?: string): LockScreenMetadata {
+  const artworkUrl = getRagnaArtworkUrl();
+  const trimmed = summary?.trim();
+  const meta: LockScreenMetadata = {
+    title: trimmed && trimmed.length > 0 ? trimmed : LOCK_SCREEN_DEFAULTS.title,
+    artist: LOCK_SCREEN_DEFAULTS.artist,
+  };
+  if (trimmed && trimmed.length > 0) {
+    meta.albumTitle = LOCK_SCREEN_DEFAULTS.title;
+  }
+  if (artworkUrl) {
+    meta.artworkUrl = artworkUrl;
+  }
+  return meta;
+}
+
 function activateLockScreenControls(player: AudioPlayer): void {
   try {
-    player.setActiveForLockScreen(true, { ...LOCK_SCREEN_METADATA }, {
-      showSeekForward: false,
-      showSeekBackward: false,
-    });
+    player.setActiveForLockScreen(
+      true,
+      buildLockScreenMetadata(currentReplySummary),
+      {
+        showSeekForward: false,
+        showSeekBackward: false,
+      },
+    );
   } catch (err) {
     console.warn("[voice] setActiveForLockScreen failed", err);
+  }
+}
+
+function getActiveLockScreenPlayer(): AudioPlayer | null {
+  return activeSound ?? speechCarrierPlayer ?? null;
+}
+
+function applyLockScreenSummary(summary: string | undefined): void {
+  currentReplySummary = summary;
+  const player = getActiveLockScreenPlayer();
+  if (!player) return;
+  try {
+    player.updateLockScreenMetadata(buildLockScreenMetadata(summary));
+  } catch (err) {
+    console.warn("[voice] updateLockScreenMetadata failed", err);
   }
 }
 
@@ -302,6 +381,7 @@ function stopSpeechFallback(clearText = false): void {
   isUsingSpeechFallback = false;
   if (clearText) {
     fallbackSpeechText = null;
+    currentReplySummary = undefined;
   }
   void stopSpeechCarrier();
   emitPlaybackState({ isPlaying: false, isPaused: false });
@@ -318,12 +398,14 @@ async function startSpeechFallback(text: string): Promise<void> {
 
   fallbackSpeechText = trimmed;
   isUsingSpeechFallback = true;
+  currentReplySummary = summarizeReplyForLockScreen(trimmed);
   emitPlaybackState({ isPlaying: true, isPaused: false });
 
   // Start the silent carrier first so AirPods / Bluetooth / lock-screen /
   // CarPlay / Android Auto transport buttons have something registered to
   // talk to while expo-speech is reading the reply.
   await startSpeechCarrier();
+  applyLockScreenSummary(currentReplySummary);
 
   Speech.speak(trimmed, {
     language: "en-US",
@@ -372,6 +454,7 @@ async function stopActiveSound(): Promise<void> {
   } catch (err) {
     console.warn("[voice] sound.remove failed", err);
   }
+  currentReplySummary = undefined;
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
@@ -458,6 +541,7 @@ async function createAndAutoplaySound(
             () => {},
           );
         }
+        currentReplySummary = undefined;
         emitPlaybackState({ isPlaying: false, isPaused: false });
         return;
       }
@@ -544,14 +628,17 @@ async function playAudioReply({
   audioBase64,
   audioMimeType,
   audioUrl,
+  assistantTranscript,
 }: {
   audioBase64?: string;
   audioMimeType?: string;
   audioUrl?: string;
+  assistantTranscript?: string;
 }): Promise<void> {
   await stopActiveSound();
   stopSpeechFallback();
   await configurePlaybackMode();
+  currentReplySummary = summarizeReplyForLockScreen(assistantTranscript);
 
   if (shouldPreferAudioUrl(audioUrl) && audioUrl) {
     await createAndAutoplaySound({ uri: audioUrl });
@@ -583,12 +670,18 @@ export async function playNativeOpenAiVoiceAudio({
   audioBase64,
   audioMimeType,
   audioUrl,
+  assistantTranscript,
 }: {
   audioBase64?: string;
   audioMimeType?: string;
   audioUrl?: string;
+  assistantTranscript?: string;
 }): Promise<void> {
-  await playAudioReply({ audioBase64, audioMimeType, audioUrl });
+  await playAudioReply({ audioBase64, audioMimeType, audioUrl, assistantTranscript });
+}
+
+export function updateNativeOpenAiVoiceReplySummary(text: string | null | undefined): void {
+  applyLockScreenSummary(summarizeReplyForLockScreen(text));
 }
 
 export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
@@ -791,6 +884,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
         audioBase64: payload.audioBase64,
         audioMimeType: payload.audioMimeType,
         audioUrl: payload.audioUrl,
+        assistantTranscript,
       });
       didAutoPlayAudio = true;
     } catch (error) {
@@ -874,6 +968,7 @@ export async function speakNativeOpenAiVoiceText({
         audioBase64: payload.audioBase64,
         audioMimeType: payload.audioMimeType,
         audioUrl: payload.audioUrl,
+        assistantTranscript: trimmed,
       });
       didAutoPlayAudio = true;
     } catch (error) {

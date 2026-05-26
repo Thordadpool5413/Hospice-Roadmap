@@ -609,6 +609,7 @@ export default function HelpScreen() {
         audioBase64: message.audioBase64,
         audioMimeType: message.audioMimeType,
         audioUrl: message.audioUrl,
+        assistantTranscript: message.content,
       });
       setVoiceStatusText("Playing Ragna's voice reply.");
     } catch (error) {
@@ -668,6 +669,7 @@ export default function HelpScreen() {
           audioBase64: latestAssistantMessage.audioBase64,
           audioMimeType: latestAssistantMessage.audioMimeType,
           audioUrl: latestAssistantMessage.audioUrl,
+          assistantTranscript: latestAssistantMessage.content,
         });
         setVoiceStatusText("Playing Ragna's voice reply.");
         return;
