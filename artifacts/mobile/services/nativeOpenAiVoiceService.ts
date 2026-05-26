@@ -161,6 +161,23 @@ function summarizeReplyForLockScreen(text: string | null | undefined): string | 
 }
 
 let currentReplySummary: string | undefined;
+const replySummaryListeners = new Set<(summary: string | undefined) => void>();
+
+function setCurrentReplySummary(summary: string | undefined): void {
+  if (summary === currentReplySummary) return;
+  currentReplySummary = summary;
+  replySummaryListeners.forEach((listener) => listener(summary));
+}
+
+export function subscribeNativeOpenAiVoiceReplySummary(
+  listener: (summary: string | undefined) => void,
+): () => void {
+  replySummaryListeners.add(listener);
+  listener(currentReplySummary);
+  return () => {
+    replySummaryListeners.delete(listener);
+  };
+}
 
 function buildLockScreenMetadata(summary?: string): LockScreenMetadata {
   const artworkUrl = getRagnaArtworkUrl();
@@ -198,7 +215,7 @@ function getActiveLockScreenPlayer(): AudioPlayer | null {
 }
 
 function applyLockScreenSummary(summary: string | undefined): void {
-  currentReplySummary = summary;
+  setCurrentReplySummary(summary);
   const player = getActiveLockScreenPlayer();
   if (!player) return;
   try {
@@ -390,7 +407,7 @@ function stopSpeechFallback(clearText = false): void {
   isUsingSpeechFallback = false;
   if (clearText) {
     fallbackSpeechText = null;
-    currentReplySummary = undefined;
+    setCurrentReplySummary(undefined);
     spokenCharOffset = 0;
   }
   void stopSpeechCarrier();
@@ -411,7 +428,7 @@ async function startSpeechFallback(
 
   fallbackSpeechText = trimmed;
   isUsingSpeechFallback = true;
-  currentReplySummary = summarizeReplyForLockScreen(trimmed);
+  setCurrentReplySummary(summarizeReplyForLockScreen(trimmed));
   emitPlaybackState({ isPlaying: true, isPaused: false });
 
   // Clamp the requested resume offset to the bounds of the reply. If we
@@ -500,7 +517,7 @@ async function stopActiveSound(): Promise<void> {
   } catch (err) {
     console.warn("[voice] sound.remove failed", err);
   }
-  currentReplySummary = undefined;
+  setCurrentReplySummary(undefined);
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
@@ -587,7 +604,7 @@ async function createAndAutoplaySound(
             () => {},
           );
         }
-        currentReplySummary = undefined;
+        setCurrentReplySummary(undefined);
         emitPlaybackState({ isPlaying: false, isPaused: false });
         return;
       }
@@ -684,7 +701,7 @@ async function playAudioReply({
   await stopActiveSound();
   stopSpeechFallback();
   await configurePlaybackMode();
-  currentReplySummary = summarizeReplyForLockScreen(assistantTranscript);
+  setCurrentReplySummary(summarizeReplyForLockScreen(assistantTranscript));
 
   if (shouldPreferAudioUrl(audioUrl) && audioUrl) {
     await createAndAutoplaySound({ uri: audioUrl });

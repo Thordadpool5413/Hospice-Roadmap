@@ -37,6 +37,7 @@ interface RagnaComposerProps {
   onVoiceOptionSelect?: (voiceId: string) => void;
   isPlaybackActive?: boolean;
   isPlaybackPaused?: boolean;
+  replyPreviewText?: string;
   onPlaybackToggle?: () => void;
   onPlaybackStop?: () => void;
 }
@@ -60,6 +61,7 @@ export function RagnaComposer({
   onVoiceOptionSelect,
   isPlaybackActive = false,
   isPlaybackPaused = false,
+  replyPreviewText,
   onPlaybackToggle,
   onPlaybackStop,
 }: RagnaComposerProps) {
@@ -140,6 +142,18 @@ export function RagnaComposer({
             );
           })}
         </ScrollView>
+      ) : null}
+      {showPlaybackControls && replyPreviewText ? (
+        <View style={styles.replyPreview}>
+          <Feather
+            name="message-circle"
+            size={13}
+            color={Colors.primaryLight}
+          />
+          <Text style={styles.replyPreviewText} numberOfLines={2}>
+            {replyPreviewText}
+          </Text>
+        </View>
       ) : null}
       {showPlaybackControls ? (
         <View style={styles.playbackRow}>
@@ -307,6 +321,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 2,
+  },
+  replyPreview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "rgba(60,120,255,0.08)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(73,118,255,0.18)",
+  },
+  replyPreviewText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primaryLight,
   },
   playbackButton: {
     flexDirection: "row",

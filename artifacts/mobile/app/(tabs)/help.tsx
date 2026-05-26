@@ -49,6 +49,7 @@ import {
   stopNativeOpenAiVoicePlayback,
   stopNativeOpenAiVoiceRecordingAndTranscribe,
   subscribeNativeOpenAiVoicePlayback,
+  subscribeNativeOpenAiVoiceReplySummary,
   updateNativeOpenAiVoiceReplySummary,
 } from "@/services/nativeOpenAiVoiceService";
 import {
@@ -346,6 +347,9 @@ export default function HelpScreen() {
   const [isPlaybackActive, setIsPlaybackActive] = useState(false);
   const [isPlaybackPaused, setIsPlaybackPaused] = useState(false);
   const [isLiveSpeechActive, setIsLiveSpeechActive] = useState(false);
+  const [replyPreviewText, setReplyPreviewText] = useState<string | undefined>(
+    undefined,
+  );
 
   const todayEntry = useMemo(
     () => getTodayEntry(),
@@ -1110,6 +1114,13 @@ export default function HelpScreen() {
   }, []);
 
   useEffect(() => {
+    const unsubscribe = subscribeNativeOpenAiVoiceReplySummary((summary) => {
+      setReplyPreviewText(summary);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active") {
         stopLiveSpeechPreview(true);
@@ -1227,6 +1238,7 @@ export default function HelpScreen() {
         }}
         isPlaybackActive={effectivePlaybackActive}
         isPlaybackPaused={effectivePlaybackPaused}
+        replyPreviewText={replyPreviewText}
         onPlaybackToggle={() => {
           void handlePlaybackToggle();
         }}
