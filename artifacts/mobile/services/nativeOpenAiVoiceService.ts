@@ -24,6 +24,7 @@ export interface NativeOpenAiVoiceTurnResult {
   assistantTranscript: string;
   didAutoPlayAudio: boolean;
   autoPlayErrorMessage?: string;
+  usedSpeechFallback?: boolean;
 }
 
 interface StopNativeOpenAiVoiceRecordingAndSendOptions {
@@ -597,6 +598,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
 
   let didAutoPlayAudio = false;
   let autoPlayErrorMessage: string | undefined;
+  let usedSpeechFallback = false;
 
   if (payload.audioBase64 || payload.audioUrl) {
     try {
@@ -616,6 +618,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
         try {
           await startSpeechFallback(assistantTranscript);
           didAutoPlayAudio = true;
+          usedSpeechFallback = true;
           autoPlayErrorMessage = undefined;
         } catch (fallbackErr) {
           console.warn("[voice] iOS speech fallback failed", fallbackErr);
@@ -629,6 +632,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
     assistantTranscript,
     didAutoPlayAudio,
     autoPlayErrorMessage,
+    usedSpeechFallback,
   };
 }
 

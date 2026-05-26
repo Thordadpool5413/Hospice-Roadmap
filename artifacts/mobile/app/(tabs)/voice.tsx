@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -69,6 +70,12 @@ const VOICE_OPTIONS = [
 const VOICE_PREVIEW_TEXT =
   "Hi, I’m Ragna. I’m here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
 
+const SILENT_MODE_HINT_STORAGE_KEY = "@ragna_silent_mode_hint_v1";
+const SILENT_MODE_HINT_TEXT =
+  "Your phone may be on silent — flip the side switch up so you can hear Ragna's voice.";
+
+type SilentHintStorageValue = "dismissed";
+
 type VoiceOptionId = (typeof VOICE_OPTIONS)[number]["id"];
 
 const STARTER_PROMPTS = [
@@ -95,6 +102,8 @@ export default function VoiceScreen() {
   const [playbackFailureMessage, setPlaybackFailureMessage] = useState<string | null>(null);
   const [lastAssistantReply, setLastAssistantReply] = useState<string | null>(null);
   const [isReplaying, setIsReplaying] = useState(false);
+  const [silentHintVisible, setSilentHintVisible] = useState(false);
+  const silentHintDismissedRef = useRef(false);
   const voiceSessionRef = useRef<OpenAiVoiceSession | null>(null);
   const conversationIdRef = useRef<number | null>(null);
   const pendingUserTranscriptRef = useRef<string | null>(null);
@@ -264,6 +273,31 @@ export default function VoiceScreen() {
     }
   }, [isNativeVoiceMode, isRecordingNative, previewingVoiceId]);
 
+  const maybeSuggestSilentMode = useCallback((trigger: boolean) => {
+    if (!trigger) return;
+    if (Platform.OS !== "ios") return;
+    if (silentHintDismissedRef.current) return;
+    setSilentHintVisible(true);
+  }, []);
+
+  const handleDismissSilentHint = useCallback(() => {
+    silentHintDismissedRef.current = true;
+    setSilentHintVisible(false);
+    void AsyncStorage.setItem(
+      SILENT_MODE_HINT_STORAGE_KEY,
+      "dismissed" satisfies SilentHintStorageValue,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    void AsyncStorage.getItem(SILENT_MODE_HINT_STORAGE_KEY).then((stored) => {
+      if (stored === "dismissed") {
+        silentHintDismissedRef.current = true;
+      }
+    });
+  }, []);
+
   const handleReplayLastReply = useCallback(async () => {
     if (!lastAssistantReply || isReplaying) return;
     try {
@@ -276,20 +310,23 @@ export default function VoiceScreen() {
       if (result.didAutoPlayAudio) {
         setPlaybackFailureMessage(null);
         setSharedThreadStatus(`Replaying Ragna's reply with ${selectedVoiceMeta.label}.`);
+        maybeSuggestSilentMode(Boolean(result.usedSpeechFallback));
       } else {
         setPlaybackFailureMessage(
           result.autoPlayErrorMessage ??
             "Audio still couldn't play. Check silent mode, volume, or device audio settings.",
         );
+        maybeSuggestSilentMode(true);
       }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Ragna's reply could not be played.";
       setPlaybackFailureMessage(message);
+      maybeSuggestSilentMode(true);
     } finally {
       setIsReplaying(false);
     }
-  }, [isReplaying, lastAssistantReply, selectedVoice, selectedVoiceMeta.label]);
+  }, [isReplaying, lastAssistantReply, maybeSuggestSilentMode, selectedVoice, selectedVoiceMeta.label]);
 
   const handleToggleVoice = useCallback(async () => {
     if (isNativeVoiceMode) {
@@ -325,12 +362,14 @@ export default function VoiceScreen() {
         if (result.didAutoPlayAudio) {
           setPlaybackFailureMessage(null);
           setVoiceStatus("speaking");
+          maybeSuggestSilentMode(Boolean(result.usedSpeechFallback));
         } else {
           setPlaybackFailureMessage(
             result.autoPlayErrorMessage ??
               "Reply ready, but Ragna's voice couldn't play. Check silent mode or volume, then tap to play.",
           );
           setVoiceStatus("ready");
+          maybeSuggestSilentMode(true);
         }
         await persistVoiceExchange(result.assistantTranscript);
         if (result.didAutoPlayAudio) {
@@ -412,6 +451,7 @@ export default function VoiceScreen() {
     ensureSharedConversation,
     isNativeVoiceMode,
     isRecordingNative,
+    maybeSuggestSilentMode,
     persistVoiceExchange,
     selectedVoice,
     selectedVoiceMeta.label,
@@ -556,6 +596,26 @@ export default function VoiceScreen() {
           {sharedThreadStatus && (
             <View style={styles.sharedThreadBanner}>
               <Text style={styles.sharedThreadText}>{sharedThreadStatus}</Text>
+            </View>
+          )}
+
+          {silentHintVisible && Platform.OS === "ios" && (
+            <View style={styles.silentHintCard}>
+              <View style={styles.silentHintTextWrap}>
+                <Text style={styles.silentHintLabel}>Silent mode?</Text>
+                <Text style={styles.silentHintText}>{SILENT_MODE_HINT_TEXT}</Text>
+              </View>
+              <Pressable
+                onPress={handleDismissSilentHint}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss silent mode hint"
+                style={({ pressed }) => [
+                  styles.silentHintDismiss,
+                  pressed ? { opacity: 0.7 } : null,
+                ]}
+              >
+                <Text style={styles.silentHintDismissText}>Got it</Text>
+              </Pressable>
             </View>
           )}
 
@@ -829,6 +889,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontFamily: "Inter_400Regular",
+  },
+  silentHintCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,209,102,0.45)",
+    backgroundColor: "rgba(46,33,9,0.72)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  silentHintTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  silentHintLabel: {
+    color: "#FFD166",
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
+  },
+  silentHintText: {
+    color: "#FFE9B5",
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "Inter_500Medium",
+  },
+  silentHintDismiss: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,209,102,0.55)",
+  },
+  silentHintDismissText: {
+    color: "#FFD166",
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
   },
   playbackFailureCard: {
     borderRadius: 16,
