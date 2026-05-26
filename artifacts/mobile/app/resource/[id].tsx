@@ -15,7 +15,7 @@ import { JourneyBadge } from "@/components/ui/JourneyBadge";
 import { Colors } from "@/constants/colors";
 import { CATEGORY_META } from "@/constants/resourceCategories";
 import { useApp } from "@/context/AppContext";
-import { mockResources } from "@/data/mockResources";
+import { resources as mockResources } from "@/data/resources";
 
 export default function ResourceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
