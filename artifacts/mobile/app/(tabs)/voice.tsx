@@ -280,6 +280,11 @@ export default function VoiceScreen() {
     setSilentHintVisible(true);
   }, []);
 
+  const hideSilentHintOnCleanPlayback = useCallback(() => {
+    if (Platform.OS !== "ios") return;
+    setSilentHintVisible(false);
+  }, []);
+
   const handleDismissSilentHint = useCallback(() => {
     silentHintDismissedRef.current = true;
     setSilentHintVisible(false);
@@ -310,7 +315,11 @@ export default function VoiceScreen() {
       if (result.didAutoPlayAudio) {
         setPlaybackFailureMessage(null);
         setSharedThreadStatus(`Replaying Ragna's reply with ${selectedVoiceMeta.label}.`);
-        maybeSuggestSilentMode(Boolean(result.usedSpeechFallback));
+        if (result.usedSpeechFallback) {
+          maybeSuggestSilentMode(true);
+        } else {
+          hideSilentHintOnCleanPlayback();
+        }
       } else {
         setPlaybackFailureMessage(
           result.autoPlayErrorMessage ??
@@ -326,7 +335,7 @@ export default function VoiceScreen() {
     } finally {
       setIsReplaying(false);
     }
-  }, [isReplaying, lastAssistantReply, maybeSuggestSilentMode, selectedVoice, selectedVoiceMeta.label]);
+  }, [hideSilentHintOnCleanPlayback, isReplaying, lastAssistantReply, maybeSuggestSilentMode, selectedVoice, selectedVoiceMeta.label]);
 
   const handleToggleVoice = useCallback(async () => {
     if (isNativeVoiceMode) {
@@ -362,7 +371,11 @@ export default function VoiceScreen() {
         if (result.didAutoPlayAudio) {
           setPlaybackFailureMessage(null);
           setVoiceStatus("speaking");
-          maybeSuggestSilentMode(Boolean(result.usedSpeechFallback));
+          if (result.usedSpeechFallback) {
+            maybeSuggestSilentMode(true);
+          } else {
+            hideSilentHintOnCleanPlayback();
+          }
         } else {
           setPlaybackFailureMessage(
             result.autoPlayErrorMessage ??
@@ -449,6 +462,7 @@ export default function VoiceScreen() {
   }, [
     buildRagnaPatientContext,
     ensureSharedConversation,
+    hideSilentHintOnCleanPlayback,
     isNativeVoiceMode,
     isRecordingNative,
     maybeSuggestSilentMode,
