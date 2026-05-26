@@ -68,7 +68,8 @@ const withAndroidAutoMedia: ConfigPlugin = (config) => {
 
 const config: ExpoConfig = {
   name: "Hospice Roadmap",
-  slug: "mobile",
+  slug: "hospice-roadmap",
+  owner: "replit-private-c0344c06-b30a-4e7f-b327-c799858e3062",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/app-icon.png",
@@ -82,6 +83,8 @@ const config: ExpoConfig = {
   },
   ios: {
     supportsTablet: false,
+    bundleIdentifier: "app.replit.hospiceroadmap",
+    appleTeamId: "65C25YHCX9",
     infoPlist: {
       NSMicrophoneUsageDescription:
         "Hospice Roadmap uses your microphone so you can speak with Ragna.",
@@ -93,9 +96,13 @@ const config: ExpoConfig = {
       // "Now Playing" screen because expo-audio publishes MPNowPlayingInfo
       // whenever a player is registered for lock-screen control.
       UIBackgroundModes: ["audio"],
+      // Declare we use no non-exempt encryption (only standard HTTPS) so
+      // App Store Connect skips the annual encryption-export questionnaire.
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
   android: {
+    package: "app.replit.hospiceroadmap",
     permissions: ["android.permission.RECORD_AUDIO"],
   },
   web: {
@@ -122,6 +129,9 @@ const config: ExpoConfig = {
   extra: {
     apiUrl: explicitApiUrl || undefined,
     domain: devDomain || undefined,
+    eas: {
+      projectId: "ea50fe69-6016-4c8e-8675-1fce10926f64",
+    },
   },
 };
 
