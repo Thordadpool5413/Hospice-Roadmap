@@ -53,6 +53,12 @@ let activeSound: AudioPlayer | null = null;
 let activeSoundSubscription: { remove: () => void } | null = null;
 let fallbackSpeechText: string | null = null;
 let isUsingSpeechFallback = false;
+// Tracks how many characters of `fallbackSpeechText` have already been
+// spoken. Updated from `Speech.speak`'s `onBoundary` callback so that when
+// the device cannot natively resume (e.g. AirPods pause on iOS without
+// `Speech.resume`), we can re-speak only the remainder instead of starting
+// the reply over from the beginning.
+let spokenCharOffset = 0;
 let speechCarrierPlayer: AudioPlayer | null = null;
 let speechCarrierSubscription: { remove: () => void } | null = null;
 let silentCarrierUri: string | null = null;
@@ -329,8 +335,11 @@ async function startSpeechCarrier(): Promise<void> {
             emitPlaybackState({ isPlaying: true, isPaused: false });
           } else {
             // Older expo-speech builds lack pause/resume. Re-speak from the
-            // beginning so the caregiver still gets the reply.
-            startSpeechFallback(fallbackSpeechText).catch(() => {});
+            // last spoken word so the caregiver picks up where they left
+            // off, not from the start of the reply.
+            startSpeechFallback(fallbackSpeechText, {
+              startOffset: spokenCharOffset,
+            }).catch(() => {});
           }
         } else if (!status.playing && !playbackState.isPaused) {
           // Remote command said "pause" — mirror that on the speech engine.
@@ -382,12 +391,16 @@ function stopSpeechFallback(clearText = false): void {
   if (clearText) {
     fallbackSpeechText = null;
     currentReplySummary = undefined;
+    spokenCharOffset = 0;
   }
   void stopSpeechCarrier();
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
-async function startSpeechFallback(text: string): Promise<void> {
+async function startSpeechFallback(
+  text: string,
+  options: { startOffset?: number } = {},
+): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) {
     return;
@@ -401,26 +414,59 @@ async function startSpeechFallback(text: string): Promise<void> {
   currentReplySummary = summarizeReplyForLockScreen(trimmed);
   emitPlaybackState({ isPlaying: true, isPaused: false });
 
+  // Clamp the requested resume offset to the bounds of the reply. If we
+  // somehow get a stale or invalid offset, fall back to speaking the full
+  // text rather than dropping any of it.
+  const requestedOffset = Math.max(0, options.startOffset ?? 0);
+  const baseOffset =
+    requestedOffset >= trimmed.length ? 0 : requestedOffset;
+  const remainder = baseOffset > 0 ? trimmed.slice(baseOffset) : trimmed;
+  spokenCharOffset = baseOffset;
+
   // Start the silent carrier first so AirPods / Bluetooth / lock-screen /
   // CarPlay / Android Auto transport buttons have something registered to
   // talk to while expo-speech is reading the reply.
   await startSpeechCarrier();
   applyLockScreenSummary(currentReplySummary);
 
-  Speech.speak(trimmed, {
+  Speech.speak(remainder, {
     language: "en-US",
+    onBoundary: (event: { charIndex?: number; charLength?: number }) => {
+      // `charIndex` is relative to the string handed to Speech.speak, so
+      // translate it back to an absolute offset within fallbackSpeechText.
+      // Some platforms omit `charLength`; treating it as 0 still moves the
+      // offset forward word-by-word as boundaries fire.
+      const charIndex =
+        typeof event?.charIndex === "number" && event.charIndex >= 0
+          ? event.charIndex
+          : 0;
+      const charLength =
+        typeof event?.charLength === "number" && event.charLength > 0
+          ? event.charLength
+          : 0;
+      const next = baseOffset + charIndex + charLength;
+      if (next > spokenCharOffset && next <= trimmed.length) {
+        spokenCharOffset = next;
+      }
+    },
     onDone: () => {
       isUsingSpeechFallback = false;
+      spokenCharOffset = 0;
       void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
     onStopped: () => {
+      // Intentionally preserve `spokenCharOffset` here — `Speech.stop` is
+      // also what we call to pause on devices without native pause/resume,
+      // and we need the offset to be available so the next resume picks up
+      // from where the caregiver left off.
       isUsingSpeechFallback = false;
       void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
     onError: () => {
       isUsingSpeechFallback = false;
+      spokenCharOffset = 0;
       void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
@@ -699,10 +745,14 @@ export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
       emitPlaybackState({ isPlaying: true, isPaused: true });
       return;
     }
+    // Older expo-speech builds have no `pause`. Stop the engine but keep
+    // `fallbackSpeechText` and `spokenCharOffset` intact so the caregiver
+    // can resume from where they left off; report a paused (not stopped)
+    // state so the UI surfaces a resume affordance.
     controls.stop?.();
     isUsingSpeechFallback = false;
     void stopSpeechCarrier();
-    emitPlaybackState({ isPlaying: false, isPaused: false });
+    emitPlaybackState({ isPlaying: true, isPaused: true });
   }
 }
 
@@ -721,7 +771,12 @@ export async function resumeNativeOpenAiVoicePlayback(): Promise<void> {
       emitPlaybackState({ isPlaying: true, isPaused: false });
       return;
     }
-    await startSpeechFallback(fallbackSpeechText);
+    // No native resume — re-speak from the last word boundary we saw via
+    // onBoundary so the caregiver picks up mid-reply instead of from the
+    // start. `startSpeechFallback` clamps a stale/invalid offset back to 0.
+    await startSpeechFallback(fallbackSpeechText, {
+      startOffset: spokenCharOffset,
+    });
   }
 }
 
