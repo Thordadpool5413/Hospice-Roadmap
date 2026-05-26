@@ -23,6 +23,7 @@ import {
 } from "@/services/aiService";
 import {
   isNativeOpenAiVoiceSupported,
+  speakNativeOpenAiVoiceText,
   startNativeOpenAiVoiceRecording,
   stopNativeOpenAiVoice,
   stopNativeOpenAiVoiceRecordingAndSend,
@@ -91,6 +92,9 @@ export default function VoiceScreen() {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const [sharedThreadStatus, setSharedThreadStatus] = useState<string | null>(null);
+  const [playbackFailureMessage, setPlaybackFailureMessage] = useState<string | null>(null);
+  const [lastAssistantReply, setLastAssistantReply] = useState<string | null>(null);
+  const [isReplaying, setIsReplaying] = useState(false);
   const voiceSessionRef = useRef<OpenAiVoiceSession | null>(null);
   const conversationIdRef = useRef<number | null>(null);
   const pendingUserTranscriptRef = useRef<string | null>(null);
@@ -260,6 +264,33 @@ export default function VoiceScreen() {
     }
   }, [isNativeVoiceMode, isRecordingNative, previewingVoiceId]);
 
+  const handleReplayLastReply = useCallback(async () => {
+    if (!lastAssistantReply || isReplaying) return;
+    try {
+      setIsReplaying(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const result = await speakNativeOpenAiVoiceText({
+        text: lastAssistantReply,
+        voice: selectedVoice,
+      });
+      if (result.didAutoPlayAudio) {
+        setPlaybackFailureMessage(null);
+        setSharedThreadStatus(`Replaying Ragna's reply with ${selectedVoiceMeta.label}.`);
+      } else {
+        setPlaybackFailureMessage(
+          result.autoPlayErrorMessage ??
+            "Audio still couldn't play. Check silent mode, volume, or device audio settings.",
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Ragna's reply could not be played.";
+      setPlaybackFailureMessage(message);
+    } finally {
+      setIsReplaying(false);
+    }
+  }, [isReplaying, lastAssistantReply, selectedVoice, selectedVoiceMeta.label]);
+
   const handleToggleVoice = useCallback(async () => {
     if (isNativeVoiceMode) {
       try {
@@ -273,6 +304,8 @@ export default function VoiceScreen() {
 
         if (!isRecordingNative) {
           setVoiceTranscript(null);
+          setPlaybackFailureMessage(null);
+          setLastAssistantReply(null);
           setSharedThreadStatus(`Recording with ${selectedVoiceMeta.label}. Tap again when you are done speaking.`);
           setVoiceStatus("requesting-mic");
           await startNativeOpenAiVoiceRecording();
@@ -288,10 +321,26 @@ export default function VoiceScreen() {
         });
         pendingUserTranscriptRef.current = result.userTranscript;
         setVoiceTranscript(`Ragna: ${result.assistantTranscript}`);
-        setVoiceStatus("speaking");
+        setLastAssistantReply(result.assistantTranscript);
+        if (result.didAutoPlayAudio) {
+          setPlaybackFailureMessage(null);
+          setVoiceStatus("speaking");
+        } else {
+          setPlaybackFailureMessage(
+            result.autoPlayErrorMessage ??
+              "Reply ready, but Ragna's voice couldn't play. Check silent mode or volume, then tap to play.",
+          );
+          setVoiceStatus("ready");
+        }
         await persistVoiceExchange(result.assistantTranscript);
-        setVoiceStatus("ready");
-        setSharedThreadStatus(`Ragna replied with ${selectedVoiceMeta.label}. Tap again to record another question.`);
+        if (result.didAutoPlayAudio) {
+          setVoiceStatus("ready");
+        }
+        setSharedThreadStatus(
+          result.didAutoPlayAudio
+            ? `Ragna replied with ${selectedVoiceMeta.label}. Tap again to record another question.`
+            : `Reply from Ragna is ready, but audio playback didn't start. Tap "Play reply" to try again.`,
+        );
         return;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Native voice chat could not start.";
@@ -535,6 +584,30 @@ export default function VoiceScreen() {
             </Text>
           )}
 
+          {playbackFailureMessage && (
+            <View style={styles.playbackFailureCard}>
+              <Text style={styles.playbackFailureLabel}>Audio didn't play</Text>
+              <Text style={styles.playbackFailureText}>{playbackFailureMessage}</Text>
+              {lastAssistantReply && (
+                <Pressable
+                  onPress={() => {
+                    void handleReplayLastReply();
+                  }}
+                  disabled={isReplaying}
+                  style={({ pressed }) => [
+                    styles.replayButton,
+                    isReplaying ? styles.replayButtonDisabled : null,
+                    pressed && !isReplaying ? { opacity: 0.9 } : null,
+                  ]}
+                >
+                  <Text style={styles.replayButtonLabel}>
+                    {isReplaying ? "Playing…" : "Tap to play reply"}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
           {voiceTranscript && (
             <View style={styles.transcriptCard}>
               <Text style={styles.transcriptLabel}>Latest transcript</Text>
@@ -756,6 +829,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontFamily: "Inter_400Regular",
+  },
+  playbackFailureCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,176,84,0.45)",
+    backgroundColor: "rgba(58,32,8,0.72)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  playbackFailureLabel: {
+    color: "#FFB054",
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
+  },
+  playbackFailureText: {
+    color: "#FFE3C2",
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: "Inter_500Medium",
+  },
+  replayButton: {
+    marginTop: 4,
+    minHeight: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,176,84,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  replayButtonDisabled: {
+    opacity: 0.6,
+  },
+  replayButtonLabel: {
+    color: "#1A0F00",
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
   },
   transcriptCard: {
     borderRadius: 16,
