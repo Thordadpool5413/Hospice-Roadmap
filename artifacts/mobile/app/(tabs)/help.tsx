@@ -57,6 +57,10 @@ import {
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
+import {
+  getHideReplyPreview,
+  setHideReplyPreview,
+} from "@/services/ragnaPreviewPreference";
 import { setPreferredVoice } from "@/services/voicePreferences";
 import { VeraEmotionalTone } from "@/types";
 
@@ -350,6 +354,7 @@ export default function HelpScreen() {
   const [replyPreviewText, setReplyPreviewText] = useState<string | undefined>(
     undefined,
   );
+  const [hideReplyPreview, setHideReplyPreviewState] = useState(false);
 
   const todayEntry = useMemo(
     () => getTodayEntry(),
@@ -1121,6 +1126,60 @@ export default function HelpScreen() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const stored = await getHideReplyPreview();
+      if (!cancelled) {
+        setHideReplyPreviewState(stored);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void (async () => {
+        const stored = await getHideReplyPreview();
+        if (!cancelled) {
+          setHideReplyPreviewState(stored);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  const handleToggleHideReplyPreview = useCallback(
+    async (hidden: boolean) => {
+      setHideReplyPreviewState(hidden);
+      await setHideReplyPreview(hidden);
+    },
+    [],
+  );
+
+  const handleReplyPreviewLongPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "Hide live reply preview?",
+      "Ragna's in-progress reply will stop appearing above the message box. You can turn it back on from Ragna privacy settings. Voice playback is not affected.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Hide preview",
+          style: "destructive",
+          onPress: () => {
+            void handleToggleHideReplyPreview(true);
+          },
+        },
+      ],
+    );
+  }, [handleToggleHideReplyPreview]);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active") {
         stopLiveSpeechPreview(true);
@@ -1238,7 +1297,9 @@ export default function HelpScreen() {
         }}
         isPlaybackActive={effectivePlaybackActive}
         isPlaybackPaused={effectivePlaybackPaused}
-        replyPreviewText={replyPreviewText}
+        replyPreviewText={
+          hideReplyPreview && isStreaming ? undefined : replyPreviewText
+        }
         onPlaybackToggle={() => {
           void handlePlaybackToggle();
         }}
@@ -1251,6 +1312,7 @@ export default function HelpScreen() {
             ? () => scrollToBottom(0)
             : undefined
         }
+        onReplyPreviewLongPress={handleReplyPreviewLongPress}
       />
     </KeyboardAvoidingView>
   );

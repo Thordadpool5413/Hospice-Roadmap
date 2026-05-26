@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Platform,
@@ -19,6 +19,10 @@ import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
+import {
+  getHideReplyPreview,
+  setHideReplyPreview,
+} from "@/services/ragnaPreviewPreference";
 import { RagnaPrivacySettings } from "@/types";
 
 export default function RagnaPrivacyScreen() {
@@ -33,6 +37,26 @@ export default function RagnaPrivacyScreen() {
   const toggleMaster = (val: boolean) => updateRagnaPrivacy({ personalizationEnabled: val });
   const toggle = (key: keyof RagnaPrivacySettings) => (val: boolean) =>
     updateRagnaPrivacy({ [key]: val });
+
+  const [hideReplyPreview, setHideReplyPreviewState] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const stored = await getHideReplyPreview();
+      if (!cancelled) {
+        setHideReplyPreviewState(stored);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleHideReplyPreview = (val: boolean) => {
+    setHideReplyPreviewState(val);
+    void setHideReplyPreview(val);
+  };
 
   const handleClearMemory = () => {
     Alert.alert(
@@ -213,6 +237,19 @@ export default function RagnaPrivacyScreen() {
             value={ragnaPrivacy.includeTimeContext}
             onChange={toggle("includeTimeContext")}
             disabled={!masterOn}
+          />
+        </View>
+      </View>
+
+      {/* Display preferences */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Display</Text>
+        <View style={styles.sectionList}>
+          <SwitchRow
+            label="Hide live reply preview"
+            sublabel="Stops Ragna's in-progress reply from appearing above the message box. Helpful during sensitive conversations near the patient. Voice playback is not affected."
+            value={hideReplyPreview}
+            onChange={toggleHideReplyPreview}
           />
         </View>
       </View>

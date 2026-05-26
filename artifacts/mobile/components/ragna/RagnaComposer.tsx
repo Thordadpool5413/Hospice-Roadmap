@@ -41,6 +41,7 @@ interface RagnaComposerProps {
   onPlaybackToggle?: () => void;
   onPlaybackStop?: () => void;
   onReplyPreviewPress?: () => void;
+  onReplyPreviewLongPress?: () => void;
 }
 
 export function RagnaComposer({
@@ -66,6 +67,7 @@ export function RagnaComposer({
   onPlaybackToggle,
   onPlaybackStop,
   onReplyPreviewPress,
+  onReplyPreviewLongPress,
 }: RagnaComposerProps) {
   const voiceDisabled = !isOnline || isStreaming || isVoiceBusy;
   const showVoiceOptions =
@@ -146,12 +148,23 @@ export function RagnaComposer({
         </ScrollView>
       ) : null}
       {(showPlaybackControls || isStreaming) && replyPreviewText ? (
-        onReplyPreviewPress ? (
+        onReplyPreviewPress || onReplyPreviewLongPress ? (
           <Pressable
             onPress={onReplyPreviewPress}
+            onLongPress={onReplyPreviewLongPress}
             accessibilityRole="button"
-            accessibilityLabel="Jump to Ragna's latest reply"
-            accessibilityHint="Scrolls the chat to the live reply"
+            accessibilityLabel={
+              onReplyPreviewPress
+                ? "Jump to Ragna's latest reply"
+                : "Ragna's live reply preview"
+            }
+            accessibilityHint={
+              onReplyPreviewPress && onReplyPreviewLongPress
+                ? "Tap to scroll to the live reply. Long press to hide the preview."
+                : onReplyPreviewPress
+                  ? "Scrolls the chat to the live reply"
+                  : "Long press to hide the preview"
+            }
             style={({ pressed }) => [
               styles.replyPreview,
               pressed && styles.replyPreviewPressed,
@@ -165,11 +178,13 @@ export function RagnaComposer({
             <Text style={styles.replyPreviewText} numberOfLines={2}>
               {replyPreviewText}
             </Text>
-            <Feather
-              name="chevron-down"
-              size={14}
-              color={Colors.primaryLight}
-            />
+            {onReplyPreviewPress ? (
+              <Feather
+                name="chevron-down"
+                size={14}
+                color={Colors.primaryLight}
+              />
+            ) : null}
           </Pressable>
         ) : (
           <View style={styles.replyPreview}>
