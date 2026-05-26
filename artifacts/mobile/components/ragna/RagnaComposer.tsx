@@ -37,8 +37,11 @@ interface RagnaComposerProps {
   onVoiceOptionSelect?: (voiceId: string) => void;
   isPlaybackActive?: boolean;
   isPlaybackPaused?: boolean;
+  replyPreviewText?: string;
   onPlaybackToggle?: () => void;
   onPlaybackStop?: () => void;
+  onReplyPreviewPress?: () => void;
+  onReplyPreviewLongPress?: () => void;
 }
 
 export function RagnaComposer({
@@ -60,8 +63,11 @@ export function RagnaComposer({
   onVoiceOptionSelect,
   isPlaybackActive = false,
   isPlaybackPaused = false,
+  replyPreviewText,
   onPlaybackToggle,
   onPlaybackStop,
+  onReplyPreviewPress,
+  onReplyPreviewLongPress,
 }: RagnaComposerProps) {
   const voiceDisabled = !isOnline || isStreaming || isVoiceBusy;
   const showVoiceOptions =
@@ -140,6 +146,58 @@ export function RagnaComposer({
             );
           })}
         </ScrollView>
+      ) : null}
+      {(showPlaybackControls || isStreaming) && replyPreviewText ? (
+        onReplyPreviewPress || onReplyPreviewLongPress ? (
+          <Pressable
+            onPress={onReplyPreviewPress}
+            onLongPress={onReplyPreviewLongPress}
+            accessibilityRole="button"
+            accessibilityLabel={
+              onReplyPreviewPress
+                ? "Jump to Ragna's latest reply"
+                : "Ragna's live reply preview"
+            }
+            accessibilityHint={
+              onReplyPreviewPress && onReplyPreviewLongPress
+                ? "Tap to scroll to the live reply. Long press to hide the preview."
+                : onReplyPreviewPress
+                  ? "Scrolls the chat to the live reply"
+                  : "Long press to hide the preview"
+            }
+            style={({ pressed }) => [
+              styles.replyPreview,
+              pressed && styles.replyPreviewPressed,
+            ]}
+          >
+            <Feather
+              name="message-circle"
+              size={13}
+              color={Colors.primaryLight}
+            />
+            <Text style={styles.replyPreviewText} numberOfLines={2}>
+              {replyPreviewText}
+            </Text>
+            {onReplyPreviewPress ? (
+              <Feather
+                name="chevron-down"
+                size={14}
+                color={Colors.primaryLight}
+              />
+            ) : null}
+          </Pressable>
+        ) : (
+          <View style={styles.replyPreview}>
+            <Feather
+              name="message-circle"
+              size={13}
+              color={Colors.primaryLight}
+            />
+            <Text style={styles.replyPreviewText} numberOfLines={2}>
+              {replyPreviewText}
+            </Text>
+          </View>
+        )
       ) : null}
       {showPlaybackControls ? (
         <View style={styles.playbackRow}>
@@ -307,6 +365,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 2,
+  },
+  replyPreview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "rgba(60,120,255,0.08)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(73,118,255,0.18)",
+  },
+  replyPreviewPressed: {
+    backgroundColor: "rgba(60,120,255,0.16)",
+    borderColor: "rgba(73,118,255,0.32)",
+  },
+  replyPreviewText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primaryLight,
   },
   playbackButton: {
     flexDirection: "row",

@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/services/aiService";
 import {
   isNativeOpenAiVoiceSupported,
+  speakNativeOpenAiVoiceText,
   startNativeOpenAiVoiceRecording,
   stopNativeOpenAiVoice,
   stopNativeOpenAiVoiceRecordingAndSend,
@@ -35,6 +37,7 @@ import {
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
+import { probeIosSilentSwitch } from "../../modules/silent-switch";
 import {
   isOpenAiVoiceSupported,
   OpenAiVoiceSession,
@@ -68,6 +71,12 @@ const VOICE_OPTIONS = [
 const VOICE_PREVIEW_TEXT =
   "Hi, I’m Ragna. I’m here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
 
+const SILENT_MODE_HINT_STORAGE_KEY = "@ragna_silent_mode_hint_v1";
+const SILENT_MODE_HINT_TEXT =
+  "Your phone may be on silent — flip the side switch up so you can hear Ragna's voice.";
+
+type SilentHintStorageValue = "dismissed";
+
 type VoiceOptionId = (typeof VOICE_OPTIONS)[number]["id"];
 
 const STARTER_PROMPTS = [
@@ -91,6 +100,11 @@ export default function VoiceScreen() {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
   const [sharedThreadStatus, setSharedThreadStatus] = useState<string | null>(null);
+  const [playbackFailureMessage, setPlaybackFailureMessage] = useState<string | null>(null);
+  const [lastAssistantReply, setLastAssistantReply] = useState<string | null>(null);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [silentHintVisible, setSilentHintVisible] = useState(false);
+  const silentHintDismissedRef = useRef(false);
   const voiceSessionRef = useRef<OpenAiVoiceSession | null>(null);
   const conversationIdRef = useRef<number | null>(null);
   const pendingUserTranscriptRef = useRef<string | null>(null);
@@ -260,6 +274,90 @@ export default function VoiceScreen() {
     }
   }, [isNativeVoiceMode, isRecordingNative, previewingVoiceId]);
 
+  const maybeSuggestSilentMode = useCallback((trigger: boolean) => {
+    if (!trigger) return;
+    if (Platform.OS !== "ios") return;
+    if (silentHintDismissedRef.current) return;
+    setSilentHintVisible(true);
+  }, []);
+
+  const hideSilentHintOnCleanPlayback = useCallback(() => {
+    if (Platform.OS !== "ios") return;
+    setSilentHintVisible(false);
+  }, []);
+
+  // Ask the native probe whether the iOS silent switch is on right now and
+  // sync the hint banner accordingly. Unlike `maybeSuggestSilentMode`, this
+  // can both show *and* hide the banner based on the real device state so
+  // caregivers get a proactive warning before they record, instead of only
+  // after the first failed playback.
+  const checkIosSilentSwitch = useCallback(async () => {
+    if (Platform.OS !== "ios") return;
+    const muted = await probeIosSilentSwitch();
+    if (muted === null) return; // probe unavailable — keep existing inferred hint
+    if (muted) {
+      if (silentHintDismissedRef.current) return;
+      setSilentHintVisible(true);
+    } else {
+      setSilentHintVisible(false);
+    }
+  }, []);
+
+  const handleDismissSilentHint = useCallback(() => {
+    silentHintDismissedRef.current = true;
+    setSilentHintVisible(false);
+    void AsyncStorage.setItem(
+      SILENT_MODE_HINT_STORAGE_KEY,
+      "dismissed" satisfies SilentHintStorageValue,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    void AsyncStorage.getItem(SILENT_MODE_HINT_STORAGE_KEY).then((stored) => {
+      if (stored === "dismissed") {
+        silentHintDismissedRef.current = true;
+      }
+      // Run the proactive probe after we know whether the user already
+      // dismissed the hint so a previous "Got it" still suppresses it.
+      void checkIosSilentSwitch();
+    });
+  }, [checkIosSilentSwitch]);
+
+  const handleReplayLastReply = useCallback(async () => {
+    if (!lastAssistantReply || isReplaying) return;
+    try {
+      setIsReplaying(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const result = await speakNativeOpenAiVoiceText({
+        text: lastAssistantReply,
+        voice: selectedVoice,
+      });
+      if (result.didAutoPlayAudio) {
+        setPlaybackFailureMessage(null);
+        setSharedThreadStatus(`Replaying Ragna's reply with ${selectedVoiceMeta.label}.`);
+        if (result.usedSpeechFallback) {
+          maybeSuggestSilentMode(true);
+        } else {
+          hideSilentHintOnCleanPlayback();
+        }
+      } else {
+        setPlaybackFailureMessage(
+          result.autoPlayErrorMessage ??
+            "Audio still couldn't play. Check silent mode, volume, or device audio settings.",
+        );
+        maybeSuggestSilentMode(true);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Ragna's reply could not be played.";
+      setPlaybackFailureMessage(message);
+      maybeSuggestSilentMode(true);
+    } finally {
+      setIsReplaying(false);
+    }
+  }, [hideSilentHintOnCleanPlayback, isReplaying, lastAssistantReply, maybeSuggestSilentMode, selectedVoice, selectedVoiceMeta.label]);
+
   const handleToggleVoice = useCallback(async () => {
     if (isNativeVoiceMode) {
       try {
@@ -273,6 +371,11 @@ export default function VoiceScreen() {
 
         if (!isRecordingNative) {
           setVoiceTranscript(null);
+          setPlaybackFailureMessage(null);
+          setLastAssistantReply(null);
+          // Probe the iOS silent switch *before* recording so the warning
+          // fires up front, not after the first failed playback.
+          void checkIosSilentSwitch();
           setSharedThreadStatus(`Recording with ${selectedVoiceMeta.label}. Tap again when you are done speaking.`);
           setVoiceStatus("requesting-mic");
           await startNativeOpenAiVoiceRecording();
@@ -288,10 +391,32 @@ export default function VoiceScreen() {
         });
         pendingUserTranscriptRef.current = result.userTranscript;
         setVoiceTranscript(`Ragna: ${result.assistantTranscript}`);
-        setVoiceStatus("speaking");
+        setLastAssistantReply(result.assistantTranscript);
+        if (result.didAutoPlayAudio) {
+          setPlaybackFailureMessage(null);
+          setVoiceStatus("speaking");
+          if (result.usedSpeechFallback) {
+            maybeSuggestSilentMode(true);
+          } else {
+            hideSilentHintOnCleanPlayback();
+          }
+        } else {
+          setPlaybackFailureMessage(
+            result.autoPlayErrorMessage ??
+              "Reply ready, but Ragna's voice couldn't play. Check silent mode or volume, then tap to play.",
+          );
+          setVoiceStatus("ready");
+          maybeSuggestSilentMode(true);
+        }
         await persistVoiceExchange(result.assistantTranscript);
-        setVoiceStatus("ready");
-        setSharedThreadStatus(`Ragna replied with ${selectedVoiceMeta.label}. Tap again to record another question.`);
+        if (result.didAutoPlayAudio) {
+          setVoiceStatus("ready");
+        }
+        setSharedThreadStatus(
+          result.didAutoPlayAudio
+            ? `Ragna replied with ${selectedVoiceMeta.label}. Tap again to record another question.`
+            : `Reply from Ragna is ready, but audio playback didn't start. Tap "Play reply" to try again.`,
+        );
         return;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Native voice chat could not start.";
@@ -360,9 +485,12 @@ export default function VoiceScreen() {
     }
   }, [
     buildRagnaPatientContext,
+    checkIosSilentSwitch,
     ensureSharedConversation,
+    hideSilentHintOnCleanPlayback,
     isNativeVoiceMode,
     isRecordingNative,
+    maybeSuggestSilentMode,
     persistVoiceExchange,
     selectedVoice,
     selectedVoiceMeta.label,
@@ -510,6 +638,26 @@ export default function VoiceScreen() {
             </View>
           )}
 
+          {silentHintVisible && Platform.OS === "ios" && (
+            <View style={styles.silentHintCard}>
+              <View style={styles.silentHintTextWrap}>
+                <Text style={styles.silentHintLabel}>Silent mode?</Text>
+                <Text style={styles.silentHintText}>{SILENT_MODE_HINT_TEXT}</Text>
+              </View>
+              <Pressable
+                onPress={handleDismissSilentHint}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss silent mode hint"
+                style={({ pressed }) => [
+                  styles.silentHintDismiss,
+                  pressed ? { opacity: 0.7 } : null,
+                ]}
+              >
+                <Text style={styles.silentHintDismissText}>Got it</Text>
+              </Pressable>
+            </View>
+          )}
+
           <Pressable
             onPress={() => {
               void handleToggleVoice();
@@ -533,6 +681,30 @@ export default function VoiceScreen() {
             <Text style={styles.supportNote}>
               The App Store path uses native recording and playback. Choose a voice, record your question, and Ragna will answer out loud.
             </Text>
+          )}
+
+          {playbackFailureMessage && (
+            <View style={styles.playbackFailureCard}>
+              <Text style={styles.playbackFailureLabel}>Audio didn't play</Text>
+              <Text style={styles.playbackFailureText}>{playbackFailureMessage}</Text>
+              {lastAssistantReply && (
+                <Pressable
+                  onPress={() => {
+                    void handleReplayLastReply();
+                  }}
+                  disabled={isReplaying}
+                  style={({ pressed }) => [
+                    styles.replayButton,
+                    isReplaying ? styles.replayButtonDisabled : null,
+                    pressed && !isReplaying ? { opacity: 0.9 } : null,
+                  ]}
+                >
+                  <Text style={styles.replayButtonLabel}>
+                    {isReplaying ? "Playing…" : "Tap to play reply"}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
           )}
 
           {voiceTranscript && (
@@ -756,6 +928,83 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontFamily: "Inter_400Regular",
+  },
+  silentHintCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,209,102,0.45)",
+    backgroundColor: "rgba(46,33,9,0.72)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  silentHintTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  silentHintLabel: {
+    color: "#FFD166",
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
+  },
+  silentHintText: {
+    color: "#FFE9B5",
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "Inter_500Medium",
+  },
+  silentHintDismiss: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,209,102,0.55)",
+  },
+  silentHintDismissText: {
+    color: "#FFD166",
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+  },
+  playbackFailureCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,176,84,0.45)",
+    backgroundColor: "rgba(58,32,8,0.72)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  playbackFailureLabel: {
+    color: "#FFB054",
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
+  },
+  playbackFailureText: {
+    color: "#FFE3C2",
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: "Inter_500Medium",
+  },
+  replayButton: {
+    marginTop: 4,
+    minHeight: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,176,84,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  replayButtonDisabled: {
+    opacity: 0.6,
+  },
+  replayButtonLabel: {
+    color: "#1A0F00",
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
   },
   transcriptCard: {
     borderRadius: 16,

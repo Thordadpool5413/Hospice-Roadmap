@@ -1,8 +1,16 @@
-import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
+import {
+  AudioModule,
+  RecordingPresets,
+  createAudioPlayer,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioStatus,
+} from "expo-audio";
 import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Speech from "expo-speech";
-import { Platform } from "react-native";
+import { Image, Platform } from "react-native";
 
 import { apiBase, mergeJsonHeaders } from "./apiClient";
 import { getClientId } from "./clientIdentity";
@@ -16,6 +24,7 @@ export interface NativeOpenAiVoiceTurnResult {
   assistantTranscript: string;
   didAutoPlayAudio: boolean;
   autoPlayErrorMessage?: string;
+  usedSpeechFallback?: boolean;
 }
 
 interface StopNativeOpenAiVoiceRecordingAndSendOptions {
@@ -37,10 +46,23 @@ export interface NativeOpenAiVoicePlaybackState {
   isPaused: boolean;
 }
 
-let activeRecording: Audio.Recording | null = null;
-let activeSound: Audio.Sound | null = null;
+type ActiveRecorder = InstanceType<typeof AudioModule.AudioRecorder>;
+
+let activeRecording: ActiveRecorder | null = null;
+let activeSound: AudioPlayer | null = null;
+let activeSoundSubscription: { remove: () => void } | null = null;
 let fallbackSpeechText: string | null = null;
 let isUsingSpeechFallback = false;
+// Tracks how many characters of `fallbackSpeechText` have already been
+// spoken. Updated from `Speech.speak`'s `onBoundary` callback so that when
+// the device cannot natively resume (e.g. AirPods pause on iOS without
+// `Speech.resume`), we can re-speak only the remainder instead of starting
+// the reply over from the beginning.
+let spokenCharOffset = 0;
+let speechCarrierPlayer: AudioPlayer | null = null;
+let speechCarrierSubscription: { remove: () => void } | null = null;
+let silentCarrierUri: string | null = null;
+let suppressSpeechCarrierBridge = false;
 let playbackState: NativeOpenAiVoicePlaybackState = {
   isPlaying: false,
   isPaused: false,
@@ -74,27 +96,309 @@ function getSpeechControls(): {
 }
 
 async function configureRecordingMode(): Promise<void> {
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: true,
-    playsInSilentModeIOS: true,
-    interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-    interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-    shouldDuckAndroid: true,
-    playThroughEarpieceAndroid: false,
-    staysActiveInBackground: false,
+  await setAudioModeAsync({
+    allowsRecording: true,
+    playsInSilentMode: true,
+    interruptionMode: "doNotMix",
+    shouldPlayInBackground: false,
   });
 }
 
 async function configurePlaybackMode(): Promise<void> {
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: false,
-    playsInSilentModeIOS: true,
-    interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-    interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-    shouldDuckAndroid: true,
-    playThroughEarpieceAndroid: false,
-    staysActiveInBackground: false,
+  await setAudioModeAsync({
+    allowsRecording: false,
+    playsInSilentMode: true,
+    interruptionMode: "doNotMix",
+    shouldPlayInBackground: true,
   });
+}
+
+interface LockScreenMetadata {
+  title: string;
+  artist: string;
+  albumTitle?: string;
+  artworkUrl?: string;
+}
+
+const LOCK_SCREEN_DEFAULTS = {
+  title: "Ragna",
+  artist: "Hospice Roadmap",
+} as const;
+
+let ragnaArtworkUrl: string | undefined;
+function getRagnaArtworkUrl(): string | undefined {
+  if (ragnaArtworkUrl !== undefined) return ragnaArtworkUrl || undefined;
+  try {
+    const resolved = Image.resolveAssetSource(
+      require("../assets/images/ragna-lockscreen.png"),
+    );
+    ragnaArtworkUrl = resolved?.uri ?? "";
+    return ragnaArtworkUrl || undefined;
+  } catch (err) {
+    console.warn("[voice] resolve ragna artwork failed", err);
+    ragnaArtworkUrl = "";
+    return undefined;
+  }
+}
+
+// Strip markdown noise then take the first sentence (or a hard-trimmed
+// prefix) so the lock-screen subtitle stays glanceable.
+function summarizeReplyForLockScreen(text: string | null | undefined): string | undefined {
+  if (!text) return undefined;
+  const cleaned = text
+    .replace(/[#*_`>~]+/g, "")
+    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return undefined;
+  const sentenceMatch = cleaned.match(/^(.+?[.!?])(\s|$)/);
+  let summary = sentenceMatch ? sentenceMatch[1] : cleaned;
+  const MAX = 120;
+  if (summary.length > MAX) {
+    summary = summary.slice(0, MAX - 1).trimEnd() + "…";
+  }
+  return summary;
+}
+
+let currentReplySummary: string | undefined;
+const replySummaryListeners = new Set<(summary: string | undefined) => void>();
+
+function setCurrentReplySummary(summary: string | undefined): void {
+  if (summary === currentReplySummary) return;
+  currentReplySummary = summary;
+  replySummaryListeners.forEach((listener) => listener(summary));
+}
+
+export function subscribeNativeOpenAiVoiceReplySummary(
+  listener: (summary: string | undefined) => void,
+): () => void {
+  replySummaryListeners.add(listener);
+  listener(currentReplySummary);
+  return () => {
+    replySummaryListeners.delete(listener);
+  };
+}
+
+function buildLockScreenMetadata(summary?: string): LockScreenMetadata {
+  const artworkUrl = getRagnaArtworkUrl();
+  const trimmed = summary?.trim();
+  const meta: LockScreenMetadata = {
+    title: trimmed && trimmed.length > 0 ? trimmed : LOCK_SCREEN_DEFAULTS.title,
+    artist: LOCK_SCREEN_DEFAULTS.artist,
+  };
+  if (trimmed && trimmed.length > 0) {
+    meta.albumTitle = LOCK_SCREEN_DEFAULTS.title;
+  }
+  if (artworkUrl) {
+    meta.artworkUrl = artworkUrl;
+  }
+  return meta;
+}
+
+function activateLockScreenControls(player: AudioPlayer): void {
+  try {
+    player.setActiveForLockScreen(
+      true,
+      buildLockScreenMetadata(currentReplySummary),
+      {
+        showSeekForward: false,
+        showSeekBackward: false,
+      },
+    );
+  } catch (err) {
+    console.warn("[voice] setActiveForLockScreen failed", err);
+  }
+}
+
+function getActiveLockScreenPlayer(): AudioPlayer | null {
+  return activeSound ?? speechCarrierPlayer ?? null;
+}
+
+function applyLockScreenSummary(summary: string | undefined): void {
+  setCurrentReplySummary(summary);
+  const player = getActiveLockScreenPlayer();
+  if (!player) return;
+  try {
+    player.updateLockScreenMetadata(buildLockScreenMetadata(summary));
+  } catch (err) {
+    console.warn("[voice] updateLockScreenMetadata failed", err);
+  }
+}
+
+function deactivateLockScreenControls(player: AudioPlayer): void {
+  try {
+    player.clearLockScreenControls();
+  } catch (err) {
+    console.warn("[voice] clearLockScreenControls failed", err);
+  }
+}
+
+// A tiny silent WAV used as a "carrier" audio track so the lock-screen,
+// CarPlay, and Android Auto media session stay attached to a real
+// AudioPlayer while we are speaking through expo-speech as a fallback.
+// Expo-audio's native MediaController wires MPRemoteCommandCenter (iOS) and
+// MediaSession (Android) directly to whichever AudioPlayer is currently
+// active for lock screen, so giving the fallback path its own carrier lets
+// AirPods / Bluetooth / car head-units drive it the same way they drive the
+// real audio path.
+function buildSilentWavBase64(seconds: number): string {
+  const sampleRate = 8000;
+  const numSamples = Math.max(1, Math.floor(sampleRate * seconds));
+  const bytesPerSample = 2;
+  const dataSize = numSamples * bytesPerSample;
+  const totalSize = 44 + dataSize;
+
+  const buf = new Uint8Array(totalSize);
+  const dv = new DataView(buf.buffer);
+  // "RIFF"
+  buf[0] = 0x52; buf[1] = 0x49; buf[2] = 0x46; buf[3] = 0x46;
+  dv.setUint32(4, totalSize - 8, true);
+  // "WAVE"
+  buf[8] = 0x57; buf[9] = 0x41; buf[10] = 0x56; buf[11] = 0x45;
+  // "fmt "
+  buf[12] = 0x66; buf[13] = 0x6d; buf[14] = 0x74; buf[15] = 0x20;
+  dv.setUint32(16, 16, true);
+  dv.setUint16(20, 1, true); // PCM
+  dv.setUint16(22, 1, true); // mono
+  dv.setUint32(24, sampleRate, true);
+  dv.setUint32(28, sampleRate * bytesPerSample, true);
+  dv.setUint16(32, bytesPerSample, true);
+  dv.setUint16(34, 16, true);
+  // "data"
+  buf[36] = 0x64; buf[37] = 0x61; buf[38] = 0x74; buf[39] = 0x61;
+  dv.setUint32(40, dataSize, true);
+  // Sample data already zero-filled = silence for signed 16-bit PCM.
+
+  let binary = "";
+  for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+  const encoder = (
+    globalThis as unknown as { btoa?: (input: string) => string }
+  ).btoa;
+  if (!encoder) {
+    throw new Error("Base64 encoder not available on this runtime.");
+  }
+  return encoder(binary);
+}
+
+async function ensureSilentCarrierUri(): Promise<string> {
+  if (silentCarrierUri) return silentCarrierUri;
+  const baseDir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!baseDir) {
+    throw new Error("Unable to access local storage for silent carrier.");
+  }
+  const uri = `${baseDir}ragna-silent-carrier.wav`;
+  const base64 = buildSilentWavBase64(1);
+  await FileSystem.writeAsStringAsync(uri, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  silentCarrierUri = uri;
+  return uri;
+}
+
+async function stopSpeechCarrier(): Promise<void> {
+  const player = speechCarrierPlayer;
+  const sub = speechCarrierSubscription;
+  speechCarrierPlayer = null;
+  speechCarrierSubscription = null;
+  if (!player) return;
+  try {
+    sub?.remove();
+  } catch {
+    // ignore
+  }
+  try {
+    deactivateLockScreenControls(player);
+  } catch {
+    // ignore
+  }
+  try {
+    player.pause();
+  } catch {
+    // ignore
+  }
+  try {
+    player.remove();
+  } catch {
+    // ignore
+  }
+}
+
+async function startSpeechCarrier(): Promise<void> {
+  await stopSpeechCarrier();
+  try {
+    const uri = await ensureSilentCarrierUri();
+    const carrier = createAudioPlayer(
+      { uri },
+      { keepAudioSessionActive: true },
+    );
+    carrier.loop = true;
+    carrier.volume = 0;
+    speechCarrierPlayer = carrier;
+
+    const subscription = carrier.addListener(
+      "playbackStatusUpdate",
+      (status: AudioStatus) => {
+        if (!status.isLoaded) return;
+        if (suppressSpeechCarrierBridge) return;
+        if (!isUsingSpeechFallback) return;
+        if (speechCarrierPlayer !== carrier) return;
+
+        const controls = getSpeechControls();
+        if (status.playing && playbackState.isPaused && fallbackSpeechText) {
+          // Remote command (AirPods / BT / lock screen / Android Auto) said
+          // "play" — resume speech to match.
+          if (controls.resume) {
+            controls.resume();
+            emitPlaybackState({ isPlaying: true, isPaused: false });
+          } else {
+            // Older expo-speech builds lack pause/resume. Re-speak from the
+            // last spoken word so the caregiver picks up where they left
+            // off, not from the start of the reply.
+            startSpeechFallback(fallbackSpeechText, {
+              startOffset: spokenCharOffset,
+            }).catch(() => {});
+          }
+        } else if (!status.playing && !playbackState.isPaused) {
+          // Remote command said "pause" — mirror that on the speech engine.
+          controls.pause?.();
+          emitPlaybackState({ isPlaying: true, isPaused: true });
+        }
+      },
+    );
+    speechCarrierSubscription = subscription;
+
+    carrier.play();
+    activateLockScreenControls(carrier);
+  } catch (err) {
+    console.warn("[voice] silent speech carrier failed", err);
+    await stopSpeechCarrier();
+  }
+}
+
+function pauseSpeechCarrier(): void {
+  const carrier = speechCarrierPlayer;
+  if (!carrier) return;
+  suppressSpeechCarrierBridge = true;
+  try {
+    carrier.pause();
+  } catch {
+    // ignore
+  } finally {
+    suppressSpeechCarrierBridge = false;
+  }
+}
+
+function resumeSpeechCarrier(): void {
+  const carrier = speechCarrierPlayer;
+  if (!carrier) return;
+  suppressSpeechCarrierBridge = true;
+  try {
+    carrier.play();
+  } catch {
+    // ignore
+  } finally {
+    suppressSpeechCarrierBridge = false;
+  }
 }
 
 function stopSpeechFallback(clearText = false): void {
@@ -103,11 +407,17 @@ function stopSpeechFallback(clearText = false): void {
   isUsingSpeechFallback = false;
   if (clearText) {
     fallbackSpeechText = null;
+    setCurrentReplySummary(undefined);
+    spokenCharOffset = 0;
   }
+  void stopSpeechCarrier();
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
-async function startSpeechFallback(text: string): Promise<void> {
+async function startSpeechFallback(
+  text: string,
+  options: { startOffset?: number } = {},
+): Promise<void> {
   const trimmed = text.trim();
   if (!trimmed) {
     return;
@@ -118,20 +428,63 @@ async function startSpeechFallback(text: string): Promise<void> {
 
   fallbackSpeechText = trimmed;
   isUsingSpeechFallback = true;
+  setCurrentReplySummary(summarizeReplyForLockScreen(trimmed));
   emitPlaybackState({ isPlaying: true, isPaused: false });
 
-  Speech.speak(trimmed, {
+  // Clamp the requested resume offset to the bounds of the reply. If we
+  // somehow get a stale or invalid offset, fall back to speaking the full
+  // text rather than dropping any of it.
+  const requestedOffset = Math.max(0, options.startOffset ?? 0);
+  const baseOffset =
+    requestedOffset >= trimmed.length ? 0 : requestedOffset;
+  const remainder = baseOffset > 0 ? trimmed.slice(baseOffset) : trimmed;
+  spokenCharOffset = baseOffset;
+
+  // Start the silent carrier first so AirPods / Bluetooth / lock-screen /
+  // CarPlay / Android Auto transport buttons have something registered to
+  // talk to while expo-speech is reading the reply.
+  await startSpeechCarrier();
+  applyLockScreenSummary(currentReplySummary);
+
+  Speech.speak(remainder, {
     language: "en-US",
+    onBoundary: (event: { charIndex?: number; charLength?: number }) => {
+      // `charIndex` is relative to the string handed to Speech.speak, so
+      // translate it back to an absolute offset within fallbackSpeechText.
+      // Some platforms omit `charLength`; treating it as 0 still moves the
+      // offset forward word-by-word as boundaries fire.
+      const charIndex =
+        typeof event?.charIndex === "number" && event.charIndex >= 0
+          ? event.charIndex
+          : 0;
+      const charLength =
+        typeof event?.charLength === "number" && event.charLength > 0
+          ? event.charLength
+          : 0;
+      const next = baseOffset + charIndex + charLength;
+      if (next > spokenCharOffset && next <= trimmed.length) {
+        spokenCharOffset = next;
+      }
+    },
     onDone: () => {
       isUsingSpeechFallback = false;
+      spokenCharOffset = 0;
+      void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
     onStopped: () => {
+      // Intentionally preserve `spokenCharOffset` here — `Speech.stop` is
+      // also what we call to pause on devices without native pause/resume,
+      // and we need the offset to be available so the next resume picks up
+      // from where the caregiver left off.
       isUsingSpeechFallback = false;
+      void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
     onError: () => {
       isUsingSpeechFallback = false;
+      spokenCharOffset = 0;
+      void stopSpeechCarrier();
       emitPlaybackState({ isPlaying: false, isPaused: false });
     },
   });
@@ -145,17 +498,26 @@ async function stopActiveSound(): Promise<void> {
     return;
   }
   const sound = activeSound;
+  const subscription = activeSoundSubscription;
   activeSound = null;
+  activeSoundSubscription = null;
   try {
-    await sound.stopAsync();
+    sound.pause();
   } catch (err) {
-    console.warn("[voice] sound.stopAsync failed", err);
+    console.warn("[voice] sound.pause failed", err);
   }
   try {
-    await sound.unloadAsync();
+    subscription?.remove();
   } catch (err) {
-    console.warn("[voice] sound.unloadAsync failed", err);
+    console.warn("[voice] sound listener remove failed", err);
   }
+  deactivateLockScreenControls(sound);
+  try {
+    sound.remove();
+  } catch (err) {
+    console.warn("[voice] sound.remove failed", err);
+  }
+  setCurrentReplySummary(undefined);
   emitPlaybackState({ isPlaying: false, isPaused: false });
 }
 
@@ -183,94 +545,111 @@ export async function startNativeOpenAiVoiceRecording(): Promise<void> {
   await stopActiveSound();
   stopSpeechFallback(true);
 
-  const permission = await Audio.requestPermissionsAsync();
+  const permission = await requestRecordingPermissionsAsync();
   if (!permission.granted) {
     throw new Error("Microphone permission is required to use voice chat.");
   }
 
   if (activeRecording) {
     try {
-      await activeRecording.stopAndUnloadAsync();
+      await activeRecording.stop();
     } catch (err) {
-      console.warn("[voice] stopAndUnload previous recording failed", err);
+      console.warn("[voice] stop previous recording failed", err);
     }
     activeRecording = null;
   }
 
   await configureRecordingMode();
 
-  const recording = new Audio.Recording();
-  await recording.prepareToRecordAsync(
-    Audio.RecordingOptionsPresets.HIGH_QUALITY,
-  );
-  await recording.startAsync();
-  activeRecording = recording;
+  const recorder = new AudioModule.AudioRecorder(RecordingPresets.HIGH_QUALITY);
+  await recorder.prepareToRecordAsync();
+  recorder.record();
+  activeRecording = recorder;
 }
 
 async function createAndAutoplaySound(
   source: { uri: string },
   cleanupUri?: string,
 ): Promise<void> {
-  const { sound, status } = await Audio.Sound.createAsync(source, {
-    shouldPlay: false,
-    volume: 1,
-    isMuted: false,
-    progressUpdateIntervalMillis: 250,
-  });
+  // keepAudioSessionActive keeps the audio session (and the iOS
+  // MPRemoteCommandCenter / Android MediaSession wiring) alive across short
+  // pauses, so an AirPods or CarPlay "play" after a pause still resumes the
+  // same player instead of being dropped.
+  const player = createAudioPlayer(source, { keepAudioSessionActive: true });
+  activeSound = player;
 
-  activeSound = sound;
+  const subscription = player.addListener(
+    "playbackStatusUpdate",
+    (status: AudioStatus) => {
+      if (!status.isLoaded) return;
 
-  sound.setOnPlaybackStatusUpdate((playbackStatus) => {
-    if (!playbackStatus.isLoaded) return;
-
-    if (playbackStatus.didJustFinish) {
-      sound.unloadAsync().catch(() => {});
-      if (cleanupUri) {
-        FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(
-          () => {},
-        );
+      if (status.didJustFinish) {
+        if (activeSound === player) {
+          activeSound = null;
+          activeSoundSubscription = null;
+        }
+        try {
+          subscription.remove();
+        } catch {
+          // ignore
+        }
+        deactivateLockScreenControls(player);
+        try {
+          player.remove();
+        } catch (err) {
+          console.warn("[voice] sound.remove after finish failed", err);
+        }
+        if (cleanupUri) {
+          FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(
+            () => {},
+          );
+        }
+        setCurrentReplySummary(undefined);
+        emitPlaybackState({ isPlaying: false, isPaused: false });
+        return;
       }
-      if (activeSound === sound) {
-        activeSound = null;
+
+      if (status.playing) {
+        emitPlaybackState({ isPlaying: true, isPaused: false });
+        return;
       }
-      emitPlaybackState({ isPlaying: false, isPaused: false });
-      return;
-    }
 
-    if (playbackStatus.isPlaying) {
-      emitPlaybackState({ isPlaying: true, isPaused: false });
-      return;
-    }
-
-    if (activeSound === sound && playbackStatus.positionMillis > 0) {
-      emitPlaybackState({ isPlaying: true, isPaused: true });
-    }
-  });
+      if (activeSound === player && status.currentTime > 0) {
+        emitPlaybackState({ isPlaying: true, isPaused: true });
+      }
+    },
+  );
+  activeSoundSubscription = subscription;
 
   try {
-    let playbackStatus = status;
+    player.volume = 1;
+    player.play();
 
-    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
-      playbackStatus = await sound.playAsync();
+    if (!player.playing) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 150));
     }
 
-    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
-      playbackStatus = await sound.getStatusAsync();
-    }
-
-    if (!playbackStatus.isLoaded || !playbackStatus.isPlaying) {
+    if (!player.playing) {
       throw new Error("Audio playback did not start.");
     }
 
+    activateLockScreenControls(player);
     emitPlaybackState({ isPlaying: true, isPaused: false });
   } catch (error) {
-    if (activeSound === sound) {
+    if (activeSound === player) {
       activeSound = null;
+      activeSoundSubscription = null;
     }
     try {
-      await sound.unloadAsync();
+      subscription.remove();
+    } catch {
+      // ignore
+    }
+    deactivateLockScreenControls(player);
+    try {
+      player.remove();
     } catch (err) {
-      console.warn("[voice] sound.unloadAsync after error failed", err);
+      console.warn("[voice] sound.remove after error failed", err);
     }
     if (cleanupUri) {
       FileSystem.deleteAsync(cleanupUri, { idempotent: true }).catch(() => {});
@@ -312,14 +691,17 @@ async function playAudioReply({
   audioBase64,
   audioMimeType,
   audioUrl,
+  assistantTranscript,
 }: {
   audioBase64?: string;
   audioMimeType?: string;
   audioUrl?: string;
+  assistantTranscript?: string;
 }): Promise<void> {
   await stopActiveSound();
   stopSpeechFallback();
   await configurePlaybackMode();
+  setCurrentReplySummary(summarizeReplyForLockScreen(assistantTranscript));
 
   if (shouldPreferAudioUrl(audioUrl) && audioUrl) {
     await createAndAutoplaySound({ uri: audioUrl });
@@ -351,17 +733,23 @@ export async function playNativeOpenAiVoiceAudio({
   audioBase64,
   audioMimeType,
   audioUrl,
+  assistantTranscript,
 }: {
   audioBase64?: string;
   audioMimeType?: string;
   audioUrl?: string;
+  assistantTranscript?: string;
 }): Promise<void> {
-  await playAudioReply({ audioBase64, audioMimeType, audioUrl });
+  await playAudioReply({ audioBase64, audioMimeType, audioUrl, assistantTranscript });
+}
+
+export function updateNativeOpenAiVoiceReplySummary(text: string | null | undefined): void {
+  applyLockScreenSummary(summarizeReplyForLockScreen(text));
 }
 
 export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
   if (activeSound) {
-    await activeSound.pauseAsync();
+    activeSound.pause();
     emitPlaybackState({ isPlaying: true, isPaused: true });
     return;
   }
@@ -370,18 +758,24 @@ export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
     const controls = getSpeechControls();
     if (controls.pause) {
       controls.pause();
+      pauseSpeechCarrier();
       emitPlaybackState({ isPlaying: true, isPaused: true });
       return;
     }
+    // Older expo-speech builds have no `pause`. Stop the engine but keep
+    // `fallbackSpeechText` and `spokenCharOffset` intact so the caregiver
+    // can resume from where they left off; report a paused (not stopped)
+    // state so the UI surfaces a resume affordance.
     controls.stop?.();
     isUsingSpeechFallback = false;
-    emitPlaybackState({ isPlaying: false, isPaused: false });
+    void stopSpeechCarrier();
+    emitPlaybackState({ isPlaying: true, isPaused: true });
   }
 }
 
 export async function resumeNativeOpenAiVoicePlayback(): Promise<void> {
   if (activeSound) {
-    await activeSound.playAsync();
+    activeSound.play();
     emitPlaybackState({ isPlaying: true, isPaused: false });
     return;
   }
@@ -390,10 +784,16 @@ export async function resumeNativeOpenAiVoicePlayback(): Promise<void> {
     const controls = getSpeechControls();
     if (isUsingSpeechFallback && controls.resume) {
       controls.resume();
+      resumeSpeechCarrier();
       emitPlaybackState({ isPlaying: true, isPaused: false });
       return;
     }
-    await startSpeechFallback(fallbackSpeechText);
+    // No native resume — re-speak from the last word boundary we saw via
+    // onBoundary so the caregiver picks up mid-reply instead of from the
+    // start. `startSpeechFallback` clamps a stale/invalid offset back to 0.
+    await startSpeechFallback(fallbackSpeechText, {
+      startOffset: spokenCharOffset,
+    });
   }
 }
 
@@ -405,9 +805,9 @@ export async function stopNativeOpenAiVoicePlayback(): Promise<void> {
 export async function stopNativeOpenAiVoice(): Promise<void> {
   if (activeRecording) {
     try {
-      await activeRecording.stopAndUnloadAsync();
+      await activeRecording.stop();
     } catch (err) {
-      console.warn("[voice] stopAndUnload on shutdown failed", err);
+      console.warn("[voice] stop on shutdown failed", err);
     }
     activeRecording = null;
   }
@@ -424,15 +824,15 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
 
   const recording = activeRecording;
   try {
-    await recording.stopAndUnloadAsync();
+    await recording.stop();
   } catch (err) {
-    console.warn("[voice] stopAndUnload failed during transcribe", err);
+    console.warn("[voice] stop failed during transcribe", err);
   } finally {
     activeRecording = null;
   }
   await configurePlaybackMode();
 
-  const uri = recording.getURI();
+  const uri = recording.uri;
   if (!uri) {
     throw new Error("The recorded audio could not be found.");
   }
@@ -482,15 +882,15 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
 
   const recording = activeRecording;
   try {
-    await recording.stopAndUnloadAsync();
+    await recording.stop();
   } catch (err) {
-    console.warn("[voice] stopAndUnload failed during send", err);
+    console.warn("[voice] stop failed during send", err);
   } finally {
     activeRecording = null;
   }
   await configurePlaybackMode();
 
-  const uri = recording.getURI();
+  const uri = recording.uri;
   if (!uri) {
     throw new Error("The recorded audio could not be found.");
   }
@@ -548,6 +948,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
 
   let didAutoPlayAudio = false;
   let autoPlayErrorMessage: string | undefined;
+  let usedSpeechFallback = false;
 
   if (payload.audioBase64 || payload.audioUrl) {
     try {
@@ -555,6 +956,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
         audioBase64: payload.audioBase64,
         audioMimeType: payload.audioMimeType,
         audioUrl: payload.audioUrl,
+        assistantTranscript,
       });
       didAutoPlayAudio = true;
     } catch (error) {
@@ -567,6 +969,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
         try {
           await startSpeechFallback(assistantTranscript);
           didAutoPlayAudio = true;
+          usedSpeechFallback = true;
           autoPlayErrorMessage = undefined;
         } catch (fallbackErr) {
           console.warn("[voice] iOS speech fallback failed", fallbackErr);
@@ -580,6 +983,7 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
     assistantTranscript,
     didAutoPlayAudio,
     autoPlayErrorMessage,
+    usedSpeechFallback,
   };
 }
 
@@ -636,6 +1040,7 @@ export async function speakNativeOpenAiVoiceText({
         audioBase64: payload.audioBase64,
         audioMimeType: payload.audioMimeType,
         audioUrl: payload.audioUrl,
+        assistantTranscript: trimmed,
       });
       didAutoPlayAudio = true;
     } catch (error) {

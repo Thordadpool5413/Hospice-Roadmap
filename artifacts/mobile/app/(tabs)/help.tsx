@@ -49,12 +49,18 @@ import {
   stopNativeOpenAiVoicePlayback,
   stopNativeOpenAiVoiceRecordingAndTranscribe,
   subscribeNativeOpenAiVoicePlayback,
+  subscribeNativeOpenAiVoiceReplySummary,
+  updateNativeOpenAiVoiceReplySummary,
 } from "@/services/nativeOpenAiVoiceService";
 import {
   clearActiveConversationId,
   getActiveConversationId,
   setActiveConversationId,
 } from "@/services/ragnaConversationState";
+import {
+  getHideReplyPreview,
+  setHideReplyPreview,
+} from "@/services/ragnaPreviewPreference";
 import { setPreferredVoice } from "@/services/voicePreferences";
 import { VeraEmotionalTone } from "@/types";
 
@@ -345,6 +351,10 @@ export default function HelpScreen() {
   const [isPlaybackActive, setIsPlaybackActive] = useState(false);
   const [isPlaybackPaused, setIsPlaybackPaused] = useState(false);
   const [isLiveSpeechActive, setIsLiveSpeechActive] = useState(false);
+  const [replyPreviewText, setReplyPreviewText] = useState<string | undefined>(
+    undefined,
+  );
+  const [hideReplyPreview, setHideReplyPreviewState] = useState(false);
 
   const todayEntry = useMemo(
     () => getTodayEntry(),
@@ -609,6 +619,7 @@ export default function HelpScreen() {
         audioBase64: message.audioBase64,
         audioMimeType: message.audioMimeType,
         audioUrl: message.audioUrl,
+        assistantTranscript: message.content,
       });
       setVoiceStatusText("Playing Ragna's voice reply.");
     } catch (error) {
@@ -623,6 +634,17 @@ export default function HelpScreen() {
 
   const handlePlaybackToggle = useCallback(async () => {
     try {
+      if (isPlaybackActive) {
+        if (isPlaybackPaused) {
+          await resumeNativeOpenAiVoicePlayback();
+          setVoiceStatusText("Resumed Ragna's voice reply.");
+        } else {
+          await pauseNativeOpenAiVoicePlayback();
+          setVoiceStatusText("Paused Ragna's voice reply.");
+        }
+        return;
+      }
+
       if (isLiveSpeechActive) {
         stopLiveSpeechPreview(true);
         setVoiceStatusText("Stopped live voice reply.");
@@ -657,6 +679,7 @@ export default function HelpScreen() {
           audioBase64: latestAssistantMessage.audioBase64,
           audioMimeType: latestAssistantMessage.audioMimeType,
           audioUrl: latestAssistantMessage.audioUrl,
+          assistantTranscript: latestAssistantMessage.content,
         });
         setVoiceStatusText("Playing Ragna's voice reply.");
         return;
@@ -808,6 +831,23 @@ export default function HelpScreen() {
 
       const patientContext = buildRagnaPatientContext();
       let streamedAssistantText = "";
+      let lockScreenSummaryTimer: ReturnType<typeof setTimeout> | null = null;
+      const flushLockScreenSummary = (finalText?: string) => {
+        if (lockScreenSummaryTimer) {
+          clearTimeout(lockScreenSummaryTimer);
+          lockScreenSummaryTimer = null;
+        }
+        updateNativeOpenAiVoiceReplySummary(
+          finalText ?? streamedAssistantText,
+        );
+      };
+      const scheduleLockScreenSummary = () => {
+        if (lockScreenSummaryTimer) return;
+        lockScreenSummaryTimer = setTimeout(() => {
+          lockScreenSummaryTimer = null;
+          updateNativeOpenAiVoiceReplySummary(streamedAssistantText);
+        }, 300);
+      };
 
       await streamMessage(
         activeConv.id,
@@ -825,6 +865,7 @@ export default function HelpScreen() {
                 : m,
             ),
           );
+          scheduleLockScreenSummary();
           scrollToBottom(50);
         },
         () => {
@@ -843,6 +884,7 @@ export default function HelpScreen() {
             ),
           );
           setIsStreaming(false);
+          flushLockScreenSummary(parsedText);
           scrollToBottom(150);
           setTimeout(() => inputRef.current?.focus(), 500);
 
@@ -857,6 +899,10 @@ export default function HelpScreen() {
           void synthesizeAssistantVoice(assistantMsgId, parsedText);
         },
         (err) => {
+          if (lockScreenSummaryTimer) {
+            clearTimeout(lockScreenSummaryTimer);
+            lockScreenSummaryTimer = null;
+          }
           stopLiveSpeechPreview(true);
           setLocalMessages((prev) =>
             prev.map((m) =>
@@ -1073,6 +1119,67 @@ export default function HelpScreen() {
   }, []);
 
   useEffect(() => {
+    const unsubscribe = subscribeNativeOpenAiVoiceReplySummary((summary) => {
+      setReplyPreviewText(summary);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const stored = await getHideReplyPreview();
+      if (!cancelled) {
+        setHideReplyPreviewState(stored);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void (async () => {
+        const stored = await getHideReplyPreview();
+        if (!cancelled) {
+          setHideReplyPreviewState(stored);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  const handleToggleHideReplyPreview = useCallback(
+    async (hidden: boolean) => {
+      setHideReplyPreviewState(hidden);
+      await setHideReplyPreview(hidden);
+    },
+    [],
+  );
+
+  const handleReplyPreviewLongPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "Hide live reply preview?",
+      "Ragna's in-progress reply will stop appearing above the message box. You can turn it back on from Ragna privacy settings. Voice playback is not affected.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Hide preview",
+          style: "destructive",
+          onPress: () => {
+            void handleToggleHideReplyPreview(true);
+          },
+        },
+      ],
+    );
+  }, [handleToggleHideReplyPreview]);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active") {
         stopLiveSpeechPreview(true);
@@ -1190,12 +1297,22 @@ export default function HelpScreen() {
         }}
         isPlaybackActive={effectivePlaybackActive}
         isPlaybackPaused={effectivePlaybackPaused}
+        replyPreviewText={
+          hideReplyPreview && isStreaming ? undefined : replyPreviewText
+        }
         onPlaybackToggle={() => {
           void handlePlaybackToggle();
         }}
         onPlaybackStop={() => {
           void handlePlaybackStop();
         }}
+        onReplyPreviewPress={
+          hasMessages &&
+          localMessages[localMessages.length - 1]?.role === "assistant"
+            ? () => scrollToBottom(0)
+            : undefined
+        }
+        onReplyPreviewLongPress={handleReplyPreviewLongPress}
       />
     </KeyboardAvoidingView>
   );

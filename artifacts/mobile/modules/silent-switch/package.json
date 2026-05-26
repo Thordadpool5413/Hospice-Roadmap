@@ -1,0 +1,7 @@
+{
+  "name": "silent-switch",
+  "version": "1.0.0",
+  "description": "Local Expo module that probes iOS hardware silent-switch state.",
+  "main": "index.ts",
+  "private": true
+}
