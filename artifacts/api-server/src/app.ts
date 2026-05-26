@@ -6,6 +6,10 @@ import router from "./routes";
 
 const app: Express = express();
 
+// Required for correct req.ip behind Replit's shared reverse proxy
+// (rate limiter, request logging, etc. all depend on this).
+app.set("trust proxy", 1);
+
 app.use(pinoHttp({ logger }));
 
 app.use(cors({

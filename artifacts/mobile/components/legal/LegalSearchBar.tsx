@@ -50,7 +50,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: "#F3F6FF",
+    color: Colors.text,
     height: "100%",
   },
   clear: { padding: 4 },

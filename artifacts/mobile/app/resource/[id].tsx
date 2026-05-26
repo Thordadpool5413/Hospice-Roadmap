@@ -15,14 +15,14 @@ import { JourneyBadge } from "@/components/ui/JourneyBadge";
 import { Colors } from "@/constants/colors";
 import { CATEGORY_META } from "@/constants/resourceCategories";
 import { useApp } from "@/context/AppContext";
-import { resources as mockResources } from "@/data/resources";
+import { resources } from "@/data/resources";
 
 export default function ResourceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { toggleSavedResource, isSavedResource } = useApp();
 
-  const resource = mockResources.find((r) => r.id === id);
+  const resource = resources.find((r) => r.id === id);
 
   if (!resource) {
     return (
@@ -56,7 +56,7 @@ export default function ResourceDetailScreen() {
   const paragraphs = resource.content.split("\n\n").filter(Boolean);
 
   // Related articles: same category, different id, max 3
-  const related = mockResources
+  const related = resources
     .filter((r) => r.category === resource.category && r.id !== resource.id)
     .slice(0, 3);
 
