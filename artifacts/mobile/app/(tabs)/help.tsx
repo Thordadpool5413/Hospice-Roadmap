@@ -1245,6 +1245,12 @@ export default function HelpScreen() {
         onPlaybackStop={() => {
           void handlePlaybackStop();
         }}
+        onReplyPreviewPress={
+          hasMessages &&
+          localMessages[localMessages.length - 1]?.role === "assistant"
+            ? () => scrollToBottom(0)
+            : undefined
+        }
       />
     </KeyboardAvoidingView>
   );

@@ -40,6 +40,7 @@ interface RagnaComposerProps {
   replyPreviewText?: string;
   onPlaybackToggle?: () => void;
   onPlaybackStop?: () => void;
+  onReplyPreviewPress?: () => void;
 }
 
 export function RagnaComposer({
@@ -64,6 +65,7 @@ export function RagnaComposer({
   replyPreviewText,
   onPlaybackToggle,
   onPlaybackStop,
+  onReplyPreviewPress,
 }: RagnaComposerProps) {
   const voiceDisabled = !isOnline || isStreaming || isVoiceBusy;
   const showVoiceOptions =
@@ -144,16 +146,43 @@ export function RagnaComposer({
         </ScrollView>
       ) : null}
       {(showPlaybackControls || isStreaming) && replyPreviewText ? (
-        <View style={styles.replyPreview}>
-          <Feather
-            name="message-circle"
-            size={13}
-            color={Colors.primaryLight}
-          />
-          <Text style={styles.replyPreviewText} numberOfLines={2}>
-            {replyPreviewText}
-          </Text>
-        </View>
+        onReplyPreviewPress ? (
+          <Pressable
+            onPress={onReplyPreviewPress}
+            accessibilityRole="button"
+            accessibilityLabel="Jump to Ragna's latest reply"
+            accessibilityHint="Scrolls the chat to the live reply"
+            style={({ pressed }) => [
+              styles.replyPreview,
+              pressed && styles.replyPreviewPressed,
+            ]}
+          >
+            <Feather
+              name="message-circle"
+              size={13}
+              color={Colors.primaryLight}
+            />
+            <Text style={styles.replyPreviewText} numberOfLines={2}>
+              {replyPreviewText}
+            </Text>
+            <Feather
+              name="chevron-down"
+              size={14}
+              color={Colors.primaryLight}
+            />
+          </Pressable>
+        ) : (
+          <View style={styles.replyPreview}>
+            <Feather
+              name="message-circle"
+              size={13}
+              color={Colors.primaryLight}
+            />
+            <Text style={styles.replyPreviewText} numberOfLines={2}>
+              {replyPreviewText}
+            </Text>
+          </View>
+        )
       ) : null}
       {showPlaybackControls ? (
         <View style={styles.playbackRow}>
@@ -332,6 +361,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(73,118,255,0.18)",
+  },
+  replyPreviewPressed: {
+    backgroundColor: "rgba(60,120,255,0.16)",
+    borderColor: "rgba(73,118,255,0.32)",
   },
   replyPreviewText: {
     flex: 1,
