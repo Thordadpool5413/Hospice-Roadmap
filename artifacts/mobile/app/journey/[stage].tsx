@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ResourceCard } from "@/components/ResourceCard";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { resources as mockResources } from "@/data/resources";
+import { resources } from "@/data/resources";
 import { bereavementResources } from "@/data/mockBereavementResources";
 import { JourneyStage } from "@/types";
 
@@ -127,7 +127,7 @@ export default function JourneyStageScreen() {
   }
 
   const info = stageInfo[stage as JourneyStage];
-  const stageResources = mockResources
+  const stageResources = resources
     .filter((r) => r.journeyStage.includes(stage as JourneyStage))
     .slice(0, 4);
 

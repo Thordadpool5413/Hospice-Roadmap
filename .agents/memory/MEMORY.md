@@ -1,2 +1,1 @@
-- [Pino + Metro watcher clash](pino-metro-watcher.md) — pino creates a transient temp benchmark dir during install that Metro tries to watch; fix is a simple workflow restart.
-- [Anthropic API key via integration](anthropic-integration.md) — ANTHROPIC_API_KEY is not a plain env var; it flows through the @workspace/integrations-anthropic-ai Replit integration. Do not check for it in startup env guards.
+- [express-rate-limit setup](express-rate-limit-setup.md) — must set `app.set('trust proxy', N)` behind a reverse proxy, key with `ipKeyGenerator`, and never trust client headers as keys without strict format validation composed with IP.

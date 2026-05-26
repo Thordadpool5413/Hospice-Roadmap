@@ -78,7 +78,9 @@ async function cancelNotification(notificationId?: string) {
   if (!Notifications || !notificationId) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(notificationId);
-  } catch {}
+  } catch (err) {
+    console.warn("[reminders] cancelScheduledNotification failed", err);
+  }
 }
 
 export function RemindersProvider({ children }: { children: React.ReactNode }) {
@@ -97,7 +99,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
 
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => { if (raw) setReminders(JSON.parse(raw)); })
-      .catch(() => {})
+      .catch((err) => { console.warn("[reminders] failed to load from storage", err); })
       .finally(() => setIsLoading(false));
   }, []);
 

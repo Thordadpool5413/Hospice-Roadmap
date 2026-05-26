@@ -151,8 +151,14 @@ router.get("/cms/providers", async (req: Request, res: Response) => {
       });
     }
 
-    const limit = Math.min(Number(limitParam) || 50, 200);
-    const offset = Number(offsetParam) || 0;
+    const parsedLimit = Number.parseInt(String(limitParam ?? ""), 10);
+    const parsedOffset = Number.parseInt(String(offsetParam ?? ""), 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(parsedLimit, 200)
+      : 50;
+    const offset = Number.isFinite(parsedOffset) && parsedOffset >= 0
+      ? Math.min(parsedOffset, 10_000)
+      : 0;
 
     const data = await cmsQuery(DATASETS.generalInfo, conditions, limit, offset);
     const providers = data.results.map(mapGeneralInfoToProvider);
@@ -179,8 +185,8 @@ router.get("/cms/providers", async (req: Request, res: Response) => {
 
 router.get("/cms/quality/:ccn", async (req: Request, res: Response) => {
   try {
-    const ccn = req.params.ccn as string;
-    if (!ccn || ccn.length < 4) {
+    const ccn = String(req.params.ccn ?? "").trim();
+    if (!/^[A-Za-z0-9]{4,10}$/.test(ccn)) {
       res.status(400).json({ error: "Valid CCN (CMS Certification Number) is required" });
       return;
     }
@@ -292,7 +298,11 @@ router.get("/cms/quality-summary", async (req: Request, res: Response) => {
       res.status(400).json({ error: "Provide 'ccns' as comma-separated CCNs" });
       return;
     }
-    const ccnList = ccns.split(",").filter((c) => c.length >= 4).slice(0, 20);
+    const ccnList = ccns
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => /^[A-Za-z0-9]{4,10}$/.test(c))
+      .slice(0, 20);
     if (ccnList.length === 0) {
       res.json({ summaries: {} });
       return;
@@ -355,8 +365,8 @@ router.get("/cms/quality-summary", async (req: Request, res: Response) => {
 
 router.get("/cms/spending/:ccn", async (req: Request, res: Response) => {
   try {
-    const ccn = req.params.ccn as string;
-    if (!ccn || ccn.length < 4) {
+    const ccn = String(req.params.ccn ?? "").trim();
+    if (!/^[A-Za-z0-9]{4,10}$/.test(ccn)) {
       res.status(400).json({ error: "Valid CCN (CMS Certification Number) is required" });
       return;
     }

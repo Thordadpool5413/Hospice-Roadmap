@@ -87,7 +87,9 @@ export default function GoalsOfCareScreen() {
   const [additionalDirectives, setAdditionalDirectives] = useState(existing?.additionalDirectives ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
-  const hasAnyContent = whatMattersMost || goodDayLooksLike || thingsToAvoid || dnrStatus || additionalDirectives;
+  const hasAnyContent = Boolean(
+    whatMattersMost || goodDayLooksLike || thingsToAvoid || dnrStatus || additionalDirectives,
+  );
 
   const handleSave = async () => {
     if (isSaving) return;

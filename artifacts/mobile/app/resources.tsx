@@ -17,7 +17,7 @@ import { ResourceCard } from "@/components/ResourceCard";
 import { Colors } from "@/constants/colors";
 import { CATEGORY_META } from "@/constants/resourceCategories";
 import { useApp } from "@/context/AppContext";
-import { resources as mockResources } from "@/data/resources";
+import { resources } from "@/data/resources";
 import { ResourceCategory } from "@/types";
 
 export { CATEGORY_META };
@@ -48,7 +48,7 @@ function CategoryCard({ category, count, onPress }: { category: ResourceCategory
 
 // ─── Featured card for horizontal scroll ──────────────────────────────────
 function FeaturedCard({ resource, onPress, onSave, isSaved }: {
-  resource: (typeof mockResources)[0];
+  resource: (typeof resources)[0];
   onPress: () => void;
   onSave: () => void;
   isSaved: boolean;
@@ -97,7 +97,7 @@ export default function ResourcesScreen() {
 
   // Filtered by stage (used across modes)
   const stageFiltered = useMemo(() =>
-    mockResources.filter((r) =>
+    resources.filter((r) =>
       activeStage === "all" || r.journeyStage.includes(activeStage as any)
     ), [activeStage]);
 
@@ -126,7 +126,7 @@ export default function ResourcesScreen() {
   const results = useMemo(() => {
     if (isSearching) {
       const q = search.toLowerCase();
-      return mockResources.filter((r) =>
+      return resources.filter((r) =>
         (activeStage === "all" || r.journeyStage.includes(activeStage as any)) &&
         (r.title.toLowerCase().includes(q) ||
           r.summary.toLowerCase().includes(q) ||
@@ -134,7 +134,7 @@ export default function ResourcesScreen() {
       );
     }
     if (selectedTag) {
-      return mockResources.filter((r) =>
+      return resources.filter((r) =>
         (activeStage === "all" || r.journeyStage.includes(activeStage as any)) &&
         r.tags.includes(selectedTag)
       );

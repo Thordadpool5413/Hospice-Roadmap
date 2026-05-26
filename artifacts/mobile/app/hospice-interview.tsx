@@ -965,7 +965,8 @@ export default function HospiceInterviewScreen() {
 
       setView("results");
       scrollTop();
-    } catch {
+    } catch (err) {
+      console.warn("[HospiceInterview] Scoring request failed:", err);
       Alert.alert("Scoring Failed", "Couldn't reach Ragna right now. Please check your connection and try again.");
     } finally {
       setIsScoring(false);
