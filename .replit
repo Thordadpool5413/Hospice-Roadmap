@@ -27,3 +27,6 @@ timeoutMs = 20000
 
 [[ports]]
 localPort = 3001
+
+[nix]
+packages = ["run"]
