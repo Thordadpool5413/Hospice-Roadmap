@@ -82,32 +82,22 @@ const config: ExpoConfig = {
   },
   ios: {
     supportsTablet: false,
+    bundleIdentifier: "com.thordadpool.hospiceroadmap",
     infoPlist: {
       NSMicrophoneUsageDescription:
         "Hospice Roadmap uses your microphone so you can speak with Ragna.",
-      // `audio` is sufficient for AirPods / Bluetooth / CarPlay Now-Playing
-      // transport controls to drive playback while the app is backgrounded
-      // or the device is locked. A full CarPlay audio-app integration would
-      // additionally require Apple's CarPlay entitlement, which is granted
-      // on request per-app; without it, Ragna still appears on the CarPlay
-      // "Now Playing" screen because expo-audio publishes MPNowPlayingInfo
-      // whenever a player is registered for lock-screen control.
       UIBackgroundModes: ["audio"],
     },
   },
   android: {
+    package: "com.thordadpool.hospiceroadmap",
     permissions: ["android.permission.RECORD_AUDIO"],
   },
   web: {
     favicon: "./assets/images/app-icon.png",
   },
   plugins: [
-    [
-      "expo-router",
-      {
-        origin: "https://replit.com/",
-      },
-    ],
+    "expo-router",
     "expo-font",
     "expo-web-browser",
     "expo-audio",
@@ -122,7 +112,11 @@ const config: ExpoConfig = {
   extra: {
     apiUrl: explicitApiUrl || undefined,
     domain: devDomain || undefined,
+    eas: {
+      projectId: "e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc",
+    },
   },
+  owner: "thordadpool",
 };
 
 export default config;
