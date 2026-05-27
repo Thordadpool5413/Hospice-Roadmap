@@ -120,7 +120,7 @@ const config: ExpoConfig = {
     apiUrl: explicitApiUrl || undefined,
     domain: devDomain || undefined,
     eas: {
-      projectId: "ea50fe69-6016-4c8e-8675-1fce10926f64",
+      projectId: "e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc",
     },
   },
 };
