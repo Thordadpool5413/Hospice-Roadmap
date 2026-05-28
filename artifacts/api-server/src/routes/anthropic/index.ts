@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq } from "drizzle-orm";
+import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { conversations, messages } from "@workspace/db/schema";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
@@ -8,18 +9,6 @@ import { buildResponsePlan } from "../../intelligence/hospice/planner.js";
 import { MODELS } from "../../config/models.js";
 
 const router: IRouter = Router();
-
-const CLIENT_ID_REGEX = /^client_[a-z0-9_]+$/;
-
-function requireClientId(req: Request, res: Response): string | null {
-  const raw = req.header("x_client_id");
-  const clientId = raw?.trim() ?? "";
-  if (!clientId || !CLIENT_ID_REGEX.test(clientId)) {
-    res.status(401).json({ error: "Missing or invalid client identity" });
-    return null;
-  }
-  return clientId;
-}
 
 function safeParseJson(raw: string): unknown | null {
   try {
@@ -36,13 +25,12 @@ function safeParseJson(raw: string): unknown | null {
 }
 
 router.get("/conversations", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
   try {
     const all = await db
       .select()
       .from(conversations)
-      .where(eq(conversations.clientId, clientId))
+      .where(eq(conversations.clientId, userId))
       .orderBy(conversations.createdAt);
     res.json(all);
   } catch (err: unknown) {
@@ -52,8 +40,7 @@ router.get("/conversations", async (req: Request, res: Response) => {
 });
 
 router.post("/conversations", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
   try {
     const { title } = req.body as { title: string };
     if (!title || typeof title !== "string") {
@@ -62,7 +49,7 @@ router.post("/conversations", async (req: Request, res: Response) => {
     }
     const [conv] = await db
       .insert(conversations)
-      .values({ title: title.trim(), clientId })
+      .values({ title: title.trim(), clientId: userId })
       .returning();
     res.status(201).json(conv);
   } catch (err: unknown) {
@@ -72,14 +59,13 @@ router.post("/conversations", async (req: Request, res: Response) => {
 });
 
 router.get("/conversations/:id", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
   try {
     const id = Number(req.params["id"]);
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+      .where(and(eq(conversations.id, id), eq(conversations.clientId, userId)));
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
       return;
@@ -97,19 +83,18 @@ router.get("/conversations/:id", async (req: Request, res: Response) => {
 });
 
 router.delete("/conversations/:id", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
   try {
     const id = Number(req.params["id"]);
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+      .where(and(eq(conversations.id, id), eq(conversations.clientId, userId)));
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
       return;
     }
-    await db.delete(conversations).where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+    await db.delete(conversations).where(and(eq(conversations.id, id), eq(conversations.clientId, userId)));
     res.status(204).send();
   } catch (err: unknown) {
     req.log.error({ err }, "Error deleting conversation");
@@ -118,14 +103,13 @@ router.delete("/conversations/:id", async (req: Request, res: Response) => {
 });
 
 router.get("/conversations/:id/messages", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
   try {
     const id = Number(req.params["id"]);
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+      .where(and(eq(conversations.id, id), eq(conversations.clientId, userId)));
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
       return;
@@ -143,8 +127,7 @@ router.get("/conversations/:id/messages", async (req: Request, res: Response) =>
 });
 
 router.post("/conversations/:id/messages", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
   const id = Number(req.params["id"]);
   const { content, patientContext } = req.body as {
     content: string;
@@ -162,7 +145,7 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+      .where(and(eq(conversations.id, id), eq(conversations.clientId, userId)));
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
       return;
@@ -252,8 +235,7 @@ router.post("/conversations/:id/messages", async (req: Request, res: Response) =
 });
 
 router.post("/conversations/:id/voice-exchange", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
 
   const id = Number(req.params["id"]);
   const { userTranscript, assistantTranscript } = req.body as {
@@ -275,7 +257,7 @@ router.post("/conversations/:id/voice-exchange", async (req: Request, res: Respo
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+      .where(and(eq(conversations.id, id), eq(conversations.clientId, userId)));
 
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
@@ -303,8 +285,6 @@ router.post("/conversations/:id/voice-exchange", async (req: Request, res: Respo
 });
 
 router.post("/profile-synthesize", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
   const { currentProfile, memory, tileHistory } = req.body as {
     currentProfile?: string;
     memory: {
@@ -359,14 +339,13 @@ Output ONLY the 3-5 sentence paragraph. No preamble, no labels, no explanation.`
 });
 
 router.post("/conversations/:id/memory", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
+  const userId = getAuth(req).userId!;
   const id = Number(req.params["id"]);
   try {
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(and(eq(conversations.id, id), eq(conversations.clientId, clientId)));
+      .where(and(eq(conversations.id, id), eq(conversations.clientId, userId)));
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
       return;

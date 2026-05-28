@@ -1,7 +1,8 @@
 import { Platform } from "react-native";
 
+import { getAuthToken } from "@workspace/api-client-react";
+
 import { apiBase, mergeJsonHeaders } from "./apiClient";
-import { getClientId } from "./clientIdentity";
 
 let activeAudio: HTMLAudioElement | null = null;
 let activeObjectUrl: string | null = null;
@@ -31,10 +32,10 @@ export async function previewOpenAiVoice(voice: string, text: string): Promise<v
 
   cleanupPreviewAudio();
 
-  const clientId = await getClientId();
+  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/preview`, {
     method: "POST",
-    headers: mergeJsonHeaders({ x_client_id: clientId }),
+    headers: mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined),
     body: JSON.stringify({ voice, text }),
   });
 

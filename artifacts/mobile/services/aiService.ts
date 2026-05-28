@@ -1,18 +1,18 @@
-import { getClientId } from "./clientIdentity";
+import { getAuthToken } from "@workspace/api-client-react";
+
 import { apiBase, fetchJson, mergeJsonHeaders } from "./apiClient";
 
 // ─── Internal header helpers ─────────────────────────────────────────────────
-// These are async because they must await the stable client ID.  They include
-// x_client_id which is required by the backend on all AI endpoints.
+// These are async because they must await the Clerk JWT.
 
 async function jsonHeaders(): Promise<Record<string, string>> {
-  const clientId = await getClientId();
-  return mergeJsonHeaders({ x_client_id: clientId });
+  const token = await getAuthToken();
+  return mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined);
 }
 
 async function baseHeaders(): Promise<Record<string, string>> {
-  const clientId = await getClientId();
-  return { x_client_id: clientId };
+  const token = await getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // ─── Public types ────────────────────────────────────────────────────────────

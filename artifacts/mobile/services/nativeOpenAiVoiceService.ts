@@ -12,8 +12,9 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Speech from "expo-speech";
 import { Image, Platform } from "react-native";
 
+import { getAuthToken } from "@workspace/api-client-react";
+
 import { apiBase, mergeJsonHeaders } from "./apiClient";
-import { getClientId } from "./clientIdentity";
 
 export interface NativeOpenAiVoiceTranscriptResult {
   userTranscript: string;
@@ -845,12 +846,10 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
     type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
   } as never);
 
-  const clientId = await getClientId();
+  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/mobile-transcribe`, {
     method: "POST",
-    headers: {
-      x_client_id: clientId,
-    },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
 
@@ -907,12 +906,10 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
   }
   formData.append("voice", voice);
 
-  const clientId = await getClientId();
+  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/mobile-voice-turn`, {
     method: "POST",
-    headers: {
-      x_client_id: clientId,
-    },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
   });
 
@@ -999,10 +996,10 @@ export async function speakNativeOpenAiVoiceText({
     return { didAutoPlayAudio: false };
   }
 
-  const clientId = await getClientId();
+  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/speak`, {
     method: "POST",
-    headers: mergeJsonHeaders({ x_client_id: clientId }),
+    headers: mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined),
     body: JSON.stringify({
       text: trimmed,
       voice,

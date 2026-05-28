@@ -5,6 +5,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -27,6 +29,9 @@ import { synthesizeFromActivity } from "@/services/aiService";
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 // LearningSync bridges RagnaLearningContext and VeraMemoryContext.
 // It silently synthesizes the living profile from app-activity observations
@@ -61,6 +66,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="(auth)" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
@@ -246,32 +252,40 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <AccessibilityProvider>
-        <AppProvider>
-          <JournalProvider>
-          <RemindersProvider>
-          <SymptomProvider>
-          <VeraMemoryProvider>
-          <RagnaLearningProvider>
-          <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <View style={{ flex: 1 }}>
-                <LearningSync />
-                <RootLayoutNav />
-                <OfflineBanner />
-              </View>
-            </GestureHandlerRootView>
-          </QueryClientProvider>
-          </RagnaLearningProvider>
-          </VeraMemoryProvider>
-          </SymptomProvider>
-          </RemindersProvider>
-          </JournalProvider>
-        </AppProvider>
-        </AccessibilityProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      tokenCache={tokenCache}
+      proxyUrl={proxyUrl}
+    >
+      <ClerkLoaded>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <AccessibilityProvider>
+            <AppProvider>
+              <JournalProvider>
+              <RemindersProvider>
+              <SymptomProvider>
+              <VeraMemoryProvider>
+              <RagnaLearningProvider>
+              <QueryClientProvider client={queryClient}>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <View style={{ flex: 1 }}>
+                    <LearningSync />
+                    <RootLayoutNav />
+                    <OfflineBanner />
+                  </View>
+                </GestureHandlerRootView>
+              </QueryClientProvider>
+              </RagnaLearningProvider>
+              </VeraMemoryProvider>
+              </SymptomProvider>
+              </RemindersProvider>
+              </JournalProvider>
+            </AppProvider>
+            </AccessibilityProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }

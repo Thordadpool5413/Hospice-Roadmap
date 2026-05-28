@@ -9,6 +9,30 @@ export type BodyType<T> = T;
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
+// Module-level auth token getter — set by mobile layouts that require auth.
+// Web apps do not call this; they rely on Clerk session cookies.
+let _authTokenGetter: (() => Promise<string | null>) | null = null;
+
+export function setAuthTokenGetter(getter: () => Promise<string | null>): void {
+  _authTokenGetter = getter;
+}
+
+export async function getAuthToken(): Promise<string | null> {
+  if (!_authTokenGetter) return null;
+  return _authTokenGetter();
+}
+
+// Module-level base URL — set by the root layout for deployed builds.
+let _baseUrl: string | null = null;
+
+export function setBaseUrl(url: string): void {
+  _baseUrl = url;
+}
+
+export function getBaseUrl(): string | null {
+  return _baseUrl;
+}
+
 function isRequest(input: RequestInfo | URL): input is Request {
   return typeof Request !== "undefined" && input instanceof Request;
 }
@@ -295,6 +319,14 @@ export async function customFetch<T = unknown>(
 
   if (responseType === "json" && !headers.has("accept")) {
     headers.set("accept", DEFAULT_JSON_ACCEPT);
+  }
+
+  // Attach Bearer token from mobile auth getter (Expo only — web uses cookies).
+  if (_authTokenGetter && !headers.has("authorization")) {
+    const token = await _authTokenGetter();
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

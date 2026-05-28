@@ -1,11 +1,13 @@
+import { useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import React from "react";
+import React, { useEffect } from "react";
 import { Image, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 const ragnaIcon = require("@/assets/images/ragna-icon.png");
 
@@ -47,9 +49,16 @@ function ChatTabIcon({ focused }: { focused: boolean }) {
 }
 
 export default function TabLayout() {
+  const { isSignedIn, getToken } = useAuth();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
+
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+  }, [getToken]);
+
+  if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
 
   const WEB_TAB_HEIGHT = 68;
   const NATIVE_TAB_HEIGHT = 60;

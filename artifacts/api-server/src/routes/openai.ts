@@ -13,7 +13,6 @@ const upload = multer({
   },
 });
 
-const CLIENT_ID_REGEX = /^client_[a-z0-9_]+$/;
 const ALLOWED_VOICES = new Set([
   "alloy",
   "ash",
@@ -46,16 +45,6 @@ function buildPublicBaseUrl(req: Request): string {
   const proto = forwardedProto || req.protocol || "https";
   const host = forwardedHost || req.get("host") || "";
   return `${proto}://${host}`;
-}
-
-function requireClientId(req: Request, res: Response): string | null {
-  const raw = req.header("x_client_id");
-  const clientId = raw?.trim() ?? "";
-  if (!clientId || !CLIENT_ID_REGEX.test(clientId)) {
-    res.status(401).json({ error: "Missing or invalid client identity" });
-    return null;
-  }
-  return clientId;
 }
 
 function getOpenAiApiKey(res: Response): string | null {
@@ -106,7 +95,7 @@ function extractAssistantText(payload: unknown): string {
 
 router.get("/speak/:audioId", (req: Request, res: Response) => {
   pruneSpeechCache();
-  const entry = speechCache.get(req.params.audioId);
+  const entry = speechCache.get(req.params["audioId"] as string);
   if (!entry) {
     res.status(404).json({ error: "Spoken reply audio not found or expired." });
     return;
@@ -120,7 +109,7 @@ router.get("/speak/:audioId", (req: Request, res: Response) => {
 
 router.head("/speak/:audioId", (req: Request, res: Response) => {
   pruneSpeechCache();
-  const entry = speechCache.get(req.params.audioId);
+  const entry = speechCache.get(req.params["audioId"] as string);
   if (!entry) {
     res.status(404).end();
     return;
@@ -133,9 +122,6 @@ router.head("/speak/:audioId", (req: Request, res: Response) => {
 });
 
 router.post("/realtime/session", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
-
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -182,7 +168,7 @@ router.post("/realtime/session", async (req: Request, res: Response) => {
     const answerSdp = await openAiResponse.text();
 
     if (!openAiResponse.ok) {
-      req.log.error({ clientId, status: openAiResponse.status, body: answerSdp }, "OpenAI realtime session error");
+      req.log.error({ status: openAiResponse.status, body: answerSdp }, "OpenAI realtime session error");
       res
         .status(openAiResponse.status >= 400 && openAiResponse.status < 500 ? openAiResponse.status : 502)
         .json({ error: answerSdp || "Failed to create realtime voice session." });
@@ -197,9 +183,6 @@ router.post("/realtime/session", async (req: Request, res: Response) => {
 });
 
 router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
-
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -213,7 +196,7 @@ router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, r
     const transcriptionForm = new FormData();
     transcriptionForm.set(
       "file",
-      new Blob([file.buffer], { type: file.mimetype || "audio/m4a" }),
+      new Blob([new Uint8Array(file.buffer)], { type: file.mimetype || "audio/m4a" }),
       file.originalname || `voice-${Date.now()}.m4a`,
     );
     transcriptionForm.set("model", MODELS.openai.transcription);
@@ -230,7 +213,7 @@ router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, r
     const userTranscript = transcriptionPayload.text?.trim() ?? "";
 
     if (!transcriptionResponse.ok || !userTranscript) {
-      req.log.error({ clientId, status: transcriptionResponse.status, body: transcriptionPayload }, "OpenAI transcription error");
+      req.log.error({ status: transcriptionResponse.status, body: transcriptionPayload }, "OpenAI transcription error");
       res.status(502).json({
         error: transcriptionPayload.error?.message || "Failed to transcribe the recorded audio.",
       });
@@ -245,9 +228,6 @@ router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, r
 });
 
 router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
-
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -264,7 +244,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
     const transcriptionForm = new FormData();
     transcriptionForm.set(
       "file",
-      new Blob([file.buffer], { type: file.mimetype || "audio/m4a" }),
+      new Blob([new Uint8Array(file.buffer)], { type: file.mimetype || "audio/m4a" }),
       file.originalname || `voice-${Date.now()}.m4a`,
     );
     transcriptionForm.set("model", MODELS.openai.transcription);
@@ -281,7 +261,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
     const userTranscript = transcriptionPayload.text?.trim() ?? "";
 
     if (!transcriptionResponse.ok || !userTranscript) {
-      req.log.error({ clientId, status: transcriptionResponse.status, body: transcriptionPayload }, "OpenAI transcription error");
+      req.log.error({ status: transcriptionResponse.status, body: transcriptionPayload }, "OpenAI transcription error");
       res.status(502).json({
         error: transcriptionPayload.error?.message || "Failed to transcribe the recorded audio.",
       });
@@ -314,7 +294,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
     const assistantTranscript = extractAssistantText(completionPayload);
 
     if (!completionResponse.ok || !assistantTranscript) {
-      req.log.error({ clientId, status: completionResponse.status, body: completionPayload }, "OpenAI chat completion error");
+      req.log.error({ status: completionResponse.status, body: completionPayload }, "OpenAI chat completion error");
       res.status(502).json({ error: "Failed to generate a spoken response." });
       return;
     }
@@ -335,7 +315,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
 
     if (!speechResponse.ok) {
       const speechError = await speechResponse.text();
-      req.log.error({ clientId, status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
+      req.log.error({ status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
       res.status(502).json({ error: speechError || "Failed to generate reply audio." });
       return;
     }
@@ -355,9 +335,6 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
 });
 
 router.post("/speak", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
-
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -390,7 +367,7 @@ router.post("/speak", async (req: Request, res: Response) => {
 
     if (!speechResponse.ok) {
       const speechError = await speechResponse.text();
-      req.log.error({ clientId, status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
+      req.log.error({ status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
       res.status(502).json({ error: speechError || "Failed to generate reply audio." });
       return;
     }
@@ -417,9 +394,6 @@ router.post("/speak", async (req: Request, res: Response) => {
 });
 
 router.post("/preview", async (req: Request, res: Response) => {
-  const clientId = requireClientId(req, res);
-  if (!clientId) return;
-
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -451,7 +425,7 @@ router.post("/preview", async (req: Request, res: Response) => {
 
     if (!openAiResponse.ok) {
       const errorBody = await openAiResponse.text();
-      req.log.error({ clientId, status: openAiResponse.status, body: errorBody }, "OpenAI voice preview error");
+      req.log.error({ status: openAiResponse.status, body: errorBody }, "OpenAI voice preview error");
       res
         .status(openAiResponse.status >= 400 && openAiResponse.status < 500 ? openAiResponse.status : 502)
         .json({ error: errorBody || "Failed to generate voice preview." });

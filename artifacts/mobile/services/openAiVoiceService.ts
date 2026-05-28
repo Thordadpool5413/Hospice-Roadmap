@@ -1,7 +1,8 @@
 import { Platform } from "react-native";
 
+import { getAuthToken } from "@workspace/api-client-react";
+
 import { apiBase, mergeJsonHeaders } from "./apiClient";
-import { getClientId } from "./clientIdentity";
 
 export type OpenAiVoiceStatus =
   | "idle"
@@ -222,10 +223,10 @@ export async function startOpenAiVoiceSession({
   await peerConnection.setLocalDescription(offer);
   await waitForIceGatheringComplete(peerConnection);
 
-  const clientId = await getClientId();
+  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/realtime/session`, {
     method: "POST",
-    headers: mergeJsonHeaders({ x_client_id: clientId }),
+    headers: mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined),
     body: JSON.stringify({
       sdp: peerConnection.localDescription?.sdp ?? offer.sdp,
       patientContext,
