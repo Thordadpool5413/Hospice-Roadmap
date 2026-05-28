@@ -266,3 +266,29 @@ export async function streamMessage(
     onError(err instanceof Error ? err.message : "Unknown error");
   }
 }
+
+// ─── Device claim ─────────────────────────────────────────────────────────────
+
+/**
+ * Links a device-generated clientId to the authenticated Clerk userId on the
+ * server side. Should be called once per device on first sign-in.
+ *
+ * Returns the number of conversation rows that were claimed, or null if the
+ * request failed (non-throwing — callers should treat null as a soft failure
+ * and retry on the next sign-in if the @device_claimed flag was not set).
+ */
+export async function claimDevice(clientId: string): Promise<number | null> {
+  try {
+    const data = await fetchJson<{ claimed: number }>(
+      `${apiBase()}/anthropic/claim-device`,
+      {
+        method: "POST",
+        headers: await jsonHeaders(),
+        body: JSON.stringify({ clientId }),
+      },
+    );
+    return data.claimed;
+  } catch {
+    return null;
+  }
+}

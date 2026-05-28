@@ -1,17 +1,71 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@clerk/expo";
 import { router } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants/colors";
+import { claimDevice } from "@/services/aiService";
+
+const DEVICE_CLAIMED_KEY = "@device_claimed";
+const CLIENT_ID_STORAGE_KEY = "ragna_client_id";
+
+/**
+ * Runs once per device after the user first signs in.
+ *
+ * Reads the locally-stored device client_id from AsyncStorage and, if it
+ * hasn't been claimed yet, sends a claim request to the server so that any
+ * conversation history created before auth was required is linked to the
+ * authenticated Clerk userId.
+ *
+ * Returns true when the claim succeeded or was not needed (safe to navigate).
+ * Returns false only if the network call failed — in that case the
+ * @device_claimed flag is NOT written so the next sign-in will retry.
+ */
+async function runDeviceClaimIfNeeded(): Promise<boolean> {
+  try {
+    const alreadyClaimed = await AsyncStorage.getItem(DEVICE_CLAIMED_KEY);
+    if (alreadyClaimed) return true;
+
+    const clientId = await AsyncStorage.getItem(CLIENT_ID_STORAGE_KEY);
+    if (!clientId || !/^client_[a-z0-9_]+$/.test(clientId)) {
+      return true;
+    }
+
+    const claimed = await claimDevice(clientId);
+    if (claimed !== null) {
+      await AsyncStorage.setItem(DEVICE_CLAIMED_KEY, "1");
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
 
 export default function IndexScreen() {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const { isOnboarded, isLoading } = useApp();
+  const claimAttempted = useRef(false);
+  const [claimReady, setClaimReady] = useState(false);
 
   useEffect(() => {
     if (!isClerkLoaded || isLoading) return;
+
+    if (!isSignedIn) {
+      setClaimReady(true);
+      return;
+    }
+
+    if (!claimAttempted.current) {
+      claimAttempted.current = true;
+      void runDeviceClaimIfNeeded().then(() => setClaimReady(true));
+      return;
+    }
+  }, [isSignedIn, isClerkLoaded, isOnboarded, isLoading]);
+
+  useEffect(() => {
+    if (!claimReady || !isClerkLoaded || isLoading) return;
 
     if (!isSignedIn) {
       router.replace("/(auth)/sign-in");
@@ -20,7 +74,7 @@ export default function IndexScreen() {
     } else {
       router.replace("/onboarding");
     }
-  }, [isSignedIn, isClerkLoaded, isOnboarded, isLoading]);
+  }, [claimReady, isSignedIn, isClerkLoaded, isOnboarded, isLoading]);
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>

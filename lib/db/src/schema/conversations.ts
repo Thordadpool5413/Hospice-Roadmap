@@ -8,9 +8,13 @@ export const conversations = pgTable(
     id: serial("id").primaryKey(),
     title: text("title").notNull(),
     clientId: text("client_id").notNull().default("legacy_unowned"),
+    userId: text("user_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [index("conversations_client_id_idx").on(table.clientId)]
+  (table) => [
+    index("conversations_client_id_idx").on(table.clientId),
+    index("conversations_user_id_idx").on(table.userId),
+  ]
 );
 
 export const insertConversationSchema = createInsertSchema(conversations).omit({
