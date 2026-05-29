@@ -20,6 +20,13 @@ import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
+import {
+  deleteServerGoals,
+  deleteServerJournal,
+  deleteServerLivingProfile,
+  deleteServerReminders,
+  deleteServerSymptoms,
+} from "@/services/syncService";
 
 // ─── Helpers to determine empty states ───────────────────────────────────────
 
@@ -126,7 +133,7 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Patient Profile",
-          "Remove saved patient profile details from this device? Goals of care will be kept unless you clear them separately.",
+          "Remove saved patient profile details from this device and cloud? Goals of care will be kept unless you clear them separately.",
           clearPatientProfile
         ),
     },
@@ -138,8 +145,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Goals of Care",
-          "Remove saved goals of care from this device? Other patient profile details will stay in place.",
-          clearGoalsOfCare
+          "Remove saved goals of care from this device and cloud? Other patient profile details will stay in place.",
+          async () => {
+            await clearGoalsOfCare();
+            await deleteServerGoals();
+          }
         ),
     },
     {
@@ -168,7 +178,7 @@ export default function DataControlsScreen() {
     },
     {
       title: "Journal Entries",
-      description: "Caregiver journal entries stored on this device",
+      description: "Caregiver journal entries stored on this device and in the cloud",
       status:
         journalEntries.length === 0
           ? "No entries"
@@ -177,13 +187,16 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Journal Entries",
-          "Delete all journal entries stored on this device? This cannot be undone.",
-          clearJournal
+          "Delete all journal entries from this device and cloud? This cannot be undone.",
+          async () => {
+            await clearJournal();
+            await deleteServerJournal();
+          }
         ),
     },
     {
       title: "Symptom Check-Ins",
-      description: "Daily symptom tracking entries stored on this device",
+      description: "Daily symptom tracking entries stored on this device and in the cloud",
       status:
         symptomEntries.length === 0
           ? "No entries"
@@ -192,8 +205,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Symptom Check-Ins",
-          "Delete all symptom tracking entries stored on this device? This cannot be undone.",
-          clearSymptoms
+          "Delete all symptom tracking entries from this device and cloud? This cannot be undone.",
+          async () => {
+            await clearSymptoms();
+            await deleteServerSymptoms();
+          }
         ),
     },
     {
@@ -207,8 +223,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Reminders",
-          "Delete all reminders stored on this device? Scheduled reminder notifications will also be cancelled.",
-          clearReminders
+          "Delete all reminders from this device and cloud? Scheduled reminder notifications will also be cancelled.",
+          async () => {
+            await clearReminders();
+            await deleteServerReminders();
+          }
         ),
     },
     {
@@ -221,10 +240,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Ragna Memory",
-          "Clear Ragna's saved local memory, living profile, topic history, and app-activity observations on this device? This does not automatically delete a conversation currently open on the server.",
+          "Clear Ragna's saved local memory, living profile, topic history, and app-activity observations? Cloud profile will also be removed. This does not automatically delete a conversation currently open on the server.",
           async () => {
             await clearMemories();
             await clearObservations();
+            await deleteServerLivingProfile();
           }
         ),
     },
@@ -257,7 +277,7 @@ export default function DataControlsScreen() {
         <View style={styles.introBanner}>
           <Feather name="hard-drive" size={18} color={Colors.primary} style={styles.introIcon} />
           <Text style={styles.introText}>
-            Review what is stored on this device and clear categories individually. These actions do not remove server-backed records such as submitted support requests, and they do not automatically delete an active Ragna conversation on the server.
+            Review what is stored on this device and in the cloud. Clearing a category removes data from both places. These actions do not remove server-backed records such as submitted support requests, and they do not automatically delete an active Ragna conversation on the server.
           </Text>
         </View>
 
@@ -314,7 +334,7 @@ export default function DataControlsScreen() {
         <View style={styles.noteCard}>
           <Text style={styles.noteTitle}>Need a full reset?</Text>
           <Text style={styles.noteBody}>
-            Category controls above only clear saved data for that category. Your app setup, accessibility settings, and journey stage are kept in place.
+            Category controls above clear saved data for that category on both this device and the cloud. Your app setup, accessibility settings, and journey stage are kept in place.
           </Text>
         </View>
 

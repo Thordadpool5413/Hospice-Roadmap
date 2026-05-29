@@ -22,6 +22,7 @@ interface SymptomContextValue {
   getRecentEntries: (days: number) => SymptomEntry[];
   getRecentSummary: (days?: number) => string;
   clearEntries: () => Promise<void>;
+  hydrateFromServer: (serverEntries: SymptomEntry[]) => Promise<void>;
 }
 
 const SymptomContext = createContext<SymptomContextValue | null>(null);
@@ -63,12 +64,14 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     const newEntry: SymptomEntry = {
       ...entry,
       id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
+      updatedAt: new Date().toISOString(),
     };
     await saveEntries([...entries, newEntry]);
   }, [entries]);
 
   const updateEntry = useCallback(async (id: string, updates: Partial<Omit<SymptomEntry, "id">>) => {
-    const updated = entries.map((e) => e.id === id ? { ...e, ...updates } : e);
+    const now = new Date().toISOString();
+    const updated = entries.map((e) => e.id === id ? { ...e, ...updates, updatedAt: now } : e);
     await saveEntries(updated);
   }, [entries]);
 
@@ -82,6 +85,18 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
       setEntries([]);
     } catch (e) {
       console.error("Error clearing symptom entries:", e);
+    }
+  }, []);
+
+  const hydrateFromServer = useCallback(async (serverEntries: SymptomEntry[]) => {
+    try {
+      const trimmed = serverEntries
+        .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
+        .slice(0, MAX_ENTRIES);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+      setEntries(trimmed);
+    } catch (e) {
+      console.error("Error hydrating symptom entries from server:", e);
     }
   }, []);
 
@@ -174,7 +189,7 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SymptomContext.Provider
-      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries, getRecentSummary, clearEntries }}
+      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries, getRecentSummary, clearEntries, hydrateFromServer }}
     >
       {children}
     </SymptomContext.Provider>

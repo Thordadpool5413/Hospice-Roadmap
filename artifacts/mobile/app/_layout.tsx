@@ -15,6 +15,7 @@ import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { CloudSyncManager } from "@/components/CloudSyncManager";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
@@ -271,6 +272,7 @@ export default function RootLayout() {
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <View style={{ flex: 1 }}>
                     <LearningSync />
+                    <CloudSyncManager />
                     <RootLayoutNav />
                     <OfflineBanner />
                   </View>

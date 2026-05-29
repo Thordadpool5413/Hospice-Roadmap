@@ -21,3 +21,8 @@ export * from "./conversations";
 export * from "./messages";
 export * from "./supportRequests";
 export * from "./users";
+export * from "./symptomEntries";
+export * from "./journalEntries";
+export * from "./goalsOfCare";
+export * from "./livingProfiles";
+export * from "./syncReminders";

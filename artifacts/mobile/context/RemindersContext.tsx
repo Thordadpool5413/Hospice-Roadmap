@@ -43,6 +43,7 @@ interface RemindersContextValue {
   toggleReminder: (id: string) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
   clearReminders: () => Promise<void>;
+  hydrateFromServer: (serverReminders: Reminder[]) => Promise<void>;
 }
 
 const RemindersContext = createContext<RemindersContextValue | null>(null);
@@ -126,6 +127,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
       id: `reminder-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       ...data,
       enabled: true,
+      updatedAt: new Date().toISOString(),
     };
     if (permissionStatus === "granted") {
       reminder.notificationId = await scheduleNotification(reminder);
@@ -136,7 +138,8 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
   }, [reminders, save, permissionStatus]);
 
   const updateReminder = useCallback(async (id: string, updates: Partial<Pick<Reminder, "label" | "datetime" | "recurrence" | "type">>) => {
-    let updated = reminders.map((r) => r.id === id ? { ...r, ...updates } : r);
+    const now = new Date().toISOString();
+    let updated = reminders.map((r) => r.id === id ? { ...r, ...updates, updatedAt: now } : r);
     const r = updated.find((r) => r.id === id);
     if (r && r.enabled) {
       await cancelNotification(r.notificationId);
@@ -150,7 +153,8 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
   }, [reminders, save, permissionStatus]);
 
   const toggleReminder = useCallback(async (id: string) => {
-    let updated = reminders.map((r) => r.id === id ? { ...r, enabled: !r.enabled } : r);
+    const now = new Date().toISOString();
+    let updated = reminders.map((r) => r.id === id ? { ...r, enabled: !r.enabled, updatedAt: now } : r);
     const toggled = updated.find((r) => r.id === id);
     if (toggled) {
       if (!toggled.enabled) {
@@ -184,11 +188,28 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     await save([]);
   }, [reminders, save]);
 
+  const hydrateFromServer = useCallback(async (serverReminders: Reminder[]) => {
+    // Server reminders don't have notificationId — merge with local to preserve them.
+    const byId: Record<string, Reminder> = {};
+    for (const r of serverReminders) {
+      byId[r.id] = r;
+    }
+    // Keep notification IDs from any existing local reminders
+    for (const local of reminders) {
+      if (byId[local.id] && local.notificationId) {
+        byId[local.id] = { ...byId[local.id], notificationId: local.notificationId };
+      }
+    }
+    const merged = Object.values(byId);
+    setReminders(merged);
+    await save(merged);
+  }, [reminders, save]);
+
   return (
     <RemindersContext.Provider value={{
       reminders, isLoading, permissionStatus,
       requestPermissions, addReminder, updateReminder,
-      toggleReminder, deleteReminder, clearReminders,
+      toggleReminder, deleteReminder, clearReminders, hydrateFromServer,
     }}>
       {children}
     </RemindersContext.Provider>

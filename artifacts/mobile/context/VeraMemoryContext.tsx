@@ -15,6 +15,7 @@ import { VeraMemory } from "@/types";
 // AsyncStorage keys are frozen — renaming would lose existing user data.
 const STORAGE_KEY = "@vera_memories_v1";
 const PROFILE_KEY = "@vera_living_profile_v1";
+const PROFILE_UPDATED_AT_KEY = "@vera_living_profile_updated_at_v1";
 const TILES_KEY = "@vera_tile_history_v1";
 const MAX_MEMORIES = 5;
 const MAX_TILES = 20;
@@ -23,10 +24,14 @@ const MAX_TILES = 20;
 interface VeraMemoryContextType {
   memories: VeraMemory[];
   livingProfile: string;
+  /** ISO timestamp of the last local write to livingProfile — used as LWW version key for sync. */
+  livingProfileUpdatedAt: string;
   recentTiles: string[];
+  /** True while the initial AsyncStorage load is still in flight. */
+  isLoading: boolean;
   addMemory: (memory: VeraMemory) => Promise<void>;
   clearMemories: () => Promise<void>;
-  updateLivingProfile: (profile: string) => Promise<void>;
+  updateLivingProfile: (profile: string, updatedAt?: string) => Promise<void>;
   recordTile: (label: string) => void;
   getMemorySummary: () => string;
   memoryCount: number;
@@ -46,24 +51,25 @@ export function useVeraMemory(): VeraMemoryContextType {
 export function VeraMemoryProvider({ children }: { children: React.ReactNode }) {
   const [memories, setMemories] = useState<VeraMemory[]>([]);
   const [livingProfile, setLivingProfile] = useState<string>("");
+  const [livingProfileUpdatedAt, setLivingProfileUpdatedAt] = useState<string>("");
   const [recentTiles, setRecentTiles] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setMemories(JSON.parse(raw) as VeraMemory[]);
+    Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(PROFILE_KEY),
+      AsyncStorage.getItem(PROFILE_UPDATED_AT_KEY),
+      AsyncStorage.getItem(TILES_KEY),
+    ])
+      .then(([memoriesRaw, profileRaw, profileUpdatedAtRaw, tilesRaw]) => {
+        if (memoriesRaw) setMemories(JSON.parse(memoriesRaw) as VeraMemory[]);
+        if (profileRaw) setLivingProfile(profileRaw);
+        if (profileUpdatedAtRaw) setLivingProfileUpdatedAt(profileUpdatedAtRaw);
+        if (tilesRaw) setRecentTiles(JSON.parse(tilesRaw) as string[]);
       })
-      .catch(() => {});
-    AsyncStorage.getItem(PROFILE_KEY)
-      .then((raw) => {
-        if (raw) setLivingProfile(raw);
-      })
-      .catch(() => {});
-    AsyncStorage.getItem(TILES_KEY)
-      .then((raw) => {
-        if (raw) setRecentTiles(JSON.parse(raw) as string[]);
-      })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   const persistMemories = useCallback(async (updated: VeraMemory[]) => {
@@ -86,14 +92,24 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
   const clearMemories = useCallback(async () => {
     await persistMemories([]);
     setLivingProfile("");
-    await AsyncStorage.removeItem(PROFILE_KEY);
+    setLivingProfileUpdatedAt("");
     setRecentTiles([]);
-    await AsyncStorage.removeItem(TILES_KEY);
+    await AsyncStorage.multiRemove([PROFILE_KEY, PROFILE_UPDATED_AT_KEY, TILES_KEY]);
   }, [persistMemories]);
 
-  const updateLivingProfile = useCallback(async (profile: string) => {
+  /**
+   * Update the living profile string.
+   * @param profile   The new synthesised profile text.
+   * @param updatedAt Optional ISO timestamp to use as the LWW version key.
+   *                  Defaults to now, so server restores use the server's own
+   *                  updatedAt to avoid immediately re-uploading as "newer".
+   */
+  const updateLivingProfile = useCallback(async (profile: string, updatedAt?: string) => {
+    const ts = updatedAt ?? new Date().toISOString();
     setLivingProfile(profile);
+    setLivingProfileUpdatedAt(ts);
     await AsyncStorage.setItem(PROFILE_KEY, profile);
+    await AsyncStorage.setItem(PROFILE_UPDATED_AT_KEY, ts);
   }, []);
 
   const recordTile = useCallback((label: string) => {
@@ -156,7 +172,9 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
       value={{
         memories,
         livingProfile,
+        livingProfileUpdatedAt,
         recentTiles,
+        isLoading,
         addMemory,
         clearMemories,
         updateLivingProfile,
