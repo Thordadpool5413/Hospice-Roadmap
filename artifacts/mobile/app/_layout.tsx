@@ -8,8 +8,9 @@ import {
 import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import Constants from "expo-constants";
 import React, { useEffect, useRef } from "react";
 import { Alert, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -30,6 +31,17 @@ import { SymptomProvider } from "@/context/SymptomContext";
 import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
+
+const isExpoGo = Constants.executionEnvironment === "storeClient";
+const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
+let Notifications: typeof import("expo-notifications") | null = null;
+if (notificationsAvailable) {
+  try {
+    Notifications = require("expo-notifications");
+  } catch {
+    Notifications = null;
+  }
+}
 
 try {
   initializeRevenueCat();
@@ -256,6 +268,42 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  // Handle escalation notification taps — navigate to Ragna with a pre-loaded message.
+  // Handles both: (a) foreground/background taps via the listener, and (b) cold-start
+  // (app launched from terminated state) via getLastNotificationResponseAsync.
+  useEffect(() => {
+    if (!Notifications) return;
+
+    function routeEscalationNotification(data: Record<string, unknown> | undefined) {
+      if (!data || data.type !== "escalation") return;
+      const initialMessage = typeof data.initialMessage === "string" ? data.initialMessage : undefined;
+      if (!initialMessage) return;
+      setTimeout(() => {
+        try {
+          router.push({ pathname: "/(tabs)/help", params: { initialMessage } } as any);
+        } catch {
+          // Navigation not yet ready — skip
+        }
+      }, 300);
+    }
+
+    // Cold-start: check if the app was opened by tapping an escalation notification
+    Notifications!.getLastNotificationResponseAsync()
+      .then((lastResponse) => {
+        if (!lastResponse) return;
+        const data = lastResponse.notification.request.content.data as Record<string, unknown> | undefined;
+        routeEscalationNotification(data);
+      })
+      .catch(() => {});
+
+    // Foreground / background tap listener
+    const subscription = Notifications!.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+      routeEscalationNotification(data);
+    });
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
