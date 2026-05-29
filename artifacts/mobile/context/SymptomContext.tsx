@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import { SymptomEntry } from "@/types";
+import { uploadSymptoms } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_symptoms";
 const MAX_ENTRIES = 90;
@@ -48,15 +49,17 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const saveEntries = async (updated: SymptomEntry[]) => {
+  const saveEntries = async (updated: SymptomEntry[]): Promise<SymptomEntry[]> => {
     try {
       const trimmed = updated
         .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
         .slice(0, MAX_ENTRIES);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
       setEntries(trimmed);
+      return trimmed;
     } catch (e) {
       console.error("Error saving symptom entries:", e);
+      return updated;
     }
   };
 
@@ -66,13 +69,15 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
       id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
       updatedAt: new Date().toISOString(),
     };
-    await saveEntries([...entries, newEntry]);
+    const saved = await saveEntries([...entries, newEntry]);
+    uploadSymptoms(saved).catch(() => {});
   }, [entries]);
 
   const updateEntry = useCallback(async (id: string, updates: Partial<Omit<SymptomEntry, "id">>) => {
     const now = new Date().toISOString();
     const updated = entries.map((e) => e.id === id ? { ...e, ...updates, updatedAt: now } : e);
-    await saveEntries(updated);
+    const saved = await saveEntries(updated);
+    uploadSymptoms(saved).catch(() => {});
   }, [entries]);
 
   const deleteEntry = useCallback(async (id: string) => {
