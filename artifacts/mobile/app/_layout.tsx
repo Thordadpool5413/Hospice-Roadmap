@@ -17,9 +17,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { CloudSyncProvider } from "@/components/CloudSyncManager";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LockScreen } from "@/components/LockScreen";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { SyncSuccessToast } from "@/components/SyncSuccessToast";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
+import { AppLockProvider, useAppLock } from "@/context/AppLockContext";
 import { AppProvider } from "@/context/AppContext";
 import { JournalProvider } from "@/context/JournalContext";
 import { RagnaLearningProvider, useRagnaLearning } from "@/context/RagnaLearningContext";
@@ -70,6 +72,14 @@ function LearningSync() {
   }, [lastSignificantAt, significantCount]);
 
   return null;
+}
+
+// LockOverlay renders the full-screen lock screen above all app content
+// whenever the app lock is enabled and the lock state is active.
+function LockOverlay() {
+  const { isLocked, isLockEnabled, unlock } = useAppLock();
+  if (!isLockEnabled || !isLocked) return null;
+  return <LockScreen onUnlock={unlock} />;
 }
 
 function RootLayoutNav() {
@@ -287,6 +297,7 @@ export default function RootLayout() {
               <RagnaLearningProvider>
               <QueryClientProvider client={queryClient}>
                 <SubscriptionProvider>
+                <AppLockProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <CloudSyncProvider>
                     <View style={{ flex: 1 }}>
@@ -294,9 +305,11 @@ export default function RootLayout() {
                       <RootLayoutNav />
                       <OfflineBanner />
                       <SyncSuccessToast />
+                      <LockOverlay />
                     </View>
                   </CloudSyncProvider>
                 </GestureHandlerRootView>
+                </AppLockProvider>
                 </SubscriptionProvider>
               </QueryClientProvider>
               </RagnaLearningProvider>

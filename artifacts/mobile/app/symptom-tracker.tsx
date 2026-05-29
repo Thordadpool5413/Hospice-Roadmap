@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { SparklineCard, CombinedTrendChart } from "@/components/SymptomSparkline";
 import { Colors } from "@/constants/colors";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
@@ -548,7 +549,8 @@ export default function SymptomTrackerScreen() {
   const [savedEntry,     setSavedEntry]     = useState<typeof existing | null>(null);
   const [selectedCal,    setSelectedCal]    = useState<string | null>(null);
 
-  const last14 = useMemo(() => getRecentEntries(14), [entries]);
+  const last7   = useMemo(() => getRecentEntries(7),  [entries]);
+  const last14  = useMemo(() => getRecentEntries(14), [entries]);
   const allRecent = useMemo(() => entries.slice(0, 30), [entries]);
 
   const highPain   = pain >= 7;
@@ -754,14 +756,18 @@ export default function SymptomTrackerScreen() {
           </Text>
 
           <View style={sc.sliders}>
+            <SparklineCard symptomKey="pain" label="Pain" entries={last7} max={10} />
             <SliderRow label="Pain"          icon="zap"      value={pain}          onChange={setPain} />
             <View style={sc.divider} />
+            <SparklineCard symptomKey="breathlessness" label="Breathlessness" entries={last7} max={10} />
             <SliderRow label="Breathlessness" icon="wind"     value={breathlessness} onChange={setBreathlessness} />
             <View style={sc.divider} />
+            <SparklineCard symptomKey="nausea" label="Nausea" entries={last7} max={10} />
             <SliderRow label="Nausea"         icon="activity" value={nausea}         onChange={setNausea} />
           </View>
 
           {/* Agitation */}
+          <SparklineCard symptomKey="agitation" label="Agitation" entries={last7} max={3} />
           <View style={sc.optSection}>
             <Text style={sc.optLabel}>Agitation level</Text>
             <View style={sc.optRow}>
@@ -784,6 +790,7 @@ export default function SymptomTrackerScreen() {
           </View>
 
           {/* Appetite */}
+          <SparklineCard symptomKey="appetite" label="Appetite" entries={last7} max={3} inverted />
           <View style={sc.optSection}>
             <Text style={sc.optLabel}>Appetite</Text>
             <View style={sc.optRow}>
@@ -843,6 +850,9 @@ export default function SymptomTrackerScreen() {
             </Text>
           </Pressable>
         </View>
+
+        {/* ── Combined 7-Day Overview (above history) ── */}
+        <CombinedTrendChart entries={last7} />
 
         {/* ── Check-in History ── */}
         <View style={sc.historySection}>

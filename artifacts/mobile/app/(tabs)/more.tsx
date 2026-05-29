@@ -23,6 +23,7 @@ import { JourneyStage, UserRole } from "@/types";
 
 import { PlanBadge } from "@/components/PlanBadge";
 import { ENTITLEMENT_IDENTIFIER, getPlanName } from "@/constants/subscriptionProducts";
+import { LockTimeout, useAppLock } from "@/context/AppLockContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 
 const roleLabels: Record<UserRole, string> = {
@@ -66,10 +67,18 @@ const FONT_SCALE_OPTIONS: { label: string; value: FontScale; display: string }[]
   { label: "X-Large", value: 1.4, display: "A++" },
 ];
 
+const TIMEOUT_OPTIONS: { label: string; value: LockTimeout }[] = [
+  { label: "Immediately", value: 0  },
+  { label: "1 min",       value: 1  },
+  { label: "5 min",       value: 5  },
+  { label: "15 min",      value: 15 },
+];
+
 export default function MoreScreen() {
   const insets = useSafeAreaInsets();
   const { user, updateJourneyStage, updateRole } = useApp();
   const { fontScale, highContrast, setFontScale, setHighContrast } = useA11y();
+  const { isLockEnabled, lockTimeout, setLockEnabled, setLockTimeout } = useAppLock();
   const { signOut } = useClerk();
   const { user: clerkUser } = useUser();
   const { isPremium, customerInfo } = useSubscription();
@@ -375,6 +384,79 @@ export default function MoreScreen() {
                 thumbColor={highContrast ? Colors.primary : "#AAB8D0"}
               />
             </View>
+          </View>
+        </View>
+
+        {/* ── Security ── */}
+        <View style={s.menuSection}>
+          <View style={s.sectionHeaderRow}>
+            <View style={[s.sectionIcon, { backgroundColor: Colors.accentReminders + "20" }]}>
+              <Feather name="lock" size={14} color={Colors.accentReminders} />
+            </View>
+            <Text style={s.sectionTitle}>Security</Text>
+          </View>
+          <View style={s.menuCard}>
+            {/* App Lock toggle */}
+            <View style={[s.menuRow, isLockEnabled && s.menuRowBorder]}>
+              <View style={[s.menuIconWrap, { backgroundColor: Colors.accentReminders + "20" }]}>
+                <Feather name="shield" size={16} color={Colors.accentReminders} />
+              </View>
+              <View style={s.menuTextWrap}>
+                <Text style={s.menuLabel}>App Lock</Text>
+                <Text style={s.menuHint}>
+                  {isLockEnabled ? "Locks on background" : "Require Face ID, Touch ID, or passcode"}
+                </Text>
+              </View>
+              <Switch
+                value={isLockEnabled}
+                onValueChange={(val) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setLockEnabled(val);
+                }}
+                trackColor={{ false: Colors.divider, true: Colors.accentReminders + "80" }}
+                thumbColor={isLockEnabled ? Colors.accentReminders : "#AAB8D0"}
+              />
+            </View>
+
+            {/* Lock-after timeout — shown only when lock is enabled */}
+            {isLockEnabled && (
+              <View style={s.menuRow}>
+                <View style={[s.menuIconWrap, { backgroundColor: Colors.accentReminders + "15" }]}>
+                  <Feather name="clock" size={16} color={Colors.accentReminders} />
+                </View>
+                <View style={s.menuTextWrap}>
+                  <Text style={s.menuLabel}>Lock after</Text>
+                </View>
+                <View style={s.fontBtnGroup}>
+                  {TIMEOUT_OPTIONS.map((opt) => (
+                    <Pressable
+                      key={opt.value}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setLockTimeout(opt.value);
+                      }}
+                      style={[
+                        s.fontBtn,
+                        lockTimeout === opt.value && {
+                          backgroundColor: Colors.accentReminders + "22",
+                          borderColor: Colors.accentReminders,
+                        },
+                      ]}
+                      accessibilityLabel={opt.label}
+                    >
+                      <Text
+                        style={[
+                          s.fontBtnText,
+                          lockTimeout === opt.value && { color: Colors.accentReminders },
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
