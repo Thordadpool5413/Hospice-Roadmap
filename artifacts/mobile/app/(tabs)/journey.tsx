@@ -161,7 +161,11 @@ export default function JourneyScreen() {
         <Text style={styles.actionsSectionTitle}>Tools & Resources</Text>
         <View style={styles.actionsList}>
           {[
-            { label: "Eligibility Assessment", icon: "clipboard", route: "/evaluation", desc: "Understand hospice readiness" },
+            // During/After users see a validating context page instead of the
+            // eligibility assessment, which is only relevant before enrollment.
+            ...(activeStage !== "before" ? [
+              { label: "Understanding Your Hospice Journey", icon: "book-open", route: "/hospice-journey-context", desc: "How eligibility decisions are made" },
+            ] : []),
             { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", desc: "Search in your area" },
             { label: "Contact Support", icon: "message-circle", route: "/support", desc: "Talk with our team" },
           ].map((item) => (

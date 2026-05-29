@@ -144,7 +144,6 @@ export default function MoreScreen() {
           { label: "Pain Assessment Tool (PAINAD)", icon: "activity", route: "/painad", color: Colors.amber } as MenuItem,
         ] : []),
         { label: "Hospice Interview Scorecard", icon: "check-square", route: "/hospice-interview", color: Colors.accentGoals },
-        { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation", color: Colors.accentCareWishes },
         { label: "Advance Directives & State Forms", icon: "file-text", route: "/legal", color: Colors.accentJourney },
         { label: "Resource Library", icon: "book-open", route: "/resources", color: Colors.textMuted },
       ],

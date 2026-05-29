@@ -259,6 +259,10 @@ function RootLayoutNav() {
         name="family-updates"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="hospice-journey-context"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
