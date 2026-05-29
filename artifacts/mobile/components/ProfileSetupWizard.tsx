@@ -117,59 +117,80 @@ export function ProfileSetupWizard({ visible, onComplete, onDismiss }: ProfileSe
     });
   }, [user, localName, localDiagnosis, localMedications, localPhone, updatePatientProfile]);
 
-  const handleNext = useCallback(() => {
+  // Not memoized — all handlers depend on local field state that changes
+  // on every keystroke. Memoizing with a subset of deps creates stale closures.
+
+  const handleAdvance = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (step < 4) {
       setStep((s) => (s + 1) as StepId);
     } else {
-      handleComplete();
+      handleFinishStep();
     }
-  }, [step]);
+  };
 
-  const handleSkip = useCallback(() => {
+  const handleSkipStep = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (step < 4) {
       setStep((s) => (s + 1) as StepId);
     } else {
-      handleComplete();
+      // Last step skipped — save partial data and enter dismiss/re-prompt track.
+      saveCurrentFields();
+      onDismiss();
     }
-  }, [step]);
+  };
 
-  const handleComplete = useCallback(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  // Called when the user taps the primary CTA on the last step.
+  // Only marks the wizard permanently complete if all 4 foundational fields
+  // are filled; otherwise saves partial data and enters the dismiss track so
+  // the re-prompt logic can fire after 7 days.
+  const handleFinishStep = () => {
     saveCurrentFields();
 
-    const name = localName.trim();
-    const diag = localDiagnosis.trim();
+    const nameFilled   = localName.trim().length > 0;
+    const diagFilled   = localDiagnosis.trim().length > 0;
+    const medsFilled   = localMedications.length > 0;
+    const phoneFilled  = localPhone.trim().length > 0;
+    const allFilled    = nameFilled && diagFilled && medsFilled && phoneFilled;
 
-    addObservation(
-      "profile_updated",
-      "Patient profile set up via setup wizard",
-      { detail: [name && `patient: ${name}`, diag && `diagnosis: ${diag}`].filter(Boolean).join(", ") || undefined, significant: true }
-    ).catch(() => {});
+    if (allFilled) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const name = localName.trim();
+      const diag = localDiagnosis.trim();
 
-    onComplete();
+      addObservation(
+        "profile_updated",
+        "Patient profile set up via setup wizard",
+        { detail: [name && `patient: ${name}`, diag && `diagnosis: ${diag}`].filter(Boolean).join(", ") || undefined, significant: true }
+      ).catch(() => {});
 
-    // Navigate to Ragna with a personalized opening message
-    let msg = "Hi Ragna! I just finished setting up the care profile. What can you help me with?";
-    if (name && diag) {
-      msg = `Hi Ragna! I've set up ${name}'s care profile — they have ${diag}. What should I know right now?`;
-    } else if (name) {
-      msg = `Hi Ragna! I've just set up ${name}'s care profile. What can you help me with?`;
-    } else if (diag) {
-      msg = `Hi Ragna! I've set up a care profile for a patient with ${diag}. What's most important for me to know?`;
+      onComplete();
+
+      // Navigate to Ragna with a personalized opening message
+      let msg = "Hi Ragna! I just finished setting up the care profile. What can you help me with?";
+      if (name && diag) {
+        msg = `Hi Ragna! I've set up ${name}'s care profile — they have ${diag}. What should I know right now?`;
+      } else if (name) {
+        msg = `Hi Ragna! I've just set up ${name}'s care profile. What can you help me with?`;
+      } else if (diag) {
+        msg = `Hi Ragna! I've set up a care profile for a patient with ${diag}. What's most important for me to know?`;
+      }
+      setTimeout(() => {
+        router.push({ pathname: "/(tabs)/help", params: { initialMessage: msg } } as any);
+      }, 300);
+    } else {
+      // Some fields still blank — treat as "finish later" so the wizard
+      // re-prompts after 7 days (or stops after a second dismissal).
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onDismiss();
     }
+  };
 
-    setTimeout(() => {
-      router.push({ pathname: "/(tabs)/help", params: { initialMessage: msg } } as any);
-    }, 300);
-  }, [localName, localDiagnosis, localMedications, localPhone, saveCurrentFields, onComplete, addObservation]);
-
-  const handleFinishLater = useCallback(() => {
+  const handleFinishLater = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     saveCurrentFields();
     onDismiss();
-  }, [saveCurrentFields, onDismiss]);
+  };
 
   const currentValue =
     step === 1 ? localName :
@@ -273,7 +294,7 @@ export function ProfileSetupWizard({ visible, onComplete, onDismiss }: ProfileSe
                   returnKeyType="done"
                   autoFocus={currentStepDef.inputType !== "phone"}
                   autoCapitalize={step === 2 ? "none" : "words"}
-                  onSubmitEditing={currentValue.trim() ? handleNext : undefined}
+                  onSubmitEditing={currentValue.trim() ? handleAdvance : undefined}
                 />
               )}
             </View>
@@ -281,7 +302,7 @@ export function ProfileSetupWizard({ visible, onComplete, onDismiss }: ProfileSe
             {/* ── Action buttons ── */}
             <View style={wz.actions}>
               <Pressable
-                onPress={handleNext}
+                onPress={handleAdvance}
                 style={({ pressed }) => [
                   wz.nextBtn,
                   !currentValue.trim() && { opacity: 0.45 },
@@ -300,11 +321,11 @@ export function ProfileSetupWizard({ visible, onComplete, onDismiss }: ProfileSe
               </Pressable>
 
               <Pressable
-                onPress={handleSkip}
+                onPress={handleSkipStep}
                 style={({ pressed }) => [wz.skipBtn, pressed && { opacity: 0.55 }]}
               >
                 <Text style={wz.skipBtnText}>
-                  {isLastStep ? "Skip & finish" : "Skip this step"}
+                  {isLastStep ? "Skip & finish later" : "Skip this step"}
                 </Text>
               </Pressable>
             </View>
