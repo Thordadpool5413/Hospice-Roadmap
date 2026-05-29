@@ -255,6 +255,10 @@ function RootLayoutNav() {
         name="call-scripts"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="family-updates"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

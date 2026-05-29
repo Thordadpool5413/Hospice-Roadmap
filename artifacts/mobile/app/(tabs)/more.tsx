@@ -125,6 +125,9 @@ export default function MoreScreen() {
         { label: isPatient ? "Journal" : "Caregiver Journal", icon: "edit-3", route: "/journal", color: Colors.accentJournal },
         { label: "Reminders", icon: "bell", route: "/reminders", color: Colors.accentReminders },
         { label: "Symptom Tracker", icon: "activity", route: "/symptom-tracker", color: Colors.accentSymptom },
+        ...(!isPatient ? [
+          { label: "Family Updates", icon: "message-square", route: "/family-updates", color: Colors.success } as MenuItem,
+        ] : []),
       ],
     },
     {
