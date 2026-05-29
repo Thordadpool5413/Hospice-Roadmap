@@ -190,21 +190,37 @@ export default function AccountScreen() {
             <View style={styles.divider} />
 
             {isPremium ? (
-              <Pressable
-                onPress={() => {
-                  void openManageSubscription();
-                }}
-                style={({ pressed }) => [
-                  styles.actionRow,
-                  pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
-                ]}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
-                  <Feather name="credit-card" size={16} color={Colors.primary} />
-                </View>
-                <Text style={styles.actionLabel}>Manage Subscription</Text>
-                <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
-              </Pressable>
+              <>
+                <Pressable
+                  onPress={() => {
+                    void openManageSubscription();
+                  }}
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    planName === "Caregiver" && styles.actionRowBorder,
+                    pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
+                  ]}
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
+                    <Feather name="credit-card" size={16} color={Colors.primary} />
+                  </View>
+                  <Text style={styles.actionLabel}>Manage Subscription</Text>
+                  <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
+                </Pressable>
+                {planName === "Caregiver" && (
+                  <Pressable
+                    onPress={openPaywall}
+                    style={({ pressed }) => [
+                      styles.upgradeCompanionBtn,
+                      pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                    ]}
+                  >
+                    <Feather name="zap" size={15} color={Colors.primary} />
+                    <Text style={styles.upgradeCompanionText}>Upgrade to Companion</Text>
+                    <Feather name="chevron-right" size={15} color={Colors.primary + "99"} />
+                  </Pressable>
+                )}
+              </>
             ) : (
               <Pressable
                 onPress={openPaywall}
@@ -472,6 +488,22 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: "#fff",
     letterSpacing: -0.2,
+  },
+
+  // Upgrade to Companion row (shown for Caregiver subscribers)
+  upgradeCompanionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  upgradeCompanionText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+    letterSpacing: -0.1,
   },
 
   versionNote: {

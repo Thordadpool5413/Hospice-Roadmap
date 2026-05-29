@@ -45,6 +45,70 @@ const COMPANION_FEATURES: PlanFeature[] = [
   { text: "Priority support", included: true },
 ];
 
+interface ComparisonRow {
+  feature: string;
+  caregiver: boolean;
+  companion: boolean;
+}
+
+const COMPARISON_ROWS: ComparisonRow[] = [
+  { feature: "Structured guidance (60 scenarios)", caregiver: true, companion: true },
+  { feature: "Symptom Tracker", caregiver: true, companion: true },
+  { feature: "Caregiver Journal", caregiver: true, companion: true },
+  { feature: "Goals of Care", caregiver: true, companion: true },
+  { feature: "Cloud sync across devices", caregiver: true, companion: true },
+  { feature: "Ragna AI companion", caregiver: false, companion: true },
+  { feature: "AI-powered personalized guidance", caregiver: false, companion: true },
+  { feature: "Cross-session AI memory", caregiver: false, companion: true },
+  { feature: "Smart follow-up suggestions", caregiver: false, companion: true },
+  { feature: "Priority support", caregiver: false, companion: true },
+];
+
+function ComparisonCell({ included }: { included: boolean }) {
+  return (
+    <View style={styles.compCell}>
+      {included ? (
+        <Feather name="check" size={14} color={Colors.success} />
+      ) : (
+        <Text style={styles.compCellDash}>—</Text>
+      )}
+    </View>
+  );
+}
+
+function PlanComparisonTable() {
+  return (
+    <View style={styles.compTable}>
+      {/* Column headers */}
+      <View style={styles.compHeaderRow}>
+        <View style={styles.compFeatureCol} />
+        <View style={[styles.compPlanCol, styles.compPlanColCaregiver]}>
+          <Text style={styles.compPlanLabel}>Caregiver</Text>
+          <Text style={styles.compPlanPrice}>$4.99<Text style={styles.compPlanPer}>/mo</Text></Text>
+        </View>
+        <View style={[styles.compPlanCol, styles.compPlanColCompanion]}>
+          <Text style={[styles.compPlanLabel, styles.compPlanLabelCompanion]}>Companion</Text>
+          <Text style={[styles.compPlanPrice, styles.compPlanPriceCompanion]}>$9.99<Text style={styles.compPlanPer}>/mo</Text></Text>
+        </View>
+      </View>
+
+      {/* Feature rows */}
+      {COMPARISON_ROWS.map((row, i) => (
+        <View
+          key={row.feature}
+          style={[styles.compRow, i % 2 === 0 && styles.compRowAlt]}
+        >
+          <View style={styles.compFeatureCol}>
+            <Text style={styles.compFeatureText}>{row.feature}</Text>
+          </View>
+          <ComparisonCell included={row.caregiver} />
+          <ComparisonCell included={row.companion} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function FeatureRow({ feature }: { feature: PlanFeature }) {
   return (
     <View style={styles.featureRow}>
@@ -212,6 +276,10 @@ export default function PaywallScreen() {
             <Text style={styles.successText}>{successMsg}</Text>
           </View>
         )}
+
+        {/* Plan comparison table */}
+        <Text style={styles.compSectionLabel}>Compare Plans</Text>
+        <PlanComparisonTable />
 
         {/* Caregiver plan */}
         <View style={styles.card}>
@@ -534,6 +602,101 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 8,
   },
+  // ── Plan comparison table ──────────────────────────────────────────────────
+  compSectionLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: Colors.textSubtle,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  compTable: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  compHeaderRow: {
+    flexDirection: "row",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.divider,
+    backgroundColor: Colors.surfaceLight,
+  },
+  compFeatureCol: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: "center",
+  },
+  compPlanCol: {
+    width: 80,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  compPlanColCaregiver: {
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: Colors.divider,
+  },
+  compPlanColCompanion: {
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.primary + "55",
+    backgroundColor: Colors.primary + "0A",
+  },
+  compPlanLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: Colors.textSecondary,
+    letterSpacing: 0.2,
+    marginBottom: 2,
+  },
+  compPlanLabelCompanion: {
+    color: Colors.primary,
+  },
+  compPlanPrice: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  compPlanPriceCompanion: {
+    color: Colors.primary,
+  },
+  compPlanPer: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  compRow: {
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.divider,
+  },
+  compRowAlt: {
+    backgroundColor: "rgba(255,255,255,0.015)",
+  },
+  compFeatureText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 17,
+  },
+  compCell: {
+    width: 80,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+  },
+  compCellDash: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+
   // Confirmation modal
   modalOverlay: {
     flex: 1,
