@@ -209,6 +209,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     );
     setReminders([]);
     await save([]);
+    uploadReminders([]);
   }, [reminders, save]);
 
   const hydrateFromServer = useCallback(async (serverReminders: Reminder[]) => {

@@ -105,6 +105,7 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
       setEntries([]);
+      uploadSymptoms([]);
     } catch (e) {
       console.error("Error clearing symptom entries:", e);
     }

@@ -92,6 +92,7 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
   const clearEntries = useCallback(async () => {
     setEntries([]);
     await save([]);
+    uploadJournal([]);
   }, [save]);
 
   const hydrateFromServer = useCallback(async (serverEntries: JournalEntry[]) => {
