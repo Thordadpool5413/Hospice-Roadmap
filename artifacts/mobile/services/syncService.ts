@@ -151,12 +151,85 @@ function reminderFallbackUpdatedAt(reminder: Reminder): string {
 
 // ─── Server data shape ────────────────────────────────────────────────────────
 
-interface ServerSyncData {
+export interface ServerSyncData {
   symptoms: SymptomEntry[];
   journal: JournalEntry[];
-  goals: { content: GoalsOfCare } | null;
-  livingProfile: { profile: string } | null;
+  /**
+   * The full DB row for goals — includes `updatedAt` (ISO string) alongside
+   * `content` so CloudSyncManager can do proper LWW timestamp comparison.
+   */
+  goals: { content: GoalsOfCare; updatedAt?: string } | null;
+  /**
+   * The full DB row for living profile — includes `updatedAt` (ISO string)
+   * alongside `profile`.
+   */
+  livingProfile: { profile: string; updatedAt?: string } | null;
   reminders: Reminder[];
+}
+
+// ─── Per-record merge helpers ─────────────────────────────────────────────────
+//
+// These produce the union of local and server entry sets, resolving conflicts
+// on matching IDs by keeping whichever record has the newer `updatedAt`.
+// Records without an explicit `updatedAt` fall back to the same deterministic
+// logical timestamp used by the upload helpers (check-in time / creation epoch)
+// so they participate correctly in LWW even before the field was introduced.
+
+/**
+ * Merge local and server symptom entries.
+ *
+ * - Records present on only one side are included as-is.
+ * - Records with matching IDs are resolved by `updatedAt` (server wins when
+ *   equal — the server is the source of truth for tie-breaks).
+ */
+export function mergeSymptomEntries(
+  local: SymptomEntry[],
+  server: SymptomEntry[],
+): SymptomEntry[] {
+  const merged = new Map<string, SymptomEntry>(local.map((e) => [e.id, e]));
+
+  for (const serverEntry of server) {
+    const localEntry = merged.get(serverEntry.id);
+    if (!localEntry) {
+      merged.set(serverEntry.id, serverEntry);
+    } else {
+      const localTs = localEntry.updatedAt ?? symptomFallbackUpdatedAt(localEntry);
+      const serverTs = serverEntry.updatedAt ?? symptomFallbackUpdatedAt(serverEntry);
+      if (new Date(serverTs) >= new Date(localTs)) {
+        merged.set(serverEntry.id, serverEntry);
+      }
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+/**
+ * Merge local and server journal entries.
+ *
+ * - Records present on only one side are included as-is.
+ * - Records with matching IDs are resolved by `updatedAt` (server wins on tie).
+ */
+export function mergeJournalEntries(
+  local: JournalEntry[],
+  server: JournalEntry[],
+): JournalEntry[] {
+  const merged = new Map<string, JournalEntry>(local.map((e) => [e.id, e]));
+
+  for (const serverEntry of server) {
+    const localEntry = merged.get(serverEntry.id);
+    if (!localEntry) {
+      merged.set(serverEntry.id, serverEntry);
+    } else {
+      const localTs = localEntry.updatedAt ?? journalFallbackUpdatedAt(localEntry);
+      const serverTs = serverEntry.updatedAt ?? journalFallbackUpdatedAt(serverEntry);
+      if (new Date(serverTs) >= new Date(localTs)) {
+        merged.set(serverEntry.id, serverEntry);
+      }
+    }
+  }
+
+  return Array.from(merged.values());
 }
 
 // ─── Full fetch from server ───────────────────────────────────────────────────

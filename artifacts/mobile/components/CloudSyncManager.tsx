@@ -8,13 +8,26 @@
  *   - App foreground (AppState "active")
  *   - Network reconnect (isOnline transitions false → true via useAppNetwork)
  *
- * Living-profile LWW:
- *   - The context now persists `livingProfileUpdatedAt` (ISO timestamp) beside
- *     the profile string in AsyncStorage.
- *   - On hydration, we compare local vs. server timestamps and apply the
- *     newer value — not just "hydrate if empty".
- *   - On upload, we send the stored `livingProfileUpdatedAt` (NOT new Date())
- *     so a stale local copy cannot win over a fresher server version.
+ * Conflict resolution strategy:
+ *   - Symptom entries and journal entries: per-record merge (union by ID).
+ *     For matching IDs, the record with the newer `updatedAt` wins; the server
+ *     is the tie-break authority. This prevents last-write-wins at the store
+ *     level when two devices edit while one is offline.
+ *   - Goals of care: true LWW — compare the server row's `updatedAt` against
+ *     the local GoalsOfCare.updatedAt and keep whichever is newer.
+ *   - Living profile: true LWW — compare stored `livingProfileUpdatedAt`
+ *     against the server row's `updatedAt` and keep whichever is newer.
+ *   - Reminders: restore-if-empty (no per-record merge; reminders are
+ *     device-local by nature and the merge spec does not apply to them).
+ *
+ * Merge note:
+ *   The merged arrays are used for BOTH the hydrate call (writing to local
+ *   storage / context state) and the push call (uploading to the server).
+ *   This is intentional: because React state updates are batched and won't
+ *   be reflected in the `symptoms`/`journal` closure until the next render,
+ *   reading from the closure after hydration would push stale pre-merge data.
+ *   Using the captured merged array guarantees the server receives the full
+ *   union even within a single sync run.
  */
 
 import { useAuth } from "@clerk/expo";
@@ -29,6 +42,8 @@ import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
 import {
   fetchServerData,
+  mergeJournalEntries,
+  mergeSymptomEntries,
   recordSyncSuccess,
   runOnceLocalMigration,
   uploadGoals,
@@ -75,18 +90,38 @@ export function CloudSyncManager() {
       // Step 1: one-time migration — upload local data where server has none
       await runOnceLocalMigration(serverData);
 
-      // Step 2: hydrate contexts from server when local state is empty
-      //         (restores data on a new device or after a reinstall)
-      if (symptoms.length === 0 && serverData.symptoms.length > 0) {
-        await hydrateSymptoms(serverData.symptoms as Parameters<typeof hydrateSymptoms>[0]);
-      }
+      // Step 2: merge server data into local state
+      //
+      // For list stores (symptoms, journal): union of IDs with per-record LWW.
+      // This means entries added on another device while this one was offline
+      // are restored, and edits to the same record resolve by timestamp.
+      //
+      // For scalar stores (goals, living profile): LWW by comparing updatedAt
+      // timestamps between local and server — the newer version wins.
 
-      if (journal.length === 0 && serverData.journal.length > 0) {
-        await hydrateJournal(serverData.journal as Parameters<typeof hydrateJournal>[0]);
-      }
+      // ── Symptoms (per-record merge) ──────────────────────────────────────
+      const mergedSymptoms = mergeSymptomEntries(symptoms, serverData.symptoms);
+      // Always hydrate: if mergedSymptoms === symptoms (no new data), the write
+      // is idempotent and inexpensive. This also handles the restore case.
+      await hydrateSymptoms(mergedSymptoms);
 
-      // Goals of care — hydrate only if local has no content at all
+      // ── Journal (per-record merge) ───────────────────────────────────────
+      const mergedJournal = mergeJournalEntries(journal, serverData.journal);
+      await hydrateJournal(mergedJournal);
+
+      // ── Goals of care (true LWW by updatedAt) ───────────────────────────
+      //
+      // `resolvedGoals` captures the winning version so Step 3 uploads the
+      // correct payload. We must NOT read from the `user` closure after
+      // calling `updatePatientProfile` — React state updates are batched and
+      // the closure still holds the pre-update value for the rest of this
+      // async function, which would cause the stale local copy to be uploaded
+      // with a fresh timestamp and overwrite the newer server data.
+      const serverGoalsContent = serverData.goals?.content as GoalsOfCare | undefined;
+      const serverGoalsTs = serverData.goals?.updatedAt;
       const localGoals = user?.patientProfile?.goalsOfCare;
+      const localGoalsTs = localGoals?.updatedAt;
+
       const hasLocalGoals = !!(
         localGoals?.whatMattersMost?.trim() ||
         localGoals?.goodDayLooksLike?.trim() ||
@@ -94,19 +129,50 @@ export function CloudSyncManager() {
         localGoals?.dnrStatus ||
         localGoals?.additionalDirectives?.trim()
       );
-      if (!hasLocalGoals && serverData.goals?.content) {
-        const restoredGoals = serverData.goals.content as GoalsOfCare;
-        const currentProfile = user?.patientProfile ?? {};
-        updatePatientProfile({ ...currentProfile, goalsOfCare: restoredGoals });
+
+      // resolvedGoals is the version that will be pushed in Step 3.
+      // It is set here during Step 2 so Step 3 never touches the stale closure.
+      let resolvedGoals: GoalsOfCare | null = null;
+
+      if (serverGoalsContent) {
+        let applyServer = false;
+        if (!hasLocalGoals) {
+          // Local is empty — always restore from server
+          applyServer = true;
+        } else if (serverGoalsTs && localGoalsTs) {
+          // Both have explicit timestamps — proper LWW
+          applyServer = new Date(serverGoalsTs) > new Date(localGoalsTs);
+        } else if (serverGoalsTs && !localGoalsTs) {
+          // Server has an explicit version; local predates the updatedAt field
+          // — treat the server record as authoritative
+          applyServer = true;
+        }
+        // else: local has a timestamp but server doesn't (shouldn't happen), or
+        // neither has a timestamp — keep local to avoid silent data loss.
+
+        if (applyServer) {
+          const currentProfile = user?.patientProfile ?? {};
+          updatePatientProfile({ ...currentProfile, goalsOfCare: serverGoalsContent });
+          // Resolved = server content. Carry the server's updatedAt so the
+          // upload uses the correct LWW key and is a no-op on the server
+          // (same data, same or older timestamp — server's setWhere guard
+          // will keep the existing row untouched).
+          resolvedGoals = serverGoalsTs
+            ? { ...serverGoalsContent, updatedAt: serverGoalsTs }
+            : serverGoalsContent;
+        } else if (hasLocalGoals && localGoals) {
+          resolvedGoals = localGoals;
+        }
+      } else if (hasLocalGoals && localGoals) {
+        // No server goals — local is the only version; push it.
+        resolvedGoals = localGoals;
       }
 
-      // Living profile — true LWW: apply whichever version has the newer timestamp.
-      // This handles the "stale local profile" case: if a newer version exists on
-      // the server (e.g. edited on another device), we take the server's version.
+      // ── Living profile (true LWW by updatedAt) ───────────────────────────
+      // The server row's updatedAt is now typed on ServerSyncData, so we read
+      // it directly rather than via a cast.
       if (serverData.livingProfile?.profile) {
-        const serverTs = typeof (serverData.livingProfile as Record<string, unknown>)["updatedAt"] === "string"
-          ? (serverData.livingProfile as Record<string, unknown>)["updatedAt"] as string
-          : null;
+        const serverTs = serverData.livingProfile.updatedAt ?? null;
         const serverIsNewer = serverTs && (
           !livingProfileUpdatedAt ||
           new Date(serverTs) > new Date(livingProfileUpdatedAt)
@@ -119,26 +185,42 @@ export function CloudSyncManager() {
         }
       }
 
+      // ── Reminders (restore-if-empty) ─────────────────────────────────────
+      // Reminders are device-local by nature. Per-record merge is not required;
+      // we simply restore from the server when the local list is empty (new
+      // device / reinstall).
       if (reminders.length === 0 && serverData.reminders.length > 0) {
         await hydrateReminders(serverData.reminders as Parameters<typeof hydrateReminders>[0]);
       }
 
-      // Step 3: push current local state to server with stored LWW timestamps
+      // Step 3: push current local state to server with stored LWW timestamps.
+      //
+      // For symptoms and journal we push the *merged* arrays captured above
+      // rather than the React closure values (`symptoms`, `journal`). React
+      // state updates from the hydrate calls above are batched and won't be
+      // visible in the closure until the next render, so using the closure
+      // here would upload only the pre-merge local data and miss entries that
+      // came from the server side of the merge.
+      //
+      // For goals of care we use `resolvedGoals` — also captured during
+      // Step 2 — for the same reason: the closure's `user.patientProfile`
+      // has not yet reflected the `updatePatientProfile` call above.
       const pushOps: Promise<unknown>[] = [];
 
-      if (symptoms.length > 0) pushOps.push(uploadSymptoms(symptoms));
-      if (journal.length > 0) pushOps.push(uploadJournal(journal));
+      if (mergedSymptoms.length > 0) pushOps.push(uploadSymptoms(mergedSymptoms));
+      if (mergedJournal.length > 0) pushOps.push(uploadJournal(mergedJournal));
 
-      const goalsOfCare = user?.patientProfile?.goalsOfCare;
-      const hasAnyGoals = !!(
-        goalsOfCare?.whatMattersMost?.trim() ||
-        goalsOfCare?.goodDayLooksLike?.trim() ||
-        goalsOfCare?.thingsToAvoid?.trim() ||
-        goalsOfCare?.dnrStatus ||
-        goalsOfCare?.additionalDirectives?.trim()
-      );
-      if (goalsOfCare && hasAnyGoals) {
-        pushOps.push(uploadGoals(goalsOfCare));
+      if (resolvedGoals) {
+        const hasAnyGoals = !!(
+          resolvedGoals.whatMattersMost?.trim() ||
+          resolvedGoals.goodDayLooksLike?.trim() ||
+          resolvedGoals.thingsToAvoid?.trim() ||
+          resolvedGoals.dnrStatus ||
+          resolvedGoals.additionalDirectives?.trim()
+        );
+        if (hasAnyGoals) {
+          pushOps.push(uploadGoals(resolvedGoals));
+        }
       }
 
       if (livingProfile && livingProfileUpdatedAt) {
