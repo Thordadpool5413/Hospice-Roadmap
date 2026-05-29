@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { MedicationPicker } from "@/components/MedicationPicker";
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { InteractionModal } from "@/components/InteractionModal";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
@@ -99,6 +100,9 @@ export default function PatientProfileScreen() {
   const [medications, setMedications] = useState<MedicationEntry[]>(
     user?.patientProfile?.medications ?? []
   );
+  const [interactionModalVisible, setInteractionModalVisible] = useState(false);
+
+  const medicationNames = medications.map((m) => m.name);
 
   const update = (key: keyof PatientProfile, value: string) => {
     setProfile((prev) => ({ ...prev, [key]: value || undefined }));
@@ -219,6 +223,21 @@ export default function PatientProfileScreen() {
           <Text style={styles.fieldHint}>
             Search for medications by name — Ragna can give precise guidance on when and how to use each one. Tap any added medication to record its dose and route.
           </Text>
+          {medicationNames.length >= 2 && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setInteractionModalVisible(true);
+              }}
+              style={({ pressed }) => [styles.interactionBtn, pressed && { opacity: 0.80 }]}
+            >
+              <Feather name="shield" size={15} color={Colors.primary} />
+              <Text style={styles.interactionBtnText}>Check Interactions</Text>
+              <View style={styles.interactionBtnBadge}>
+                <Text style={styles.interactionBtnBadgeText}>{medicationNames.length} meds</Text>
+              </View>
+            </Pressable>
+          )}
         </View>
 
         {FIELDS.slice(2).map((field) => (
@@ -247,6 +266,12 @@ export default function PatientProfileScreen() {
           <Text style={styles.clearBtnText}>Clear all profile data</Text>
         </Pressable>
       </ScrollView>
+
+      <InteractionModal
+        visible={interactionModalVisible}
+        onClose={() => setInteractionModalVisible(false)}
+        medicationNames={medicationNames}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -362,6 +387,35 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#5A78A8",
     lineHeight: 17,
+  },
+  interactionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    marginTop: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "rgba(60,120,255,0.10)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(60,120,255,0.30)",
+  },
+  interactionBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+  },
+  interactionBtnBadge: {
+    backgroundColor: "rgba(60,120,255,0.18)",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  interactionBtnBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
   clearBtn: {
     flexDirection: "row",

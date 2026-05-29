@@ -312,6 +312,25 @@ export interface JournalEntry {
   updatedAt?: string;
 }
 
+// ─── Drug Interaction types ───────────────────────────────────────────────────
+
+export interface DrugInteractionPair {
+  drugA: string;
+  drugB: string;
+  /** "serious" = red, "monitor" = amber, "none" = no significant interaction found */
+  severity: "serious" | "monitor" | "none";
+  /** Plain-language 1–2 sentence summary extracted from FDA label text */
+  summary: string;
+  rawText?: string;
+}
+
+export interface DrugInteractionResult {
+  /** ISO timestamp of when the check was performed */
+  checkedAt: string;
+  medications: string[];
+  pairs: DrugInteractionPair[];
+}
+
 export type ReminderRecurrence = "none" | "daily" | "weekly";
 export type ReminderType = "medication" | "appointment";
 
