@@ -1,8 +1,21 @@
-import type { Request, Response, NextFunction } from "express";
+/**
+ * requirePremium — server-side RevenueCat entitlement gate.
+ *
+ * Environment variables (both must be set in production):
+ *   REVENUECAT_PROJECT_ID     – enables the check; absent → dev bypass
+ *   REVENUECAT_SECRET_API_KEY – RevenueCat v1 secret API key (not the public SDK key)
+ *
+ * Behaviour on error: FAIL CLOSED.
+ *   • 503 when the API key is missing or RevenueCat is unreachable.
+ *   • 402 when the user has no active premium entitlement.
+ *   • Dev bypass when REVENUECAT_PROJECT_ID is absent (local development).
+ */
+
+import type { NextFunction, Request, Response } from "express";
 import { getAuth } from "@clerk/express";
 
 const ENTITLEMENT_ID = "premium";
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 
 interface CacheEntry {
   isPremium: boolean;
@@ -25,35 +38,60 @@ function setCached(userId: string, isPremium: boolean): void {
   cache.set(userId, { isPremium, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-async function checkRevenueCatEntitlement(userId: string): Promise<boolean> {
-  const apiKey = process.env["EXPO_PUBLIC_REVENUECAT_TEST_API_KEY"];
-  if (!apiKey) {
-    return true;
-  }
+interface RcEntitlement {
+  expires_date: string | null;
+  grace_period_expires_date?: string | null;
+  product_identifier: string;
+}
 
+interface RcSubscriberResponse {
+  subscriber?: {
+    entitlements?: Record<string, RcEntitlement>;
+  };
+}
+
+/**
+ * Returns true if the entitlement is currently active:
+ *   – expires_date is null (lifetime purchase), OR
+ *   – expires_date is in the future, OR
+ *   – grace_period_expires_date is in the future (billing grace)
+ */
+function isEntitlementActive(e: RcEntitlement): boolean {
+  const now = Date.now();
+
+  if (e.expires_date === null) return true; // lifetime
+
+  const exp = Date.parse(e.expires_date);
+  if (!isNaN(exp) && exp > now) return true;
+
+  const grace = e.grace_period_expires_date
+    ? Date.parse(e.grace_period_expires_date)
+    : NaN;
+  if (!isNaN(grace) && grace > now) return true;
+
+  return false;
+}
+
+async function checkEntitlement(userId: string, secretKey: string): Promise<boolean> {
   const url = `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`;
   const response = await fetch(url, {
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${secretKey}`,
       "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
-    throw new Error(`RevenueCat API error: ${response.status}`);
+    throw new Error(`RevenueCat API responded ${response.status}`);
   }
 
-  const data = (await response.json()) as {
-    subscriber?: {
-      entitlements?: Record<
-        string,
-        { expires_date: string | null; product_identifier: string }
-      >;
-    };
-  };
-
+  const data = (await response.json()) as RcSubscriberResponse;
   const entitlements = data?.subscriber?.entitlements ?? {};
-  return ENTITLEMENT_ID in entitlements;
+
+  const entitlement = entitlements[ENTITLEMENT_ID];
+  if (!entitlement) return false;
+
+  return isEntitlementActive(entitlement);
 }
 
 export async function requirePremium(
@@ -61,9 +99,23 @@ export async function requirePremium(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
+  // Dev bypass — REVENUECAT_PROJECT_ID not set means local development
   const projectId = process.env["REVENUECAT_PROJECT_ID"];
   if (!projectId) {
     next();
+    return;
+  }
+
+  // Fail closed: secret key must be present in production
+  const secretKey = process.env["REVENUECAT_SECRET_API_KEY"];
+  if (!secretKey) {
+    req.log.error(
+      "REVENUECAT_SECRET_API_KEY is not set but REVENUECAT_PROJECT_ID is — premium check cannot run",
+    );
+    res.status(503).json({
+      error: "Service unavailable",
+      message: "Subscription verification is temporarily unavailable. Please try again shortly.",
+    });
     return;
   }
 
@@ -73,6 +125,7 @@ export async function requirePremium(
     return;
   }
 
+  // Cache hit
   const cached = getCached(userId);
   if (cached === true) {
     next();
@@ -87,8 +140,9 @@ export async function requirePremium(
     return;
   }
 
+  // Live check — fail closed on any error
   try {
-    const isPremium = await checkRevenueCatEntitlement(userId);
+    const isPremium = await checkEntitlement(userId, secretKey);
     setCached(userId, isPremium);
     if (isPremium) {
       next();
@@ -100,7 +154,10 @@ export async function requirePremium(
       });
     }
   } catch (err: unknown) {
-    req.log.warn({ err }, "RevenueCat entitlement check failed — allowing request");
-    next();
+    req.log.error({ err }, "RevenueCat entitlement check failed — blocking request (fail closed)");
+    res.status(503).json({
+      error: "Service unavailable",
+      message: "Subscription verification is temporarily unavailable. Please try again shortly.",
+    });
   }
 }
