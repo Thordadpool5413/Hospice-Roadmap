@@ -251,6 +251,10 @@ function RootLayoutNav() {
         name="paywall"
         options={{ headerShown: false, presentation: "modal" }}
       />
+      <Stack.Screen
+        name="call-scripts"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }

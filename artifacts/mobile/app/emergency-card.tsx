@@ -243,6 +243,28 @@ export default function EmergencyCardScreen() {
           </View>
         )}
 
+        {/* Call Scripts */}
+        <Pressable
+          onPress={() => router.push("/call-scripts" as any)}
+          style={({ pressed }) => [
+            styles.callScriptsBanner,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={styles.callScriptsLeft}>
+            <View style={styles.callScriptsIconWrap}>
+              <Feather name="phone-call" size={18} color={Colors.error} />
+            </View>
+            <View style={styles.callScriptsText}>
+              <Text style={styles.callScriptsTitle}>Know What to Say</Text>
+              <Text style={styles.callScriptsSub}>
+                Pre-filled call scripts for the hospice team
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={16} color={Colors.error + "99"} />
+        </Pressable>
+
         {/* Guidance Links */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -500,6 +522,44 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#3A5080",
     fontStyle: "italic",
+  },
+  callScriptsBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(192,48,64,0.10)",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(192,48,64,0.25)",
+  },
+  callScriptsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  callScriptsIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(192,48,64,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  callScriptsText: {
+    flex: 1,
+    gap: 2,
+  },
+  callScriptsTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#EEF4FF",
+  },
+  callScriptsSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#5A78A8",
   },
   guidanceLink: {
     flexDirection: "row",

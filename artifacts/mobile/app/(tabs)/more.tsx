@@ -134,6 +134,7 @@ export default function MoreScreen() {
       icon: "clipboard",
       items: [
         { label: "Situation Finder", icon: "compass", route: "/situation-finder", color: Colors.accentSituation },
+        { label: "Call Scripts", icon: "phone-call", route: "/call-scripts", color: Colors.error },
         { label: "Medication Lookup", icon: "package", route: "/medication-lookup", color: Colors.primary },
         ...(!isPatient ? [
           { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying", color: Colors.journeyDuring } as MenuItem,
