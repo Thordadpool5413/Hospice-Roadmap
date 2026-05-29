@@ -222,6 +222,10 @@ function RootLayoutNav() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="account"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="paywall"
         options={{ headerShown: false, presentation: "modal" }}
       />
