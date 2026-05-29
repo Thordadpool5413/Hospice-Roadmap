@@ -8,6 +8,9 @@ import React, {
 } from "react";
 
 import { SymptomEntry } from "@/types";
+import { enqueueRetry } from "@/services/retryQueue";
+import { enqueuePendingDelete } from "@/services/pendingDeletes";
+import { uploadSymptoms } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_symptoms";
 const MAX_ENTRIES = 90;
@@ -22,6 +25,7 @@ interface SymptomContextValue {
   getRecentEntries: (days: number) => SymptomEntry[];
   getRecentSummary: (days?: number) => string;
   clearEntries: () => Promise<void>;
+  hydrateFromServer: (serverEntries: SymptomEntry[]) => Promise<void>;
 }
 
 const SymptomContext = createContext<SymptomContextValue | null>(null);
@@ -47,15 +51,17 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const saveEntries = async (updated: SymptomEntry[]) => {
+  const saveEntries = async (updated: SymptomEntry[]): Promise<SymptomEntry[]> => {
     try {
       const trimmed = updated
         .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
         .slice(0, MAX_ENTRIES);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
       setEntries(trimmed);
+      return trimmed;
     } catch (e) {
       console.error("Error saving symptom entries:", e);
+      return updated;
     }
   };
 
@@ -63,17 +69,36 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
     const newEntry: SymptomEntry = {
       ...entry,
       id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
+      updatedAt: new Date().toISOString(),
     };
-    await saveEntries([...entries, newEntry]);
+    const saved = await saveEntries([...entries, newEntry]);
+    uploadSymptoms(saved)
+      .then((ok) => { if (!ok) return enqueueRetry("symptoms", saved); })
+      .catch(() => enqueueRetry("symptoms", saved));
   }, [entries]);
 
   const updateEntry = useCallback(async (id: string, updates: Partial<Omit<SymptomEntry, "id">>) => {
-    const updated = entries.map((e) => e.id === id ? { ...e, ...updates } : e);
-    await saveEntries(updated);
+    const now = new Date().toISOString();
+    const updated = entries.map((e) => e.id === id ? { ...e, ...updates, updatedAt: now } : e);
+    const saved = await saveEntries(updated);
+    uploadSymptoms(saved)
+      .then((ok) => { if (!ok) return enqueueRetry("symptoms", saved); })
+      .catch(() => enqueueRetry("symptoms", saved));
   }, [entries]);
 
   const deleteEntry = useCallback(async (id: string) => {
-    await saveEntries(entries.filter((e) => e.id !== id));
+    const saved = await saveEntries(entries.filter((e) => e.id !== id));
+    uploadSymptoms(saved)
+      .then((ok) => {
+        if (!ok) {
+          enqueueRetry("symptoms", saved);
+          enqueuePendingDelete("symptoms", id);
+        }
+      })
+      .catch(() => {
+        enqueueRetry("symptoms", saved);
+        enqueuePendingDelete("symptoms", id);
+      });
   }, [entries]);
 
   const clearEntries = useCallback(async () => {
@@ -82,6 +107,18 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
       setEntries([]);
     } catch (e) {
       console.error("Error clearing symptom entries:", e);
+    }
+  }, []);
+
+  const hydrateFromServer = useCallback(async (serverEntries: SymptomEntry[]) => {
+    try {
+      const trimmed = serverEntries
+        .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
+        .slice(0, MAX_ENTRIES);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+      setEntries(trimmed);
+    } catch (e) {
+      console.error("Error hydrating symptom entries from server:", e);
     }
   }, []);
 
@@ -174,7 +211,7 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SymptomContext.Provider
-      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries, getRecentSummary, clearEntries }}
+      value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries, getRecentSummary, clearEntries, hydrateFromServer }}
     >
       {children}
     </SymptomContext.Provider>

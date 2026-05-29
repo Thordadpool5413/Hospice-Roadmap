@@ -1,18 +1,18 @@
-import { getClientId } from "./clientIdentity";
+import { getAuthToken } from "@workspace/api-client-react";
+
 import { apiBase, fetchJson, mergeJsonHeaders } from "./apiClient";
 
 // ─── Internal header helpers ─────────────────────────────────────────────────
-// These are async because they must await the stable client ID.  They include
-// x_client_id which is required by the backend on all AI endpoints.
+// These are async because they must await the Clerk JWT.
 
 async function jsonHeaders(): Promise<Record<string, string>> {
-  const clientId = await getClientId();
-  return mergeJsonHeaders({ x_client_id: clientId });
+  const token = await getAuthToken();
+  return mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined);
 }
 
 async function baseHeaders(): Promise<Record<string, string>> {
-  const clientId = await getClientId();
-  return { x_client_id: clientId };
+  const token = await getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -264,5 +264,31 @@ export async function streamMessage(
     onDone();
   } catch (err: unknown) {
     onError(err instanceof Error ? err.message : "Unknown error");
+  }
+}
+
+// ─── Device claim ─────────────────────────────────────────────────────────────
+
+/**
+ * Links a device-generated clientId to the authenticated Clerk userId on the
+ * server side. Should be called once per device on first sign-in.
+ *
+ * Returns the number of conversation rows that were claimed, or null if the
+ * request failed (non-throwing — callers should treat null as a soft failure
+ * and retry on the next sign-in if the @device_claimed flag was not set).
+ */
+export async function claimDevice(clientId: string): Promise<number | null> {
+  try {
+    const data = await fetchJson<{ claimed: number }>(
+      `${apiBase()}/anthropic/claim-device`,
+      {
+        method: "POST",
+        headers: await jsonHeaders(),
+        body: JSON.stringify({ clientId }),
+      },
+    );
+    return data.claimed;
+  } catch {
+    return null;
   }
 }

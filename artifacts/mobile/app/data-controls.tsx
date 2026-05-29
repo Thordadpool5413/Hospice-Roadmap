@@ -1,7 +1,8 @@
+import { useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -13,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { useCloudSync } from "@/components/CloudSyncManager";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
@@ -20,6 +22,34 @@ import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
+import { useAppNetwork } from "@/hooks/useAppNetwork";
+import {
+  deleteServerGoals,
+  deleteServerJournal,
+  deleteServerLivingProfile,
+  deleteServerReminders,
+  deleteServerSymptoms,
+  readSyncLastSuccess,
+} from "@/services/syncService";
+
+// ─── Sync timestamp formatter ────────────────────────────────────────────────
+
+function formatSyncTime(iso: string): string {
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "Unknown";
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  const timeStr = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  if (diffDays === 0) return `Today at ${timeStr}`;
+  if (diffDays === 1) return `Yesterday at ${timeStr}`;
+
+  const monthDay = date.toLocaleDateString([], { month: "short", day: "numeric" });
+  return `${monthDay} at ${timeStr}`;
+}
 
 // ─── Helpers to determine empty states ───────────────────────────────────────
 
@@ -67,12 +97,32 @@ function deriveRagnaMemoryStatus(
 
 export default function DataControlsScreen() {
   const insets = useSafeAreaInsets();
+  const { isSignedIn } = useAuth();
+  const { isOnline } = useAppNetwork();
   const { user, clearPatientProfile, clearGoalsOfCare, clearSavedResources, clearSavedProviders } = useApp();
   const { entries: journalEntries, clearEntries: clearJournal } = useJournal();
   const { entries: symptomEntries, clearEntries: clearSymptoms } = useSymptoms();
   const { reminders, clearReminders } = useReminders();
   const { memories, livingProfile, recentTiles, clearMemories } = useVeraMemory();
   const { observations, clearObservations } = useRagnaLearning();
+
+  const { triggerSync, isSyncing } = useCloudSync();
+
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [syncLoaded, setSyncLoaded] = useState(false);
+
+  useEffect(() => {
+    readSyncLastSuccess().then((ts) => {
+      setLastSynced(ts);
+      setSyncLoaded(true);
+    });
+  }, []);
+
+  const handleSyncNow = async () => {
+    await triggerSync();
+    const ts = await readSyncLastSuccess();
+    setLastSynced(ts);
+  };
 
   // Derived statuses
   const profileStatus = derivePatientProfileStatus(user);
@@ -126,7 +176,7 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Patient Profile",
-          "Remove saved patient profile details from this device? Goals of care will be kept unless you clear them separately.",
+          "Remove saved patient profile details from this device and cloud? Goals of care will be kept unless you clear them separately.",
           clearPatientProfile
         ),
     },
@@ -138,8 +188,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Goals of Care",
-          "Remove saved goals of care from this device? Other patient profile details will stay in place.",
-          clearGoalsOfCare
+          "Remove saved goals of care from this device and cloud? Other patient profile details will stay in place.",
+          async () => {
+            await clearGoalsOfCare();
+            await deleteServerGoals();
+          }
         ),
     },
     {
@@ -168,7 +221,7 @@ export default function DataControlsScreen() {
     },
     {
       title: "Journal Entries",
-      description: "Caregiver journal entries stored on this device",
+      description: "Caregiver journal entries stored on this device and in the cloud",
       status:
         journalEntries.length === 0
           ? "No entries"
@@ -177,13 +230,16 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Journal Entries",
-          "Delete all journal entries stored on this device? This cannot be undone.",
-          clearJournal
+          "Delete all journal entries from this device and cloud? This cannot be undone.",
+          async () => {
+            await clearJournal();
+            await deleteServerJournal();
+          }
         ),
     },
     {
       title: "Symptom Check-Ins",
-      description: "Daily symptom tracking entries stored on this device",
+      description: "Daily symptom tracking entries stored on this device and in the cloud",
       status:
         symptomEntries.length === 0
           ? "No entries"
@@ -192,8 +248,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Symptom Check-Ins",
-          "Delete all symptom tracking entries stored on this device? This cannot be undone.",
-          clearSymptoms
+          "Delete all symptom tracking entries from this device and cloud? This cannot be undone.",
+          async () => {
+            await clearSymptoms();
+            await deleteServerSymptoms();
+          }
         ),
     },
     {
@@ -207,8 +266,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Reminders",
-          "Delete all reminders stored on this device? Scheduled reminder notifications will also be cancelled.",
-          clearReminders
+          "Delete all reminders from this device and cloud? Scheduled reminder notifications will also be cancelled.",
+          async () => {
+            await clearReminders();
+            await deleteServerReminders();
+          }
         ),
     },
     {
@@ -221,10 +283,11 @@ export default function DataControlsScreen() {
       onClear: () =>
         confirm(
           "Clear Ragna Memory",
-          "Clear Ragna's saved local memory, living profile, topic history, and app-activity observations on this device? This does not automatically delete a conversation currently open on the server.",
+          "Clear Ragna's saved local memory, living profile, topic history, and app-activity observations? Cloud profile will also be removed. This does not automatically delete a conversation currently open on the server.",
           async () => {
             await clearMemories();
             await clearObservations();
+            await deleteServerLivingProfile();
           }
         ),
     },
@@ -257,9 +320,70 @@ export default function DataControlsScreen() {
         <View style={styles.introBanner}>
           <Feather name="hard-drive" size={18} color={Colors.primary} style={styles.introIcon} />
           <Text style={styles.introText}>
-            Review what is stored on this device and clear categories individually. These actions do not remove server-backed records such as submitted support requests, and they do not automatically delete an active Ragna conversation on the server.
+            Review what is stored on this device and in the cloud. Clearing a category removes data from both places. These actions do not remove server-backed records such as submitted support requests, and they do not automatically delete an active Ragna conversation on the server.
           </Text>
         </View>
+
+        {/* Cloud backup status — only shown to signed-in users once we've read AsyncStorage */}
+        {isSignedIn && syncLoaded && (() => {
+          const synced = !!lastSynced;
+          const pending = !isOnline;
+
+          let icon: React.ComponentProps<typeof Feather>["name"];
+          let dotColor: string;
+          let label: string;
+          let sublabel: string;
+
+          if (synced && !pending) {
+            icon = "check-circle";
+            dotColor = Colors.success;
+            label = "Last backed up";
+            sublabel = formatSyncTime(lastSynced!);
+          } else if (synced && pending) {
+            icon = "cloud-off";
+            dotColor = Colors.warning;
+            label = "Offline — sync pending";
+            sublabel = `Last backed up ${formatSyncTime(lastSynced!)}`;
+          } else if (!synced && pending) {
+            icon = "cloud-off";
+            dotColor = Colors.textSubtle;
+            label = "Offline";
+            sublabel = "Not yet backed up to the cloud";
+          } else {
+            icon = "cloud";
+            dotColor = Colors.textSubtle;
+            label = "Not yet backed up";
+            sublabel = "Data will sync automatically when online";
+          }
+
+          return (
+            <View style={[styles.syncBanner, { borderColor: dotColor + "30" }]}>
+              <View style={[styles.syncDot, { backgroundColor: dotColor }]} />
+              <Feather name={icon} size={15} color={dotColor} style={styles.syncIcon} />
+              <View style={styles.syncText}>
+                <Text style={[styles.syncLabel, { color: dotColor }]}>{label}</Text>
+                <Text style={styles.syncSublabel}>{sublabel}</Text>
+              </View>
+              {isOnline && (
+                <Pressable
+                  onPress={isSyncing ? undefined : handleSyncNow}
+                  disabled={isSyncing}
+                  style={({ pressed }) => [
+                    styles.syncNowBtn,
+                    isSyncing && styles.syncNowBtnLoading,
+                    !isSyncing && pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  {isSyncing ? (
+                    <Feather name="refresh-cw" size={12} color={Colors.primary} />
+                  ) : (
+                    <Text style={styles.syncNowBtnText}>Sync now</Text>
+                  )}
+                </Pressable>
+              )}
+            </View>
+          );
+        })()}
 
         {/* Category list */}
         <View style={styles.categoryList}>
@@ -314,7 +438,7 @@ export default function DataControlsScreen() {
         <View style={styles.noteCard}>
           <Text style={styles.noteTitle}>Need a full reset?</Text>
           <Text style={styles.noteBody}>
-            Category controls above only clear saved data for that category. Your app setup, accessibility settings, and journey stage are kept in place.
+            Category controls above clear saved data for that category on both this device and the cloud. Your app setup, accessibility settings, and journey stage are kept in place.
           </Text>
         </View>
 
@@ -458,6 +582,58 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.divider,
     marginHorizontal: 16,
+  },
+  syncBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderWidth: 1,
+  },
+  syncDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  syncIcon: {
+    flexShrink: 0,
+  },
+  syncText: {
+    flex: 1,
+    gap: 1,
+  },
+  syncLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.1,
+  },
+  syncSublabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  syncNowBtn: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.primaryPale,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+    minWidth: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  syncNowBtnLoading: {
+    opacity: 0.55,
+  },
+  syncNowBtnText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
   noteCard: {
     backgroundColor: Colors.surface,

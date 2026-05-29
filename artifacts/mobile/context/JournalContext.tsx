@@ -2,6 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 import { JournalEntry, JournalEntryType } from "@/types";
+import { enqueueRetry } from "@/services/retryQueue";
+import { enqueuePendingDelete } from "@/services/pendingDeletes";
+import { uploadJournal } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_journal";
 
@@ -12,6 +15,7 @@ interface JournalContextValue {
   updateEntry: (id: string, updates: Partial<Omit<JournalEntry, "id" | "timestamp">>) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
   clearEntries: () => Promise<void>;
+  hydrateFromServer: (serverEntries: JournalEntry[]) => Promise<void>;
 }
 
 const JournalContext = createContext<JournalContextValue | null>(null);
@@ -39,10 +43,14 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
         ...entry,
         id: `journal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         timestamp: Date.now(),
+        updatedAt: new Date().toISOString(),
       };
       const updated = [newEntry, ...entries];
       setEntries(updated);
       await save(updated);
+      uploadJournal(updated)
+        .then((ok) => { if (!ok) return enqueueRetry("journal", updated); })
+        .catch(() => enqueueRetry("journal", updated));
       return newEntry;
     },
     [entries, save]
@@ -50,9 +58,13 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
 
   const updateEntry = useCallback(
     async (id: string, updates: Partial<Omit<JournalEntry, "id" | "timestamp">>) => {
-      const updated = entries.map((e) => (e.id === id ? { ...e, ...updates } : e));
+      const now = new Date().toISOString();
+      const updated = entries.map((e) => (e.id === id ? { ...e, ...updates, updatedAt: now } : e));
       setEntries(updated);
       await save(updated);
+      uploadJournal(updated)
+        .then((ok) => { if (!ok) return enqueueRetry("journal", updated); })
+        .catch(() => enqueueRetry("journal", updated));
     },
     [entries, save]
   );
@@ -62,6 +74,17 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
       const updated = entries.filter((e) => e.id !== id);
       setEntries(updated);
       await save(updated);
+      uploadJournal(updated)
+        .then((ok) => {
+          if (!ok) {
+            enqueueRetry("journal", updated);
+            enqueuePendingDelete("journal", id);
+          }
+        })
+        .catch(() => {
+          enqueueRetry("journal", updated);
+          enqueuePendingDelete("journal", id);
+        });
     },
     [entries, save]
   );
@@ -71,8 +94,14 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
     await save([]);
   }, [save]);
 
+  const hydrateFromServer = useCallback(async (serverEntries: JournalEntry[]) => {
+    const sorted = [...serverEntries].sort((a, b) => b.timestamp - a.timestamp);
+    setEntries(sorted);
+    await save(sorted);
+  }, [save]);
+
   return (
-    <JournalContext.Provider value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, clearEntries }}>
+    <JournalContext.Provider value={{ entries, isLoading, addEntry, updateEntry, deleteEntry, clearEntries, hydrateFromServer }}>
       {children}
     </JournalContext.Provider>
   );

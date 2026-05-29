@@ -67,6 +67,8 @@ export interface SymptomEntry {
   restlessness: boolean;
   appetite: 0 | 1 | 2 | 3;
   notes?: string;
+  /** ISO timestamp of last local modification — used as LWW version key for sync. */
+  updatedAt?: string;
 }
 
 export interface RagnaPrivacySettings {
@@ -285,6 +287,8 @@ export interface JournalEntry {
   timestamp: number;
   moodLevel?: 1 | 2 | 3 | 4 | 5;
   tags?: string[];
+  /** ISO timestamp of last local modification — used as LWW version key for sync. */
+  updatedAt?: string;
 }
 
 export type ReminderRecurrence = "none" | "daily" | "weekly";
@@ -298,4 +302,6 @@ export interface Reminder {
   recurrence: ReminderRecurrence;
   enabled: boolean;
   notificationId?: string;
+  /** ISO timestamp of last local modification — used as LWW version key for sync. */
+  updatedAt?: string;
 }

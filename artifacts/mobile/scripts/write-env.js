@@ -16,6 +16,7 @@ const path = require("path");
 const devDomain = process.env.REPLIT_DEV_DOMAIN || "";
 const expoDevDomain = process.env.REPLIT_EXPO_DEV_DOMAIN || devDomain;
 const replId = process.env.REPL_ID || "";
+const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY || "";
 
 if (!devDomain) {
   console.warn("[write-env] REPLIT_DEV_DOMAIN is not set — using localhost fallback");
@@ -27,10 +28,19 @@ const lines = [
   `EXPO_PUBLIC_REPL_ID=${replId}`,
   `EXPO_PACKAGER_PROXY_URL=https://${expoDevDomain}`,
   `REACT_NATIVE_PACKAGER_HOSTNAME=${devDomain}`,
+  `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=${clerkPublishableKey}`,
 ];
 
 const envPath = path.join(__dirname, "..", ".env.local");
 fs.writeFileSync(envPath, lines.join("\n") + "\n", "utf8");
 
 console.log(`[write-env] Wrote ${envPath}`);
-lines.forEach((l) => console.log(`[write-env]   ${l}`));
+lines.forEach((l) => {
+  // Mask secret values in logs
+  if (l.includes("KEY=")) {
+    const [k] = l.split("=");
+    console.log(`[write-env]   ${k}=***`);
+  } else {
+    console.log(`[write-env]   ${l}`);
+  }
+});

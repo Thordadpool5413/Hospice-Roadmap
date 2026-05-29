@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1780008677624,
+      "tag": "0000_colossal_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780010683580,
+      "tag": "0001_add_conversations_user_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780011663852,
+      "tag": "0002_misty_robbie_robertson",
+      "breakpoints": true
+    }
+  ]
+}

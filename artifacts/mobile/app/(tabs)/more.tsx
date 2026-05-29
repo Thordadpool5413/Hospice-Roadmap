@@ -1,3 +1,4 @@
+import { useClerk, useUser } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
@@ -65,8 +66,26 @@ export default function MoreScreen() {
   const insets = useSafeAreaInsets();
   const { user, updateJourneyStage, updateRole } = useApp();
   const { fontScale, highContrast, setFontScale, setHighContrast } = useA11y();
+  const { signOut } = useClerk();
+  const { user: clerkUser } = useUser();
 
   const isPatient = user?.role === "patient";
+
+  const handleSignOut = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: () => signOut().then(() => router.replace("/(auth)/sign-in" as any)),
+        },
+      ]
+    );
+  };
 
   const menuSections: MenuSection[] = [
     {
@@ -139,6 +158,13 @@ export default function MoreScreen() {
               "The content provided in this app is for educational and informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment.\n\nAlways seek the advice of a qualified health provider with any questions you may have regarding a medical condition."
             ),
         },
+        {
+          label: "Sign Out",
+          icon: "log-out",
+          color: Colors.error,
+          destructive: true,
+          onPress: handleSignOut,
+        },
       ],
     },
   ];
@@ -204,7 +230,13 @@ export default function MoreScreen() {
             </View>
             <View style={s.profileInfo}>
               <Text style={s.profileRole}>{roleLabels[user.role] ?? "User"}</Text>
-              <Text style={s.profileStage}>{stageLabels[user.journeyStage]}</Text>
+              {clerkUser?.primaryEmailAddress?.emailAddress ? (
+                <Text style={s.profileStage} numberOfLines={1}>
+                  {clerkUser.primaryEmailAddress.emailAddress}
+                </Text>
+              ) : (
+                <Text style={s.profileStage}>{stageLabels[user.journeyStage]}</Text>
+              )}
             </View>
             <View style={[s.stageIndicator, { backgroundColor: stageColors[user.journeyStage] + "22", borderColor: stageColors[user.journeyStage] + "50" }]}>
               <View style={[s.stageDot, { backgroundColor: stageColors[user.journeyStage] }]} />
