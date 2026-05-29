@@ -5,6 +5,7 @@ import { Platform } from "react-native";
 
 import { Reminder, ReminderRecurrence, ReminderType } from "@/types";
 import { enqueueRetry } from "@/services/retryQueue";
+import { enqueuePendingDelete } from "@/services/pendingDeletes";
 import { uploadReminders } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_reminders";
@@ -187,8 +188,16 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     setReminders(updated);
     await save(updated);
     uploadReminders(updated)
-      .then((ok) => { if (!ok) return enqueueRetry("reminders", updated); })
-      .catch(() => enqueueRetry("reminders", updated));
+      .then((ok) => {
+        if (!ok) {
+          enqueueRetry("reminders", updated);
+          enqueuePendingDelete("reminders", id);
+        }
+      })
+      .catch(() => {
+        enqueueRetry("reminders", updated);
+        enqueuePendingDelete("reminders", id);
+      });
   }, [reminders, save]);
 
   const clearReminders = useCallback(async () => {

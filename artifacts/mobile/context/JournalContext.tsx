@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 
 import { JournalEntry, JournalEntryType } from "@/types";
 import { enqueueRetry } from "@/services/retryQueue";
+import { enqueuePendingDelete } from "@/services/pendingDeletes";
 import { uploadJournal } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_journal";
@@ -74,8 +75,16 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
       setEntries(updated);
       await save(updated);
       uploadJournal(updated)
-        .then((ok) => { if (!ok) return enqueueRetry("journal", updated); })
-        .catch(() => enqueueRetry("journal", updated));
+        .then((ok) => {
+          if (!ok) {
+            enqueueRetry("journal", updated);
+            enqueuePendingDelete("journal", id);
+          }
+        })
+        .catch(() => {
+          enqueueRetry("journal", updated);
+          enqueuePendingDelete("journal", id);
+        });
     },
     [entries, save]
   );

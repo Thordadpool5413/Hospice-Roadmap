@@ -9,6 +9,7 @@ import React, {
 
 import { SymptomEntry } from "@/types";
 import { enqueueRetry } from "@/services/retryQueue";
+import { enqueuePendingDelete } from "@/services/pendingDeletes";
 import { uploadSymptoms } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_symptoms";
@@ -88,8 +89,16 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
   const deleteEntry = useCallback(async (id: string) => {
     const saved = await saveEntries(entries.filter((e) => e.id !== id));
     uploadSymptoms(saved)
-      .then((ok) => { if (!ok) return enqueueRetry("symptoms", saved); })
-      .catch(() => enqueueRetry("symptoms", saved));
+      .then((ok) => {
+        if (!ok) {
+          enqueueRetry("symptoms", saved);
+          enqueuePendingDelete("symptoms", id);
+        }
+      })
+      .catch(() => {
+        enqueueRetry("symptoms", saved);
+        enqueuePendingDelete("symptoms", id);
+      });
   }, [entries]);
 
   const clearEntries = useCallback(async () => {

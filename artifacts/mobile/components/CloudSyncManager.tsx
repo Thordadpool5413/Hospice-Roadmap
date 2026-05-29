@@ -50,6 +50,10 @@ import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
 import { clearRetryQueue, drainRetryQueue } from "@/services/retryQueue";
 import {
+  clearAllPendingDeletes,
+  getPendingDeletes,
+} from "@/services/pendingDeletes";
+import {
   fetchServerData,
   mergeJournalEntries,
   mergeSymptomEntries,
@@ -127,6 +131,33 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // Step 1: one-time migration — upload local data where server has none
       await runOnceLocalMigration(serverData);
 
+      // Step 1b: filter pending-deleted IDs out of server data before merging.
+      //
+      // Union merges (symptoms, journal) include any ID present on EITHER side.
+      // A record deleted locally while offline has no local counterpart, so the
+      // merge would restore it from the server unchanged. Reading the pending-
+      // deletes queue here and removing those IDs from the server response
+      // prevents the restoration before the merge runs.
+      //
+      // This is read once and used for both the merge and the push phase to
+      // avoid a second AsyncStorage round-trip.
+      const pendingDeletes = await getPendingDeletes();
+
+      const filteredServerSymptoms = pendingDeletes.symptoms.length > 0
+        ? serverData.symptoms.filter((e) => !pendingDeletes.symptoms.includes(e.id))
+        : serverData.symptoms;
+
+      const filteredServerJournal = pendingDeletes.journal.length > 0
+        ? serverData.journal.filter((e) => !pendingDeletes.journal.includes(e.id))
+        : serverData.journal;
+
+      // Reminders use restore-if-empty rather than per-record merge. If the
+      // user deleted all reminders while offline, filter the server list so
+      // that restore-if-empty doesn't bring them back when local becomes empty.
+      const filteredServerReminders = pendingDeletes.reminders.length > 0
+        ? serverData.reminders.filter((r) => !pendingDeletes.reminders.includes(r.id))
+        : serverData.reminders;
+
       // Step 2: merge server data into local state
       //
       // For list stores (symptoms, journal): union of IDs with per-record LWW.
@@ -137,13 +168,15 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // timestamps between local and server — the newer version wins.
 
       // ── Symptoms (per-record merge) ──────────────────────────────────────
-      const mergedSymptoms = mergeSymptomEntries(symptoms, serverData.symptoms);
+      // Use filteredServerSymptoms — pending-deleted IDs have been removed so
+      // the union merge cannot restore records the user already removed offline.
+      const mergedSymptoms = mergeSymptomEntries(symptoms, filteredServerSymptoms);
       // Always hydrate: if mergedSymptoms === symptoms (no new data), the write
       // is idempotent and inexpensive. This also handles the restore case.
       await hydrateSymptoms(mergedSymptoms);
 
       // ── Journal (per-record merge) ───────────────────────────────────────
-      const mergedJournal = mergeJournalEntries(journal, serverData.journal);
+      const mergedJournal = mergeJournalEntries(journal, filteredServerJournal);
       await hydrateJournal(mergedJournal);
 
       // ── Goals of care (true LWW by updatedAt) ───────────────────────────
@@ -225,9 +258,11 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // ── Reminders (restore-if-empty) ─────────────────────────────────────
       // Reminders are device-local by nature. Per-record merge is not required;
       // we simply restore from the server when the local list is empty (new
-      // device / reinstall).
-      if (reminders.length === 0 && serverData.reminders.length > 0) {
-        await hydrateReminders(serverData.reminders as Parameters<typeof hydrateReminders>[0]);
+      // device / reinstall). Use filteredServerReminders so that deletions made
+      // while offline (with an empty resulting list) are not restored from the
+      // server on next sync.
+      if (reminders.length === 0 && filteredServerReminders.length > 0) {
+        await hydrateReminders(filteredServerReminders as Parameters<typeof hydrateReminders>[0]);
       }
 
       // Step 3: push current local state to server with stored LWW timestamps.
@@ -281,8 +316,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       if (allPushesSucceeded) {
         await recordSyncSuccess();
         // A successful full sync pushed the current state of every store, so
-        // any queued retry payloads are now redundant — clear them.
+        // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
+        await clearAllPendingDeletes();
       }
     } catch {
       // Sync failures are silent — app continues to work offline
