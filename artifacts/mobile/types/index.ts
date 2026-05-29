@@ -123,6 +123,10 @@ export interface Provider {
   phone: string;
   website?: string;
   distance?: number;
+  /** Geocoded latitude — present when the server successfully resolved the address. */
+  latitude?: number;
+  /** Geocoded longitude — present when the server successfully resolved the address. */
+  longitude?: number;
   services: string[];
   accreditations: string[];
   rating?: number;
