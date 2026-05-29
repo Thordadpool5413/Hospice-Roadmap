@@ -232,6 +232,36 @@ export function mergeJournalEntries(
   return Array.from(merged.values());
 }
 
+/**
+ * Merge local and server reminder entries.
+ *
+ * - Records present on only one side are included as-is.
+ * - Records with matching IDs are resolved by `updatedAt` (server wins on tie).
+ * - For pre-updatedAt records the scheduled datetime is used as the logical
+ *   version (consistent with the upload helper's clientUpdatedAt fallback).
+ */
+export function mergeReminderEntries(
+  local: Reminder[],
+  server: Reminder[],
+): Reminder[] {
+  const merged = new Map<string, Reminder>(local.map((r) => [r.id, r]));
+
+  for (const serverEntry of server) {
+    const localEntry = merged.get(serverEntry.id);
+    if (!localEntry) {
+      merged.set(serverEntry.id, serverEntry);
+    } else {
+      const localTs = localEntry.updatedAt ?? reminderFallbackUpdatedAt(localEntry);
+      const serverTs = serverEntry.updatedAt ?? reminderFallbackUpdatedAt(serverEntry);
+      if (new Date(serverTs) >= new Date(localTs)) {
+        merged.set(serverEntry.id, serverEntry);
+      }
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
 // ─── Full fetch from server ───────────────────────────────────────────────────
 
 export async function fetchServerData(): Promise<ServerSyncData | null> {

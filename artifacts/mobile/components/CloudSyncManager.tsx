@@ -18,17 +18,18 @@
  *     the local GoalsOfCare.updatedAt and keep whichever is newer.
  *   - Living profile: true LWW — compare stored `livingProfileUpdatedAt`
  *     against the server row's `updatedAt` and keep whichever is newer.
- *   - Reminders: restore-if-empty (no per-record merge; reminders are
- *     device-local by nature and the merge spec does not apply to them).
+ *   - Reminders: per-record merge (union by ID, same LWW strategy as
+ *     symptoms and journal). Falls back to scheduled datetime as the logical
+ *     version for pre-updatedAt records.
  *
  * Merge note:
  *   The merged arrays are used for BOTH the hydrate call (writing to local
  *   storage / context state) and the push call (uploading to the server).
  *   This is intentional: because React state updates are batched and won't
- *   be reflected in the `symptoms`/`journal` closure until the next render,
- *   reading from the closure after hydration would push stale pre-merge data.
- *   Using the captured merged array guarantees the server receives the full
- *   union even within a single sync run.
+ *   be reflected in the `symptoms`/`journal`/`reminders` closure until the
+ *   next render, reading from the closure after hydration would push stale
+ *   pre-merge data. Using the captured merged array guarantees the server
+ *   receives the full union even within a single sync run.
  */
 
 import { useAuth } from "@clerk/expo";
@@ -56,6 +57,7 @@ import {
 import {
   fetchServerData,
   mergeJournalEntries,
+  mergeReminderEntries,
   mergeSymptomEntries,
   readSyncLastSuccess,
   recordSyncSuccess,
@@ -273,15 +275,16 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         }
       }
 
-      // ── Reminders (restore-if-empty) ─────────────────────────────────────
-      // Reminders are device-local by nature. Per-record merge is not required;
-      // we simply restore from the server when the local list is empty (new
-      // device / reinstall). Use filteredServerReminders so that deletions made
-      // while offline (with an empty resulting list) are not restored from the
-      // server on next sync.
-      if (reminders.length === 0 && filteredServerReminders.length > 0) {
-        await hydrateReminders(filteredServerReminders as Parameters<typeof hydrateReminders>[0]);
-      }
+      // ── Reminders (per-record merge) ─────────────────────────────────────
+      // Union of local and server reminder sets, resolving conflicts by
+      // `updatedAt` (server wins on tie). Uses filteredServerReminders so that
+      // IDs deleted locally while offline (tracked in pendingDeletes) are not
+      // restored from the server side of the union.
+      // Always hydrate: when mergedReminders === reminders (no new data) the
+      // write is idempotent and inexpensive, but it covers the restore case
+      // (new device / reinstall) without a separate empty-guard branch.
+      const mergedReminders = mergeReminderEntries(reminders, filteredServerReminders);
+      await hydrateReminders(mergedReminders as Parameters<typeof hydrateReminders>[0]);
 
       // Step 3: push current local state to server with stored LWW timestamps.
       //
@@ -319,7 +322,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushOps.push(uploadLivingProfile(livingProfile, livingProfileUpdatedAt));
       }
 
-      if (reminders.length > 0) pushOps.push(uploadReminders(reminders));
+      if (mergedReminders.length > 0) pushOps.push(uploadReminders(mergedReminders));
 
       const pushResults = await Promise.allSettled(pushOps);
 
