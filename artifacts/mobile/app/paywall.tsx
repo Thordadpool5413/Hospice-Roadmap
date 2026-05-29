@@ -92,7 +92,15 @@ function RagnaCallout() {
   );
 }
 
-function PlanComparisonTable() {
+interface PlanComparisonTableProps {
+  caregiverPkg?: PurchasesPackage;
+  companionPkg?: PurchasesPackage;
+}
+
+function PlanComparisonTable({ caregiverPkg, companionPkg }: PlanComparisonTableProps) {
+  const caregiverPrice = caregiverPkg?.product.priceString ?? "$4.99";
+  const companionPrice = companionPkg?.product.priceString ?? "$9.99";
+
   return (
     <View style={styles.compTable}>
       {/* Column headers */}
@@ -100,11 +108,11 @@ function PlanComparisonTable() {
         <View style={styles.compFeatureCol} />
         <View style={[styles.compPlanCol, styles.compPlanColCaregiver]}>
           <Text style={styles.compPlanLabel}>Caregiver</Text>
-          <Text style={styles.compPlanPrice}>$4.99<Text style={styles.compPlanPer}>/mo</Text></Text>
+          <Text style={styles.compPlanPrice}>{caregiverPrice}<Text style={styles.compPlanPer}>/mo</Text></Text>
         </View>
         <View style={[styles.compPlanCol, styles.compPlanColCompanion]}>
           <Text style={[styles.compPlanLabel, styles.compPlanLabelCompanion]}>Companion</Text>
-          <Text style={[styles.compPlanPrice, styles.compPlanPriceCompanion]}>$9.99<Text style={styles.compPlanPer}>/mo</Text></Text>
+          <Text style={[styles.compPlanPrice, styles.compPlanPriceCompanion]}>{companionPrice}<Text style={styles.compPlanPer}>/mo</Text></Text>
         </View>
       </View>
 
@@ -296,7 +304,7 @@ export default function PaywallScreen() {
         {/* Plan comparison table */}
         <Text style={styles.compSectionLabel}>Compare Plans</Text>
         <RagnaCallout />
-        <PlanComparisonTable />
+        <PlanComparisonTable caregiverPkg={caregiverPkg} companionPkg={companionPkg} />
 
         {/* Caregiver plan */}
         <View style={styles.card}>
