@@ -35,8 +35,8 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
   const [lockTimeout, setLockTimeoutState] = useState<LockTimeout>(1);
   const [isLocked, setIsLocked] = useState(false);
 
-  // Refs avoid stale closures inside the AppState listener, which is
-  // registered once on mount and never re-registered.
+  // Refs avoid stale closures in the AppState listener, which is registered
+  // once on mount and never re-registered.
   const isLockEnabledRef = useRef(false);
   const lockTimeoutRef   = useRef<LockTimeout>(1);
   const backgroundAt     = useRef<number | null>(null);
@@ -50,8 +50,8 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
         const saved = JSON.parse(raw) as LockSettings;
         setIsLockEnabled(saved.enabled);
         setLockTimeoutState(saved.timeoutMinutes);
-        isLockEnabledRef.current  = saved.enabled;
-        lockTimeoutRef.current    = saved.timeoutMinutes;
+        isLockEnabledRef.current = saved.enabled;
+        lockTimeoutRef.current   = saved.timeoutMinutes;
       })
       .catch(() => {});
   }, []);
@@ -61,28 +61,43 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { lockTimeoutRef.current   = lockTimeout;   }, [lockTimeout]);
 
   // ── AppState listener ─────────────────────────────────────────────────────
+  //
+  // Strategy to prevent data flash on resume:
+  //   • On background/inactive → pre-lock IMMEDIATELY (isLocked = true).
+  //     The OS takes a screenshot at this point for the app switcher; the
+  //     lock screen is already in the tree before that happens.
+  //   • On active → check elapsed time:
+  //       - elapsed < threshold → auto-release (user came back quickly, no auth needed)
+  //       - elapsed >= threshold → keep locked; LockScreen auto-prompts auth on mount
 
   useEffect(() => {
     const subscription = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {
         if (nextState === "background" || nextState === "inactive") {
-          // Record when the app went to background (only if lock is on).
           if (isLockEnabledRef.current) {
             backgroundAt.current = Date.now();
+            // Pre-lock before the OS screenshot is taken.
+            setIsLocked(true);
           }
         } else if (nextState === "active") {
           if (!isLockEnabledRef.current) {
             backgroundAt.current = null;
+            setIsLocked(false);
             return;
           }
+
           if (backgroundAt.current !== null) {
-            const elapsedMs    = Date.now() - backgroundAt.current;
-            const thresholdMs  = lockTimeoutRef.current * 60 * 1000;
-            if (elapsedMs >= thresholdMs) {
-              setIsLocked(true);
+            const elapsedMs   = Date.now() - backgroundAt.current;
+            const thresholdMs = lockTimeoutRef.current * 60 * 1000;
+            if (elapsedMs < thresholdMs) {
+              // User returned within the grace window — auto-release lock.
+              setIsLocked(false);
             }
+            // else: elapsed >= threshold → keep isLocked=true; LockScreen
+            //       auto-prompts via its own useEffect on mount.
           }
+
           backgroundAt.current = null;
         }
       }
@@ -118,9 +133,11 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     [persist]
   );
 
-  // authenticateAsync handles Face ID / Touch ID / fingerprint and
-  // falls back to the device passcode automatically when
-  // disableDeviceFallback is false (the default).
+  // authenticateAsync handles Face ID / Touch ID / fingerprint and falls
+  // back to the device passcode when disableDeviceFallback is false.
+  //
+  // SECURITY: this function ALWAYS fails closed.  Any exception during auth
+  // keeps isLocked=true and returns false — we never unlock on an error path.
   const unlock = useCallback(async (): Promise<boolean> => {
     try {
       const result = await LocalAuthentication.authenticateAsync({
@@ -133,12 +150,12 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
         setIsLocked(false);
         return true;
       }
+      // Auth failed or was cancelled — stay locked.
       return false;
     } catch {
-      // If the device has no auth hardware at all, unlock gracefully so
-      // the user is never permanently locked out.
-      setIsLocked(false);
-      return true;
+      // Fail closed: keep app locked on any unexpected auth API error.
+      // Never auto-unlock on an exception path.
+      return false;
     }
   }, []);
 

@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -18,11 +18,13 @@ interface Props {
 }
 
 export function LockScreen({ onUnlock }: Props) {
-  const insets = useSafeAreaInsets();
+  const insets   = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed,  setFailed]  = useState(false);
+  // Prevent double-invocation of the initial auto-prompt.
+  const autoPrompted = useRef(false);
 
-  const handleUnlock = async () => {
+  const handleUnlock = useCallback(async () => {
     if (loading) return;
     setLoading(true);
     setFailed(false);
@@ -35,7 +37,23 @@ export function LockScreen({ onUnlock }: Props) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading, onUnlock]);
+
+  // Auto-invoke biometrics when the lock screen mounts (i.e., immediately
+  // after timeout is exceeded on resume).  A short delay lets React finish
+  // painting the lock screen before the system dialog appears.
+  useEffect(() => {
+    if (autoPrompted.current) return;
+    autoPrompted.current = true;
+    const timer = setTimeout(() => {
+      handleUnlock();
+    }, 350);
+    return () => clearTimeout(timer);
+    // handleUnlock is stable (useCallback with stable deps); running this
+    // effect only on mount is intentional — re-runs would re-prompt on
+    // every render, which we do not want.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
