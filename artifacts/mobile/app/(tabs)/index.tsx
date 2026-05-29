@@ -1,8 +1,9 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   Platform,
@@ -17,6 +18,40 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useJournal } from "@/context/JournalContext";
+import { useReminders } from "@/context/RemindersContext";
+import { useSymptoms } from "@/context/SymptomContext";
+import { JourneyStage, JournalEntry, Reminder, SymptomEntry } from "@/types";
+
+// ─── Stage config ─────────────────────────────────────────────────────────────
+
+type StageStyle = { label: string; color: string; bg: string; dot: string; border: string };
+
+const STAGE_STYLES: Record<JourneyStage, StageStyle> = {
+  before: {
+    label: "Before Hospice",
+    color: "#78AAEE",
+    bg: "rgba(14, 38, 78, 0.85)",
+    dot: Colors.journeyBefore,
+    border: Colors.journeyBefore + "40",
+  },
+  during: {
+    label: "During Hospice",
+    color: "#F09A7A",
+    bg: "rgba(76, 42, 57, 0.80)",
+    dot: "#FF8B68",
+    border: "rgba(240, 154, 122, 0.25)",
+  },
+  after: {
+    label: "After Hospice",
+    color: "#B89AE8",
+    bg: "rgba(30, 20, 58, 0.85)",
+    dot: Colors.journeyAfter,
+    border: Colors.journeyAfter + "40",
+  },
+};
+
+const STAGE_FALLBACK: StageStyle = STAGE_STYLES.during;
 
 // ─── Role config ──────────────────────────────────────────────────────────────
 
@@ -86,6 +121,62 @@ const ROLE_CONFIG: Record<string, RoleConfig> = {
     ],
   },
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function computeJournalStreak(entries: JournalEntry[]): number {
+  if (entries.length === 0) return 0;
+  const entryDates = new Set(
+    entries.map((e) => new Date(e.timestamp).toISOString().slice(0, 10))
+  );
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  while (true) {
+    const dateStr = cursor.toISOString().slice(0, 10);
+    if (entryDates.has(dateStr)) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function countRemindersToday(reminders: Reminder[]): number {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayDow = new Date().getDay();
+  return reminders.filter((r) => {
+    if (!r.enabled) return false;
+    if (r.recurrence === "daily") return true;
+    if (r.recurrence === "weekly") return new Date(r.datetime).getDay() === todayDow;
+    return r.datetime.slice(0, 10) === today;
+  }).length;
+}
+
+function buildSymptomLine(entry: SymptomEntry): string {
+  const parts: string[] = [];
+  parts.push(`Pain ${entry.pain}/10`);
+  parts.push(`Breathlessness ${entry.breathlessness}/10`);
+  if (entry.nausea > 0) parts.push(`Nausea ${entry.nausea}/10`);
+  return parts.join(" · ");
+}
+
+// ─── Profile completeness ─────────────────────────────────────────────────────
+
+const SETUP_DISMISSED_KEY = "@home_profile_setup_dismissed";
+
+type ProfileField = { label: string; filled: boolean };
+
+function getProfileFields(profile: { patientName?: string; diagnosis?: string; medications?: unknown[]; comfortKitMedications?: string; hospicePhone?: string } | undefined): ProfileField[] {
+  return [
+    { label: "Patient name",    filled: !!(profile?.patientName?.trim()) },
+    { label: "Diagnosis",       filled: !!(profile?.diagnosis?.trim()) },
+    { label: "Medications",     filled: !!(profile?.medications && (profile.medications as unknown[]).length > 0) || !!(profile?.comfortKitMedications?.trim()) },
+    { label: "Hospice phone",   filled: !!(profile?.hospicePhone?.trim()) },
+  ];
+}
 
 // ─── Quick Action Card ────────────────────────────────────────────────────────
 
@@ -197,7 +288,7 @@ const rc = StyleSheet.create({
 
 // ─── Journey Card ─────────────────────────────────────────────────────────────
 
-function JourneyCard({ onPress }: { onPress: () => void }) {
+function JourneyCard({ stageLabel, onPress }: { stageLabel: string; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
@@ -213,7 +304,7 @@ function JourneyCard({ onPress }: { onPress: () => void }) {
           <Feather name="map" size={20} color={Colors.accentJourney} />
         </View>
         <View style={jc.textWrap}>
-          <Text style={jc.label}>During Hospice</Text>
+          <Text style={jc.label}>{stageLabel}</Text>
           <Text style={jc.sub}>Journey Guide & Stage Planner</Text>
         </View>
       </View>
@@ -268,19 +359,13 @@ function HeroRagnaCard({ title, subtitle, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] }]}
     >
-      {/* Outer glow ring */}
       <View style={hero.glowRing} />
       <View style={hero.card}>
-        {/* Background gradient */}
         <LinearGradient
           colors={["rgba(16, 28, 80, 0.96)", "rgba(12, 20, 68, 0.98)"]}
           style={StyleSheet.absoluteFill}
         />
-
-        {/* Title */}
         <Text style={hero.question}>{title}</Text>
-
-        {/* Ask Ragna CTA */}
         <LinearGradient
           colors={["rgba(28, 48, 110, 0.95)", "rgba(22, 36, 95, 0.98)", "rgba(34, 24, 90, 0.95)"]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -299,8 +384,6 @@ function HeroRagnaCard({ title, subtitle, onPress }: {
             <Feather name="arrow-right" size={16} color="#A0C8FF" />
           </View>
         </LinearGradient>
-
-        {/* Subtitle */}
         <Text style={hero.subtitle}>{subtitle}</Text>
       </View>
     </Pressable>
@@ -403,16 +486,271 @@ const sh = StyleSheet.create({
   line: { flex: 1, height: 1, backgroundColor: "rgba(60, 90, 160, 0.25)" },
 });
 
+// ─── Today Status Row ─────────────────────────────────────────────────────────
+
+type StatusChip = {
+  icon: string;
+  label: string;
+  color: string;
+  route: string;
+  filled: boolean;
+};
+
+function TodayStatusRow({ chips, onPress }: {
+  chips: StatusChip[];
+  onPress: (route: string) => void;
+}) {
+  return (
+    <View style={ts.row}>
+      {chips.map((chip) => (
+        <Pressable
+          key={chip.label}
+          onPress={() => onPress(chip.route)}
+          style={({ pressed }) => [
+            ts.chip,
+            { borderColor: chip.color + (chip.filled ? "50" : "28") },
+            chip.filled && { backgroundColor: chip.color + "14" },
+            pressed && { opacity: 0.75, transform: [{ scale: 0.95 }] },
+          ]}
+        >
+          <Feather
+            name={chip.icon as any}
+            size={13}
+            color={chip.filled ? chip.color : chip.color + "80"}
+          />
+          <Text style={[ts.label, { color: chip.filled ? chip.color : chip.color + "80" }]} numberOfLines={1}>
+            {chip.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+const ts = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(80, 120, 200, 0.28)",
+    backgroundColor: "rgba(14, 22, 58, 0.70)",
+  },
+  label: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.1,
+  },
+});
+
+// ─── Profile Setup Card ───────────────────────────────────────────────────────
+
+function ProfileSetupCard({
+  fields,
+  onPress,
+  onDismiss,
+}: {
+  fields: ProfileField[];
+  onPress: () => void;
+  onDismiss: () => void;
+}) {
+  const filledCount = fields.filter((f) => f.filled).length;
+  const total = fields.length;
+
+  return (
+    <View style={ps.card}>
+      <LinearGradient
+        colors={["rgba(26, 42, 90, 0.70)", "rgba(18, 30, 70, 0.60)"]}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={ps.top}>
+        <View style={ps.iconWrap}>
+          <Feather name="user" size={16} color={Colors.primary} />
+        </View>
+        <View style={ps.textWrap}>
+          <Text style={ps.title}>Complete your profile</Text>
+          <Text style={ps.sub}>{filledCount} of {total} key fields set up</Text>
+        </View>
+        <Pressable
+          onPress={onDismiss}
+          hitSlop={8}
+          style={({ pressed }) => [ps.dismissBtn, pressed && { opacity: 0.5 }]}
+        >
+          <Feather name="x" size={15} color="#4A6090" />
+        </Pressable>
+      </View>
+      <View style={ps.dots}>
+        {fields.map((f) => (
+          <View
+            key={f.label}
+            style={[
+              ps.dot,
+              f.filled
+                ? { backgroundColor: Colors.primary }
+                : { backgroundColor: "rgba(80, 120, 200, 0.22)" },
+            ]}
+          />
+        ))}
+      </View>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [ps.cta, pressed && { opacity: 0.80 }]}
+      >
+        <Text style={ps.ctaText}>Finish setup</Text>
+        <Feather name="arrow-right" size={13} color={Colors.primary} />
+      </Pressable>
+    </View>
+  );
+}
+const ps = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(80, 130, 220, 0.22)",
+    padding: 14,
+    gap: 11,
+    overflow: "hidden",
+    backgroundColor: "rgba(14, 22, 58, 0.70)",
+    shadowColor: "#1040A0",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  top: { flexDirection: "row", alignItems: "center", gap: 10 },
+  iconWrap: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: Colors.primary + "20",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  textWrap: { flex: 1 },
+  title: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#D8E8FF", letterSpacing: -0.2 },
+  sub:   { fontSize: 11, fontFamily: "Inter_400Regular", color: "#5A78A8", marginTop: 1 },
+  dismissBtn: {
+    width: 28, height: 28, borderRadius: 8,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  dots: { flexDirection: "row", gap: 6, paddingLeft: 44 },
+  dot:  { width: 28, height: 4, borderRadius: 2 },
+  cta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    paddingLeft: 44,
+  },
+  ctaText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+    letterSpacing: -0.1,
+  },
+});
+
+// ─── Today's Symptom Summary ──────────────────────────────────────────────────
+
+function TodaySymptomSummary({ entry, onPress }: { entry: SymptomEntry; onPress: () => void }) {
+  const line = buildSymptomLine(entry);
+  const isHighPain = entry.pain >= 7 || entry.breathlessness >= 7;
+  const accentColor = isHighPain ? Colors.accent : Colors.accentSymptom;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        sy.card,
+        { borderColor: accentColor + "35" },
+        pressed && { opacity: 0.80 },
+      ]}
+    >
+      <View style={[sy.dot, { backgroundColor: accentColor }]} />
+      <View style={sy.textWrap}>
+        <Text style={sy.label}>Today's check-in</Text>
+        <Text style={[sy.values, { color: accentColor }]} numberOfLines={1}>{line}</Text>
+      </View>
+      <Feather name="chevron-right" size={14} color={accentColor + "80"} />
+    </Pressable>
+  );
+}
+const sy = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(14, 22, 58, 0.65)",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+  },
+  dot: { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
+  textWrap: { flex: 1, gap: 1 },
+  label:  { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#4A6090", letterSpacing: 0.1 },
+  values: { fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: -0.1 },
+});
+
 // ─── Home Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useApp();
+  const { getTodayEntry, entries: symptomEntries } = useSymptoms();
+  const { entries: journalEntries } = useJournal();
+  const { reminders } = useReminders();
+
+  const [setupDismissed, setSetupDismissed] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SETUP_DISMISSED_KEY)
+      .then((val) => { if (val === "1") setSetupDismissed(true); })
+      .catch(() => {});
+  }, []);
+
+  const dismissSetup = useCallback(() => {
+    setSetupDismissed(true);
+    AsyncStorage.setItem(SETUP_DISMISSED_KEY, "1").catch(() => {});
+  }, []);
 
   const role   = user?.role ?? "other";
   const config = useMemo(() => ROLE_CONFIG[role] ?? ROLE_CONFIG.other, [role]);
   const patientName = user?.patientProfile?.patientName?.trim();
   const contextLine = config.contextLine(patientName);
+
+  const journeyStage: JourneyStage = (user?.journeyStage as JourneyStage) ?? "during";
+  const stageStyle = STAGE_STYLES[journeyStage] ?? STAGE_FALLBACK;
+
+  const todayEntry = getTodayEntry();
+  const journalStreak = useMemo(() => computeJournalStreak(journalEntries), [journalEntries]);
+  const remindersToday = useMemo(() => countRemindersToday(reminders), [reminders]);
+
+  const profileFields = useMemo(() => getProfileFields(user?.patientProfile), [user?.patientProfile]);
+  const allFieldsFilled = profileFields.every((f) => f.filled);
+  const showSetupCard = !setupDismissed && !allFieldsFilled;
+
+  const statusChips: StatusChip[] = [
+    todayEntry
+      ? { icon: "check-circle", label: "Check-in done", color: Colors.accentSymptom, route: "/symptom-tracker", filled: true }
+      : { icon: "activity",    label: "Check in today", color: Colors.accentSymptom, route: "/symptom-tracker", filled: false },
+    {
+      icon: "bell",
+      label: remindersToday > 0 ? `${remindersToday} reminder${remindersToday > 1 ? "s" : ""} today` : "No reminders",
+      color: Colors.accentReminders,
+      route: "/reminders",
+      filled: remindersToday > 0,
+    },
+    journalStreak > 0
+      ? { icon: "edit-3", label: `${journalStreak}-day streak`, color: Colors.accentJournal, route: "/journal", filled: true }
+      : { icon: "edit-3", label: "Start journaling",            color: Colors.accentJournal, route: "/journal", filled: false },
+  ];
 
   const tap = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -438,9 +776,9 @@ export default function HomeScreen() {
         {/* ── Header ── */}
         <View style={sc.header}>
           <View style={sc.headerLeft}>
-            <View style={sc.stagePill}>
-              <View style={sc.stageDot} />
-              <Text style={sc.stagePillText}>During Hospice</Text>
+            <View style={[sc.stagePill, { backgroundColor: stageStyle.bg, borderColor: stageStyle.border }]}>
+              <View style={[sc.stageDot, { backgroundColor: stageStyle.dot }]} />
+              <Text style={[sc.stagePillText, { color: stageStyle.color }]}>{stageStyle.label}</Text>
             </View>
             <Text style={sc.pageTitle}>{config.title}</Text>
             <Text style={sc.contextLine}>{contextLine}</Text>
@@ -452,6 +790,18 @@ export default function HomeScreen() {
             <Feather name="settings" size={19} color="rgba(150, 175, 230, 0.75)" />
           </Pressable>
         </View>
+
+        {/* ── Today at a glance ── */}
+        <TodayStatusRow chips={statusChips} onPress={tap} />
+
+        {/* ── Profile setup nudge ── */}
+        {showSetupCard && (
+          <ProfileSetupCard
+            fields={profileFields}
+            onPress={() => tap("/patient-profile")}
+            onDismiss={dismissSetup}
+          />
+        )}
 
         {/* ── Hero ── */}
         <HeroRagnaCard
@@ -471,6 +821,12 @@ export default function HomeScreen() {
               </View>
             ))}
           </View>
+          {todayEntry && (
+            <TodaySymptomSummary
+              entry={todayEntry}
+              onPress={() => tap("/symptom-tracker")}
+            />
+          )}
         </View>
 
         {/* ── Helpful Resources ── */}
@@ -484,7 +840,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Journey card ── */}
-        <JourneyCard onPress={() => tap("/(tabs)/journey")} />
+        <JourneyCard stageLabel={stageStyle.label} onPress={() => tap("/(tabs)/journey")} />
 
       </ScrollView>
     </View>
@@ -504,21 +860,17 @@ const sc = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-start",
-    backgroundColor: "rgba(76, 42, 57, 0.80)",
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "rgba(240, 154, 122, 0.25)",
   },
   stageDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: "#FF8B68",
   },
   stagePillText: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    color: "#F09A7A",
     letterSpacing: 0.2,
   },
 
