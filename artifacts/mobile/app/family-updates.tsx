@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -246,29 +247,43 @@ function FamilyUpdatesContent() {
   // Active (non-opted-out) contacts for sending
   const activeContacts = contacts.filter((c) => !c.optedOut);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadHistory() {
-      try {
-        const token = await getToken();
-        if (cancelled) return;
-        if (token) {
-          const serverHistory = await fetchFamilyUpdateHistory(token);
-          if (cancelled) return;
-          setHistory(serverHistory);
-          cacheHistory(serverHistory);
-          return;
-        }
-      } catch {
-        // server unavailable — fall through to local cache
+  const refreshHistory = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const token = await getToken();
+      if (signal?.aborted) return;
+      if (token) {
+        const serverHistory = await fetchFamilyUpdateHistory(token);
+        if (signal?.aborted) return;
+        setHistory(serverHistory);
+        cacheHistory(serverHistory);
+        return;
       }
-      if (cancelled) return;
-      const local = await loadLocalHistory();
-      if (!cancelled) setHistory(local);
+    } catch {
+      // server unavailable — fall through to local cache
     }
-    loadHistory();
-    return () => { cancelled = true; };
+    if (signal?.aborted) return;
+    const local = await loadLocalHistory();
+    if (!signal?.aborted) setHistory(local);
   }, [getToken]);
+
+  // Load history on mount
+  useEffect(() => {
+    const controller = new AbortController();
+    refreshHistory(controller.signal);
+    return () => { controller.abort(); };
+  }, [refreshHistory]);
+
+  // Silently re-fetch history when the app returns to the foreground
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextState === "active") {
+        refreshHistory();
+      }
+      appStateRef.current = nextState;
+    });
+    return () => { subscription.remove(); };
+  }, [refreshHistory]);
 
   // Fetch opt-out status whenever the contact list changes
   useEffect(() => {
