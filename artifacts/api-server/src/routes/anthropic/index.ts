@@ -7,6 +7,7 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { HOSPICE_SYSTEM_PROMPT } from "./systemPrompt.js";
 import { buildResponsePlan } from "../../intelligence/hospice/planner.js";
 import { MODELS } from "../../config/models.js";
+import { requirePremium } from "../../middlewares/requirePremium.js";
 
 const router: IRouter = Router();
 
@@ -143,7 +144,7 @@ router.get("/conversations/:id/messages", async (req: Request, res: Response) =>
   }
 });
 
-router.post("/conversations/:id/messages", async (req: Request, res: Response) => {
+router.post("/conversations/:id/messages", requirePremium, async (req: Request, res: Response) => {
   const userId = getAuth(req).userId!;
   const id = Number(req.params["id"]);
   const { content, patientContext } = req.body as {

@@ -18,6 +18,7 @@ import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { JOURNAL_TYPE_META, useJournal } from "@/context/JournalContext";
 import { JournalEntry } from "@/types";
+import { PremiumGate } from "@/components/PremiumGate";
 
 function formatDate(dateStr: string): string {
   try {
@@ -208,6 +209,11 @@ export default function JournalScreen() {
   };
 
   return (
+    <PremiumGate
+      featureName="Caregiver Journal"
+      showBackButton
+      description="Write and review care events, moods, and milestones. Ragna can reference your journal for richer, more personalized guidance."
+    >
     <View style={styles.container}>
       <CosmicBackground />
       {/* Header */}
@@ -376,6 +382,7 @@ export default function JournalScreen() {
         </ScrollView>
       )}
     </View>
+    </PremiumGate>
   );
 }
 
