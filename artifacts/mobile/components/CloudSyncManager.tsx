@@ -14,8 +14,11 @@
  *     For matching IDs, the record with the newer `updatedAt` wins; the server
  *     is the tie-break authority. This prevents last-write-wins at the store
  *     level when two devices edit while one is offline.
- *   - Goals of care: true LWW — compare the server row's `updatedAt` against
- *     the local GoalsOfCare.updatedAt and keep whichever is newer.
+ *   - Goals of care: field-level merge — each of the five GoC fields is
+ *     resolved independently using `fieldUpdatedAt[field] ?? documentUpdatedAt`
+ *     as the effective timestamp. Two devices that each edited a different
+ *     field while offline both keep their change. Falls back to document-level
+ *     LWW when neither side has per-field timestamps (backward compatibility).
  *   - Living profile: true LWW — compare stored `livingProfileUpdatedAt`
  *     against the server row's `updatedAt` and keep whichever is newer.
  *   - Reminders: per-record merge (union by ID, same LWW strategy as
@@ -56,6 +59,7 @@ import {
 } from "@/services/pendingDeletes";
 import {
   fetchServerData,
+  mergeGoalsOfCare,
   mergeJournalEntries,
   mergeReminderEntries,
   mergeSymptomEntries,
@@ -199,63 +203,36 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const mergedJournal = mergeJournalEntries(journal, filteredServerJournal);
       await hydrateJournal(mergedJournal);
 
-      // ── Goals of care (true LWW by updatedAt) ───────────────────────────
+      // ── Goals of care (field-level merge) ───────────────────────────────
       //
-      // `resolvedGoals` captures the winning version so Step 3 uploads the
-      // correct payload. We must NOT read from the `user` closure after
-      // calling `updatePatientProfile` — React state updates are batched and
-      // the closure still holds the pre-update value for the rest of this
-      // async function, which would cause the stale local copy to be uploaded
-      // with a fresh timestamp and overwrite the newer server data.
+      // Rather than picking one document wholesale (true LWW), we resolve each
+      // of the five GoC fields independently. Each field's effective timestamp
+      // is `fieldUpdatedAt[field] ?? documentUpdatedAt`, so two devices that
+      // each edited a different field while offline both keep their changes.
+      //
+      // `resolvedGoals` captures the merged result so Step 3 can upload the
+      // correct payload without reading from the stale React closure (React
+      // state updates from `updatePatientProfile` are batched and won't be
+      // reflected in `user` until the next render).
       const serverGoalsContent = serverData.goals?.content as GoalsOfCare | undefined;
       const serverGoalsTs = serverData.goals?.updatedAt;
       const localGoals = user?.patientProfile?.goalsOfCare;
-      const localGoalsTs = localGoals?.updatedAt;
-
-      const hasLocalGoals = !!(
-        localGoals?.whatMattersMost?.trim() ||
-        localGoals?.goodDayLooksLike?.trim() ||
-        localGoals?.thingsToAvoid?.trim() ||
-        localGoals?.dnrStatus ||
-        localGoals?.additionalDirectives?.trim()
-      );
 
       // resolvedGoals is the version that will be pushed in Step 3.
-      // It is set here during Step 2 so Step 3 never touches the stale closure.
-      let resolvedGoals: GoalsOfCare | null = null;
+      const resolvedGoals: GoalsOfCare | null = mergeGoalsOfCare(
+        localGoals,
+        serverGoalsContent,
+        serverGoalsTs,
+      );
 
-      if (serverGoalsContent) {
-        let applyServer = false;
-        if (!hasLocalGoals) {
-          // Local is empty — always restore from server
-          applyServer = true;
-        } else if (serverGoalsTs && localGoalsTs) {
-          // Both have explicit timestamps — proper LWW
-          applyServer = new Date(serverGoalsTs) > new Date(localGoalsTs);
-        } else if (serverGoalsTs && !localGoalsTs) {
-          // Server has an explicit version; local predates the updatedAt field
-          // — treat the server record as authoritative
-          applyServer = true;
-        }
-        // else: local has a timestamp but server doesn't (shouldn't happen), or
-        // neither has a timestamp — keep local to avoid silent data loss.
-
-        if (applyServer) {
-          const currentProfile = user?.patientProfile ?? {};
-          updatePatientProfile({ ...currentProfile, goalsOfCare: serverGoalsContent });
-          // Resolved = server content. Carry the server's updatedAt so the
-          // upload uses the correct LWW key and is a no-op on the server
-          // (same data, same or older timestamp — server's setWhere guard
-          // will keep the existing row untouched).
-          resolvedGoals = serverGoalsTs
-            ? { ...serverGoalsContent, updatedAt: serverGoalsTs }
-            : serverGoalsContent;
-        } else if (hasLocalGoals && localGoals) {
-          resolvedGoals = localGoals;
-        }
-      } else if (hasLocalGoals && localGoals) {
-        // No server goals — local is the only version; push it.
-        resolvedGoals = localGoals;
+      // Apply the merged result to local state only when it differs from what
+      // the local closure already holds. This covers three cases:
+      //   1. Local was empty → restore from server.
+      //   2. Server had fields the local device never set → merge them in.
+      //   3. Local already matches → no-op (idempotent).
+      if (resolvedGoals && resolvedGoals !== localGoals) {
+        const currentProfile = user?.patientProfile ?? {};
+        updatePatientProfile({ ...currentProfile, goalsOfCare: resolvedGoals });
       }
 
       // ── Living profile (true LWW by updatedAt) ───────────────────────────
