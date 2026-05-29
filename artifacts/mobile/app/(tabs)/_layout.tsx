@@ -7,11 +7,12 @@ import { Image, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { useSubscription } from "@/context/SubscriptionContext";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 const ragnaIcon = require("@/assets/images/ragna-icon.png");
 
-function ChatTabIcon({ focused }: { focused: boolean }) {
+function ChatTabIcon({ focused, isPremium }: { focused: boolean; isPremium: boolean }) {
   return (
     <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
       <View style={{
@@ -38,18 +39,31 @@ function ChatTabIcon({ focused }: { focused: boolean }) {
           resizeMode="cover"
         />
       </View>
-      <View style={{
-        position: "absolute", bottom: -1, right: -1,
-        width: 7, height: 7, borderRadius: 4,
-        backgroundColor: Colors.chatLiveDot,
-        borderWidth: 1.5, borderColor: "#040C1C",
-      }} />
+      {isPremium ? (
+        <View style={{
+          position: "absolute", bottom: -1, right: -1,
+          width: 7, height: 7, borderRadius: 4,
+          backgroundColor: Colors.chatLiveDot,
+          borderWidth: 1.5, borderColor: "#040C1C",
+        }} />
+      ) : (
+        <View style={{
+          position: "absolute", top: -3, left: -3,
+          width: 14, height: 14, borderRadius: 7,
+          backgroundColor: Colors.primary,
+          borderWidth: 1.5, borderColor: "#040C1C",
+          alignItems: "center", justifyContent: "center",
+        }}>
+          <Feather name="lock" size={7} color="#fff" />
+        </View>
+      )}
     </View>
   );
 }
 
 export default function TabLayout() {
   const { isSignedIn, getToken } = useAuth();
+  const { isPremium } = useSubscription();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
@@ -113,7 +127,7 @@ export default function TabLayout() {
         name="help"
         options={{
           title: "Ask Ragna",
-          tabBarIcon: ({ focused }) => <ChatTabIcon focused={focused} />,
+          tabBarIcon: ({ focused }) => <ChatTabIcon focused={focused} isPremium={isPremium} />,
         }}
       />
       <Tabs.Screen

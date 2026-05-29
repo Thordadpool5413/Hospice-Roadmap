@@ -20,6 +20,7 @@ import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { GoalsOfCare } from "@/types";
+import { PremiumGate } from "@/components/PremiumGate";
 
 const DNR_OPTIONS: { value: GoalsOfCare["dnrStatus"]; label: string; desc: string; color: string }[] = [
   { value: "dnr", label: "DNR / Allow Natural Death", desc: "If the heart stops, we let it stop peacefully. No CPR.", color: "#7A5C8A" },
@@ -129,6 +130,11 @@ export default function GoalsOfCareScreen() {
   };
 
   return (
+    <PremiumGate
+      featureName="Goals of Care"
+      showBackButton
+      description="Define what matters most to your loved one. Ragna uses these goals to personalize every response to your family's situation."
+    >
     <View style={[styles.container, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0) }]}>
       <CosmicBackground />
       <View style={styles.header}>
@@ -315,6 +321,7 @@ export default function GoalsOfCareScreen() {
         </Pressable>
       </ScrollView>
     </View>
+    </PremiumGate>
   );
 }
 

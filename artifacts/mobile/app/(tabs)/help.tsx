@@ -69,6 +69,7 @@ import { RagnaEmptyState } from "@/components/ragna/RagnaEmptyState";
 import { RagnaHeader } from "@/components/ragna/RagnaHeader";
 import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
 import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
+import { PremiumGate } from "@/components/PremiumGate";
 
 const VOICE_OPTIONS = [{ id: "marin", label: "Ragna" }] as const;
 
@@ -1210,6 +1211,10 @@ export default function HelpScreen() {
   const hasMessages = localMessages.length > 0;
 
   return (
+    <PremiumGate
+      featureName="Ragna AI"
+      description="Chat with Ragna, your AI companion trained in hospice and palliative care. She can help with symptoms, difficult conversations, and guidance at every stage."
+    >
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1315,6 +1320,7 @@ export default function HelpScreen() {
         onReplyPreviewLongPress={handleReplyPreviewLongPress}
       />
     </KeyboardAvoidingView>
+    </PremiumGate>
   );
 }
 

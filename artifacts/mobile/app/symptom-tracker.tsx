@@ -21,6 +21,7 @@ import { Colors } from "@/constants/colors";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { SymptomEntry } from "@/types";
+import { PremiumGate } from "@/components/PremiumGate";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -642,6 +643,11 @@ export default function SymptomTrackerScreen() {
   }, []);
 
   return (
+    <PremiumGate
+      featureName="Symptom Tracker"
+      showBackButton
+      description="Track pain, breathlessness, and other symptoms daily. Ragna uses your check-ins to provide personalized guidance when you need it most."
+    >
     <View style={[sc.container, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 0) }]}>
       <CosmicBackground />
       {/* ── Header ── */}
@@ -862,6 +868,7 @@ export default function SymptomTrackerScreen() {
 
       </ScrollView>
     </View>
+    </PremiumGate>
   );
 }
 
