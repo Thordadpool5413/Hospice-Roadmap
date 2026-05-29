@@ -1,5 +1,5 @@
 /**
- * CloudSyncManager — mounts inside all context providers and ClerkLoaded.
+ * CloudSyncProvider — wraps the app tree and provides CloudSyncContext.
  *
  * Triggers on:
  *   - Initial sign-in (after ALL contexts finish loading from AsyncStorage —
@@ -7,6 +7,7 @@
  *     RemindersContext, and VeraMemoryContext)
  *   - App foreground (AppState "active")
  *   - Network reconnect (isOnline transitions false → true via useAppNetwork)
+ *   - Manual user tap via triggerSync() from CloudSyncContext
  *
  * Conflict resolution strategy:
  *   - Symptom entries and journal entries: per-record merge (union by ID).
@@ -31,7 +32,14 @@
  */
 
 import { useAuth } from "@clerk/expo";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { AppState, AppStateStatus } from "react-native";
 
 import { useApp } from "@/context/AppContext";
@@ -55,7 +63,31 @@ import {
 } from "@/services/syncService";
 import type { GoalsOfCare } from "@/types";
 
-export function CloudSyncManager() {
+// ─── Context ──────────────────────────────────────────────────────────────────
+
+interface CloudSyncContextValue {
+  /** Manually trigger a full sync. Resolves when the sync attempt finishes. */
+  triggerSync: () => Promise<void>;
+  /** True while a sync is in progress. */
+  isSyncing: boolean;
+}
+
+const CloudSyncContext = createContext<CloudSyncContextValue>({
+  triggerSync: async () => {},
+  isSyncing: false,
+});
+
+export function useCloudSync(): CloudSyncContextValue {
+  return useContext(CloudSyncContext);
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+interface CloudSyncProviderProps {
+  children: React.ReactNode;
+}
+
+export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { isSignedIn } = useAuth();
   const { isOnline } = useAppNetwork();
 
@@ -72,8 +104,11 @@ export function CloudSyncManager() {
   } = useVeraMemory();
 
   const initialized = useRef(false);
-  const isSyncing = useRef(false);
+  const isSyncingRef = useRef(false);
   const wasOnline = useRef<boolean | null>(null);
+
+  // Reactive isSyncing state for UI consumers
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // All five local stores must have finished loading from AsyncStorage before
   // we attempt any sync or hydration. This prevents pushing stale empty-state
@@ -81,8 +116,9 @@ export function CloudSyncManager() {
   const contextsReady = !appLoading && !sympLoading && !jrnLoading && !remLoading && !veraLoading;
 
   const runSync = useCallback(async () => {
-    if (!isSignedIn || isSyncing.current) return;
-    isSyncing.current = true;
+    if (!isSignedIn || isSyncingRef.current) return;
+    isSyncingRef.current = true;
+    setIsSyncing(true);
 
     try {
       const serverData = await fetchServerData();
@@ -251,7 +287,8 @@ export function CloudSyncManager() {
     } catch {
       // Sync failures are silent — app continues to work offline
     } finally {
-      isSyncing.current = false;
+      isSyncingRef.current = false;
+      setIsSyncing(false);
     }
   }, [
     isSignedIn,
@@ -320,5 +357,14 @@ export function CloudSyncManager() {
     }
   }, [isSignedIn, isOnline, runSync]);
 
+  return (
+    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing }}>
+      {children}
+    </CloudSyncContext.Provider>
+  );
+}
+
+/** @deprecated Use CloudSyncProvider instead */
+export function CloudSyncManager() {
   return null;
 }

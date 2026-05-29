@@ -15,7 +15,7 @@ import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { CloudSyncManager } from "@/components/CloudSyncManager";
+import { CloudSyncProvider } from "@/components/CloudSyncManager";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
@@ -270,12 +270,13 @@ export default function RootLayout() {
               <RagnaLearningProvider>
               <QueryClientProvider client={queryClient}>
                 <GestureHandlerRootView style={{ flex: 1 }}>
-                  <View style={{ flex: 1 }}>
-                    <LearningSync />
-                    <CloudSyncManager />
-                    <RootLayoutNav />
-                    <OfflineBanner />
-                  </View>
+                  <CloudSyncProvider>
+                    <View style={{ flex: 1 }}>
+                      <LearningSync />
+                      <RootLayoutNav />
+                      <OfflineBanner />
+                    </View>
+                  </CloudSyncProvider>
                 </GestureHandlerRootView>
               </QueryClientProvider>
               </RagnaLearningProvider>

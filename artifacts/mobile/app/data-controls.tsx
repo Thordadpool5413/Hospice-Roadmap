@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { useCloudSync } from "@/components/CloudSyncManager";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
@@ -105,6 +106,8 @@ export default function DataControlsScreen() {
   const { memories, livingProfile, recentTiles, clearMemories } = useVeraMemory();
   const { observations, clearObservations } = useRagnaLearning();
 
+  const { triggerSync, isSyncing } = useCloudSync();
+
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [syncLoaded, setSyncLoaded] = useState(false);
 
@@ -114,6 +117,12 @@ export default function DataControlsScreen() {
       setSyncLoaded(true);
     });
   }, []);
+
+  const handleSyncNow = async () => {
+    await triggerSync();
+    const ts = await readSyncLastSuccess();
+    setLastSynced(ts);
+  };
 
   // Derived statuses
   const profileStatus = derivePatientProfileStatus(user);
@@ -355,6 +364,23 @@ export default function DataControlsScreen() {
                 <Text style={[styles.syncLabel, { color: dotColor }]}>{label}</Text>
                 <Text style={styles.syncSublabel}>{sublabel}</Text>
               </View>
+              {isOnline && (
+                <Pressable
+                  onPress={isSyncing ? undefined : handleSyncNow}
+                  disabled={isSyncing}
+                  style={({ pressed }) => [
+                    styles.syncNowBtn,
+                    isSyncing && styles.syncNowBtnLoading,
+                    !isSyncing && pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  {isSyncing ? (
+                    <Feather name="refresh-cw" size={12} color={Colors.primary} />
+                  ) : (
+                    <Text style={styles.syncNowBtnText}>Sync now</Text>
+                  )}
+                </Pressable>
+              )}
             </View>
           );
         })()}
@@ -589,6 +615,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
+  },
+  syncNowBtn: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.primaryPale,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+    minWidth: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  syncNowBtnLoading: {
+    opacity: 0.55,
+  },
+  syncNowBtnText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
   noteCard: {
     backgroundColor: Colors.surface,
