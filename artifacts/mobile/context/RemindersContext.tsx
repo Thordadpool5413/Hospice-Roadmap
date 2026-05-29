@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { Platform } from "react-native";
 
 import { Reminder, ReminderRecurrence, ReminderType } from "@/types";
+import { enqueueRetry } from "@/services/retryQueue";
 import { uploadReminders } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_reminders";
@@ -136,7 +137,9 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     const updated = [reminder, ...reminders];
     setReminders(updated);
     await save(updated);
-    uploadReminders(updated).catch(() => {});
+    uploadReminders(updated)
+      .then((ok) => { if (!ok) return enqueueRetry("reminders", updated); })
+      .catch(() => enqueueRetry("reminders", updated));
   }, [reminders, save, permissionStatus]);
 
   const updateReminder = useCallback(async (id: string, updates: Partial<Pick<Reminder, "label" | "datetime" | "recurrence" | "type">>) => {
@@ -152,7 +155,9 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     }
     setReminders(updated);
     await save(updated);
-    uploadReminders(updated).catch(() => {});
+    uploadReminders(updated)
+      .then((ok) => { if (!ok) return enqueueRetry("reminders", updated); })
+      .catch(() => enqueueRetry("reminders", updated));
   }, [reminders, save, permissionStatus]);
 
   const toggleReminder = useCallback(async (id: string) => {
@@ -170,7 +175,9 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     }
     setReminders(updated);
     await save(updated);
-    uploadReminders(updated).catch(() => {});
+    uploadReminders(updated)
+      .then((ok) => { if (!ok) return enqueueRetry("reminders", updated); })
+      .catch(() => enqueueRetry("reminders", updated));
   }, [reminders, save, permissionStatus]);
 
   const deleteReminder = useCallback(async (id: string) => {
@@ -179,7 +186,9 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     const updated = reminders.filter((r) => r.id !== id);
     setReminders(updated);
     await save(updated);
-    uploadReminders(updated).catch(() => {});
+    uploadReminders(updated)
+      .then((ok) => { if (!ok) return enqueueRetry("reminders", updated); })
+      .catch(() => enqueueRetry("reminders", updated));
   }, [reminders, save]);
 
   const clearReminders = useCallback(async () => {

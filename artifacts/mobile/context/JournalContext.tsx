@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 import { JournalEntry, JournalEntryType } from "@/types";
+import { enqueueRetry } from "@/services/retryQueue";
 import { uploadJournal } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_journal";
@@ -46,7 +47,9 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
       const updated = [newEntry, ...entries];
       setEntries(updated);
       await save(updated);
-      uploadJournal(updated).catch(() => {});
+      uploadJournal(updated)
+        .then((ok) => { if (!ok) return enqueueRetry("journal", updated); })
+        .catch(() => enqueueRetry("journal", updated));
       return newEntry;
     },
     [entries, save]
@@ -58,7 +61,9 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
       const updated = entries.map((e) => (e.id === id ? { ...e, ...updates, updatedAt: now } : e));
       setEntries(updated);
       await save(updated);
-      uploadJournal(updated).catch(() => {});
+      uploadJournal(updated)
+        .then((ok) => { if (!ok) return enqueueRetry("journal", updated); })
+        .catch(() => enqueueRetry("journal", updated));
     },
     [entries, save]
   );
@@ -68,7 +73,9 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
       const updated = entries.filter((e) => e.id !== id);
       setEntries(updated);
       await save(updated);
-      uploadJournal(updated).catch(() => {});
+      uploadJournal(updated)
+        .then((ok) => { if (!ok) return enqueueRetry("journal", updated); })
+        .catch(() => enqueueRetry("journal", updated));
     },
     [entries, save]
   );

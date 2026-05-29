@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import { SymptomEntry } from "@/types";
+import { enqueueRetry } from "@/services/retryQueue";
 import { uploadSymptoms } from "@/services/syncService";
 
 const STORAGE_KEY = "@hospice_roadmap_symptoms";
@@ -70,19 +71,25 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
       updatedAt: new Date().toISOString(),
     };
     const saved = await saveEntries([...entries, newEntry]);
-    uploadSymptoms(saved).catch(() => {});
+    uploadSymptoms(saved)
+      .then((ok) => { if (!ok) return enqueueRetry("symptoms", saved); })
+      .catch(() => enqueueRetry("symptoms", saved));
   }, [entries]);
 
   const updateEntry = useCallback(async (id: string, updates: Partial<Omit<SymptomEntry, "id">>) => {
     const now = new Date().toISOString();
     const updated = entries.map((e) => e.id === id ? { ...e, ...updates, updatedAt: now } : e);
     const saved = await saveEntries(updated);
-    uploadSymptoms(saved).catch(() => {});
+    uploadSymptoms(saved)
+      .then((ok) => { if (!ok) return enqueueRetry("symptoms", saved); })
+      .catch(() => enqueueRetry("symptoms", saved));
   }, [entries]);
 
   const deleteEntry = useCallback(async (id: string) => {
     const saved = await saveEntries(entries.filter((e) => e.id !== id));
-    uploadSymptoms(saved).catch(() => {});
+    uploadSymptoms(saved)
+      .then((ok) => { if (!ok) return enqueueRetry("symptoms", saved); })
+      .catch(() => enqueueRetry("symptoms", saved));
   }, [entries]);
 
   const clearEntries = useCallback(async () => {

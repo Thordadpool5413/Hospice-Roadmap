@@ -40,6 +40,7 @@ import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
+import { clearRetryQueue, drainRetryQueue } from "@/services/retryQueue";
 import {
   fetchServerData,
   mergeJournalEntries,
@@ -243,6 +244,9 @@ export function CloudSyncManager() {
 
       if (allPushesSucceeded) {
         await recordSyncSuccess();
+        // A successful full sync pushed the current state of every store, so
+        // any queued retry payloads are now redundant — clear them.
+        await clearRetryQueue();
       }
     } catch {
       // Sync failures are silent — app continues to work offline
@@ -293,7 +297,11 @@ export function CloudSyncManager() {
     return () => sub.remove();
   }, [isSignedIn, runSync]);
 
-  // Sync on network reconnect (offline → online transition)
+  // Sync on network reconnect (offline → online transition).
+  // In addition to a full runSync, drain the retry queue so any per-entry
+  // uploads that failed while offline are replayed immediately. The retry
+  // drain runs concurrently with runSync; the full sync's clearRetryQueue
+  // at the end will clean up any entries that the drain also succeeded on.
   useEffect(() => {
     if (!isSignedIn) return;
 
@@ -307,6 +315,7 @@ export function CloudSyncManager() {
     wasOnline.current = isOnline;
 
     if (justReconnected) {
+      void drainRetryQueue();
       runSync();
     }
   }, [isSignedIn, isOnline, runSync]);
