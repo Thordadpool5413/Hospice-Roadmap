@@ -252,10 +252,19 @@ function FamilyUpdatesContent() {
       const token = await getToken();
       if (signal?.aborted) return;
       if (token) {
-        const serverHistory = await fetchFamilyUpdateHistory(token);
+        const [serverHistory, localHistory] = await Promise.all([
+          fetchFamilyUpdateHistory(token),
+          loadLocalHistory(),
+        ]);
         if (signal?.aborted) return;
-        setHistory(serverHistory);
-        cacheHistory(serverHistory);
+        // Merge: union by id, keeping server entry when both sides have the same id
+        const serverIds = new Set(serverHistory.map((e) => e.id));
+        const localOnly = localHistory.filter((e) => !serverIds.has(e.id));
+        const merged = [...serverHistory, ...localOnly]
+          .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())
+          .slice(0, MAX_HISTORY);
+        setHistory(merged);
+        cacheHistory(merged);
         return;
       }
     } catch {
