@@ -57,6 +57,7 @@ import {
   fetchServerData,
   mergeJournalEntries,
   mergeSymptomEntries,
+  readSyncLastSuccess,
   recordSyncSuccess,
   runOnceLocalMigration,
   uploadGoals,
@@ -67,6 +68,11 @@ import {
 } from "@/services/syncService";
 import type { GoalsOfCare } from "@/types";
 
+// ─── Toast threshold ───────────────────────────────────────────────────────────
+// Show the "Synced" toast only when the previous successful sync was at least
+// this many milliseconds ago. Keeps frequent background syncs quiet.
+const SYNC_TOAST_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 interface CloudSyncContextValue {
@@ -74,11 +80,19 @@ interface CloudSyncContextValue {
   triggerSync: () => Promise<void>;
   /** True while a sync is in progress. */
   isSyncing: boolean;
+  /**
+   * Updated to a new Date() each time a qualifying sync completes while the
+   * app is in the foreground and the previous sync was more than
+   * SYNC_TOAST_THRESHOLD_MS ago. Consumers (e.g. SyncSuccessToast) watch
+   * this value to decide when to show a confirmation.
+   */
+  syncSucceededAt: Date | null;
 }
 
 const CloudSyncContext = createContext<CloudSyncContextValue>({
   triggerSync: async () => {},
   isSyncing: false,
+  syncSucceededAt: null,
 });
 
 export function useCloudSync(): CloudSyncContextValue {
@@ -113,6 +127,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
   // Reactive isSyncing state for UI consumers
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Updated to a new Date() when a qualifying foreground sync completes.
+  // "Qualifying" = app is active + previous sync was > SYNC_TOAST_THRESHOLD_MS ago.
+  const [syncSucceededAt, setSyncSucceededAt] = useState<Date | null>(null);
 
   // All five local stores must have finished loading from AsyncStorage before
   // we attempt any sync or hydration. This prevents pushing stale empty-state
@@ -314,11 +332,26 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushResults.every((r) => r.status === "fulfilled" && r.value === true);
 
       if (allPushesSucceeded) {
+        // Read the previous success timestamp BEFORE overwriting it so we can
+        // decide whether the toast threshold has elapsed.
+        const prevSuccessRaw = await readSyncLastSuccess();
         await recordSyncSuccess();
         // A successful full sync pushed the current state of every store, so
         // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
         await clearAllPendingDeletes();
+
+        // ── Toast eligibility ────────────────────────────────────────────
+        // Show the "Synced" confirmation only when:
+        //   1. The app is currently in the foreground (user can see it).
+        //   2. Enough time has passed since the last sync to avoid spamming.
+        const isForegrounded = AppState.currentState === "active";
+        const prevTs = prevSuccessRaw ? new Date(prevSuccessRaw).getTime() : 0;
+        const thresholdElapsed = Date.now() - prevTs >= SYNC_TOAST_THRESHOLD_MS;
+
+        if (isForegrounded && thresholdElapsed) {
+          setSyncSucceededAt(new Date());
+        }
       }
     } catch {
       // Sync failures are silent — app continues to work offline
@@ -394,7 +427,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   }, [isSignedIn, isOnline, runSync]);
 
   return (
-    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing }}>
+    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt }}>
       {children}
     </CloudSyncContext.Provider>
   );

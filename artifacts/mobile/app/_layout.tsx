@@ -18,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CloudSyncProvider } from "@/components/CloudSyncManager";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SyncSuccessToast } from "@/components/SyncSuccessToast";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AppProvider } from "@/context/AppContext";
 import { JournalProvider } from "@/context/JournalContext";
@@ -275,6 +276,7 @@ export default function RootLayout() {
                       <LearningSync />
                       <RootLayoutNav />
                       <OfflineBanner />
+                      <SyncSuccessToast />
                     </View>
                   </CloudSyncProvider>
                 </GestureHandlerRootView>
