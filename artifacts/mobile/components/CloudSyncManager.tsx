@@ -14,21 +14,25 @@
  *     For matching IDs, the record with the newer `updatedAt` wins; the server
  *     is the tie-break authority. This prevents last-write-wins at the store
  *     level when two devices edit while one is offline.
- *   - Goals of care: true LWW — compare the server row's `updatedAt` against
- *     the local GoalsOfCare.updatedAt and keep whichever is newer.
+ *   - Goals of care: field-level merge — each of the five GoC fields is
+ *     resolved independently using `fieldUpdatedAt[field] ?? documentUpdatedAt`
+ *     as the effective timestamp. Two devices that each edited a different
+ *     field while offline both keep their change. Falls back to document-level
+ *     LWW when neither side has per-field timestamps (backward compatibility).
  *   - Living profile: true LWW — compare stored `livingProfileUpdatedAt`
  *     against the server row's `updatedAt` and keep whichever is newer.
- *   - Reminders: restore-if-empty (no per-record merge; reminders are
- *     device-local by nature and the merge spec does not apply to them).
+ *   - Reminders: per-record merge (union by ID, same LWW strategy as
+ *     symptoms and journal). Falls back to scheduled datetime as the logical
+ *     version for pre-updatedAt records.
  *
  * Merge note:
  *   The merged arrays are used for BOTH the hydrate call (writing to local
  *   storage / context state) and the push call (uploading to the server).
  *   This is intentional: because React state updates are batched and won't
- *   be reflected in the `symptoms`/`journal` closure until the next render,
- *   reading from the closure after hydration would push stale pre-merge data.
- *   Using the captured merged array guarantees the server receives the full
- *   union even within a single sync run.
+ *   be reflected in the `symptoms`/`journal`/`reminders` closure until the
+ *   next render, reading from the closure after hydration would push stale
+ *   pre-merge data. Using the captured merged array guarantees the server
+ *   receives the full union even within a single sync run.
  */
 
 import { useAuth } from "@clerk/expo";
@@ -55,8 +59,11 @@ import {
 } from "@/services/pendingDeletes";
 import {
   fetchServerData,
+  mergeGoalsOfCare,
   mergeJournalEntries,
+  mergeReminderEntries,
   mergeSymptomEntries,
+  readSyncLastSuccess,
   recordSyncSuccess,
   runOnceLocalMigration,
   uploadGoals,
@@ -67,6 +74,11 @@ import {
 } from "@/services/syncService";
 import type { GoalsOfCare } from "@/types";
 
+// ─── Toast threshold ───────────────────────────────────────────────────────────
+// Show the "Synced" toast only when the previous successful sync was at least
+// this many milliseconds ago. Keeps frequent background syncs quiet.
+const SYNC_TOAST_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 interface CloudSyncContextValue {
@@ -74,11 +86,19 @@ interface CloudSyncContextValue {
   triggerSync: () => Promise<void>;
   /** True while a sync is in progress. */
   isSyncing: boolean;
+  /**
+   * Updated to a new Date() each time a qualifying sync completes while the
+   * app is in the foreground and the previous sync was more than
+   * SYNC_TOAST_THRESHOLD_MS ago. Consumers (e.g. SyncSuccessToast) watch
+   * this value to decide when to show a confirmation.
+   */
+  syncSucceededAt: Date | null;
 }
 
 const CloudSyncContext = createContext<CloudSyncContextValue>({
   triggerSync: async () => {},
   isSyncing: false,
+  syncSucceededAt: null,
 });
 
 export function useCloudSync(): CloudSyncContextValue {
@@ -113,6 +133,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
   // Reactive isSyncing state for UI consumers
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Updated to a new Date() when a qualifying foreground sync completes.
+  // "Qualifying" = app is active + previous sync was > SYNC_TOAST_THRESHOLD_MS ago.
+  const [syncSucceededAt, setSyncSucceededAt] = useState<Date | null>(null);
 
   // All five local stores must have finished loading from AsyncStorage before
   // we attempt any sync or hydration. This prevents pushing stale empty-state
@@ -179,63 +203,36 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const mergedJournal = mergeJournalEntries(journal, filteredServerJournal);
       await hydrateJournal(mergedJournal);
 
-      // ── Goals of care (true LWW by updatedAt) ───────────────────────────
+      // ── Goals of care (field-level merge) ───────────────────────────────
       //
-      // `resolvedGoals` captures the winning version so Step 3 uploads the
-      // correct payload. We must NOT read from the `user` closure after
-      // calling `updatePatientProfile` — React state updates are batched and
-      // the closure still holds the pre-update value for the rest of this
-      // async function, which would cause the stale local copy to be uploaded
-      // with a fresh timestamp and overwrite the newer server data.
+      // Rather than picking one document wholesale (true LWW), we resolve each
+      // of the five GoC fields independently. Each field's effective timestamp
+      // is `fieldUpdatedAt[field] ?? documentUpdatedAt`, so two devices that
+      // each edited a different field while offline both keep their changes.
+      //
+      // `resolvedGoals` captures the merged result so Step 3 can upload the
+      // correct payload without reading from the stale React closure (React
+      // state updates from `updatePatientProfile` are batched and won't be
+      // reflected in `user` until the next render).
       const serverGoalsContent = serverData.goals?.content as GoalsOfCare | undefined;
       const serverGoalsTs = serverData.goals?.updatedAt;
       const localGoals = user?.patientProfile?.goalsOfCare;
-      const localGoalsTs = localGoals?.updatedAt;
-
-      const hasLocalGoals = !!(
-        localGoals?.whatMattersMost?.trim() ||
-        localGoals?.goodDayLooksLike?.trim() ||
-        localGoals?.thingsToAvoid?.trim() ||
-        localGoals?.dnrStatus ||
-        localGoals?.additionalDirectives?.trim()
-      );
 
       // resolvedGoals is the version that will be pushed in Step 3.
-      // It is set here during Step 2 so Step 3 never touches the stale closure.
-      let resolvedGoals: GoalsOfCare | null = null;
+      const resolvedGoals: GoalsOfCare | null = mergeGoalsOfCare(
+        localGoals,
+        serverGoalsContent,
+        serverGoalsTs,
+      );
 
-      if (serverGoalsContent) {
-        let applyServer = false;
-        if (!hasLocalGoals) {
-          // Local is empty — always restore from server
-          applyServer = true;
-        } else if (serverGoalsTs && localGoalsTs) {
-          // Both have explicit timestamps — proper LWW
-          applyServer = new Date(serverGoalsTs) > new Date(localGoalsTs);
-        } else if (serverGoalsTs && !localGoalsTs) {
-          // Server has an explicit version; local predates the updatedAt field
-          // — treat the server record as authoritative
-          applyServer = true;
-        }
-        // else: local has a timestamp but server doesn't (shouldn't happen), or
-        // neither has a timestamp — keep local to avoid silent data loss.
-
-        if (applyServer) {
-          const currentProfile = user?.patientProfile ?? {};
-          updatePatientProfile({ ...currentProfile, goalsOfCare: serverGoalsContent });
-          // Resolved = server content. Carry the server's updatedAt so the
-          // upload uses the correct LWW key and is a no-op on the server
-          // (same data, same or older timestamp — server's setWhere guard
-          // will keep the existing row untouched).
-          resolvedGoals = serverGoalsTs
-            ? { ...serverGoalsContent, updatedAt: serverGoalsTs }
-            : serverGoalsContent;
-        } else if (hasLocalGoals && localGoals) {
-          resolvedGoals = localGoals;
-        }
-      } else if (hasLocalGoals && localGoals) {
-        // No server goals — local is the only version; push it.
-        resolvedGoals = localGoals;
+      // Apply the merged result to local state only when it differs from what
+      // the local closure already holds. This covers three cases:
+      //   1. Local was empty → restore from server.
+      //   2. Server had fields the local device never set → merge them in.
+      //   3. Local already matches → no-op (idempotent).
+      if (resolvedGoals && resolvedGoals !== localGoals) {
+        const currentProfile = user?.patientProfile ?? {};
+        updatePatientProfile({ ...currentProfile, goalsOfCare: resolvedGoals });
       }
 
       // ── Living profile (true LWW by updatedAt) ───────────────────────────
@@ -255,15 +252,16 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         }
       }
 
-      // ── Reminders (restore-if-empty) ─────────────────────────────────────
-      // Reminders are device-local by nature. Per-record merge is not required;
-      // we simply restore from the server when the local list is empty (new
-      // device / reinstall). Use filteredServerReminders so that deletions made
-      // while offline (with an empty resulting list) are not restored from the
-      // server on next sync.
-      if (reminders.length === 0 && filteredServerReminders.length > 0) {
-        await hydrateReminders(filteredServerReminders as Parameters<typeof hydrateReminders>[0]);
-      }
+      // ── Reminders (per-record merge) ─────────────────────────────────────
+      // Union of local and server reminder sets, resolving conflicts by
+      // `updatedAt` (server wins on tie). Uses filteredServerReminders so that
+      // IDs deleted locally while offline (tracked in pendingDeletes) are not
+      // restored from the server side of the union.
+      // Always hydrate: when mergedReminders === reminders (no new data) the
+      // write is idempotent and inexpensive, but it covers the restore case
+      // (new device / reinstall) without a separate empty-guard branch.
+      const mergedReminders = mergeReminderEntries(reminders, filteredServerReminders);
+      await hydrateReminders(mergedReminders as Parameters<typeof hydrateReminders>[0]);
 
       // Step 3: push current local state to server with stored LWW timestamps.
       //
@@ -301,7 +299,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushOps.push(uploadLivingProfile(livingProfile, livingProfileUpdatedAt));
       }
 
-      if (reminders.length > 0) pushOps.push(uploadReminders(reminders));
+      if (mergedReminders.length > 0) pushOps.push(uploadReminders(mergedReminders));
 
       const pushResults = await Promise.allSettled(pushOps);
 
@@ -314,11 +312,26 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushResults.every((r) => r.status === "fulfilled" && r.value === true);
 
       if (allPushesSucceeded) {
+        // Read the previous success timestamp BEFORE overwriting it so we can
+        // decide whether the toast threshold has elapsed.
+        const prevSuccessRaw = await readSyncLastSuccess();
         await recordSyncSuccess();
         // A successful full sync pushed the current state of every store, so
         // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
         await clearAllPendingDeletes();
+
+        // ── Toast eligibility ────────────────────────────────────────────
+        // Show the "Synced" confirmation only when:
+        //   1. The app is currently in the foreground (user can see it).
+        //   2. Enough time has passed since the last sync to avoid spamming.
+        const isForegrounded = AppState.currentState === "active";
+        const prevTs = prevSuccessRaw ? new Date(prevSuccessRaw).getTime() : 0;
+        const thresholdElapsed = Date.now() - prevTs >= SYNC_TOAST_THRESHOLD_MS;
+
+        if (isForegrounded && thresholdElapsed) {
+          setSyncSucceededAt(new Date());
+        }
       }
     } catch {
       // Sync failures are silent — app continues to work offline
@@ -394,7 +407,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   }, [isSignedIn, isOnline, runSync]);
 
   return (
-    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing }}>
+    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt }}>
       {children}
     </CloudSyncContext.Provider>
   );

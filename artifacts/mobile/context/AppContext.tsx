@@ -7,7 +7,79 @@ import React, {
   useState,
 } from "react";
 
-import { JourneyStage, PatientProfile, RagnaPrivacySettings, User, UserRole } from "@/types";
+import {
+  GoalsOfCare,
+  GoalsOfCareField,
+  JourneyStage,
+  PatientProfile,
+  RagnaPrivacySettings,
+  User,
+  UserRole,
+} from "@/types";
+
+// ─── GoC field-level timestamp helpers ────────────────────────────────────────
+
+const GOC_FIELDS: GoalsOfCareField[] = [
+  "whatMattersMost",
+  "goodDayLooksLike",
+  "thingsToAvoid",
+  "dnrStatus",
+  "additionalDirectives",
+];
+
+/**
+ * Compute per-field timestamps for a GoalsOfCare object saved from the UI.
+ *
+ * Called only when the incoming goals have NO `fieldUpdatedAt` map (i.e. the
+ * save originated from the UI, not from a sync merge which already carries a
+ * carefully constructed map). For each field:
+ *   - If the value CHANGED vs the previous version → stamp `now`.
+ *   - If the value is UNCHANGED → preserve the existing per-field timestamp
+ *     (or fall back to the existing document-level updatedAt so the field
+ *     participates correctly in future merges without appearing "just edited").
+ *   - If the field was CLEARED (new value is undefined) → drop its entry so
+ *     the merge knows it was intentionally removed.
+ *
+ * Returns the completed `fieldUpdatedAt` map.
+ */
+function computeFieldUpdatedAt(
+  incoming: GoalsOfCare,
+  existing: GoalsOfCare | undefined,
+  now: string,
+): Partial<Record<GoalsOfCareField, string>> {
+  const result: Partial<Record<GoalsOfCareField, string>> = {};
+
+  for (const field of GOC_FIELDS) {
+    const newVal = (incoming as Record<string, unknown>)[field];
+    const oldVal = (existing as Record<string, unknown> | undefined)?.[field];
+
+    if (newVal === undefined || newVal === null || newVal === "") {
+      // Field was cleared — omit from map so the merge treats it as gone.
+      continue;
+    }
+
+    if (newVal !== oldVal) {
+      // Value changed (or field is new) — use now.
+      result[field] = now;
+    } else {
+      // Value unchanged — preserve the prior per-field timestamp so we don't
+      // claim ownership of a field the user didn't actually touch.
+      const prior =
+        existing?.fieldUpdatedAt?.[field] ??
+        existing?.updatedAt;
+      if (prior) {
+        result[field] = prior;
+      } else {
+        // No prior timestamp at all — use now as a safe initialization so the
+        // field participates in future field-level merges rather than being
+        // treated as unversioned.
+        result[field] = now;
+      }
+    }
+  }
+
+  return result;
+}
 
 export const DEFAULT_RAGNA_PRIVACY: RagnaPrivacySettings = {
   personalizationEnabled: true,
@@ -128,7 +200,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updatePatientProfile = useCallback(
     (profile: PatientProfile) => {
       if (!user) return;
-      saveUser({ ...user, patientProfile: profile });
+
+      // ── Per-field GoC timestamp stamping ──────────────────────────────────
+      // When incoming goals have NO `fieldUpdatedAt` map the save originated
+      // from the UI (the form always constructs a plain GoalsOfCare without
+      // field-level timestamps). Compute per-field timestamps by comparing
+      // each field's new value against the current local value:
+      //   - Changed field  → stamp now.
+      //   - Unchanged field → carry the existing per-field timestamp (or the
+      //     document-level updatedAt) so we don't falsely claim ownership.
+      //   - Cleared field  → omit from map.
+      //
+      // When incoming goals ALREADY have `fieldUpdatedAt` (written by the sync
+      // merge step) we leave them untouched — the merge has already done the
+      // correct field-level resolution.
+      let finalProfile = profile;
+      if (profile.goalsOfCare && !profile.goalsOfCare.fieldUpdatedAt) {
+        const now = profile.goalsOfCare.updatedAt ?? new Date().toISOString();
+        const existing = user.patientProfile?.goalsOfCare;
+        const fieldUpdatedAt = computeFieldUpdatedAt(profile.goalsOfCare, existing, now);
+        const updatedGoals: GoalsOfCare = {
+          ...profile.goalsOfCare,
+          ...(Object.keys(fieldUpdatedAt).length > 0 ? { fieldUpdatedAt } : {}),
+        };
+        finalProfile = { ...profile, goalsOfCare: updatedGoals };
+      }
+
+      saveUser({ ...user, patientProfile: finalProfile });
     },
     [user]
   );

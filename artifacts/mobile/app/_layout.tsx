@@ -11,13 +11,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef } from "react";
-import { Platform, View } from "react-native";
+import { Alert, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { CloudSyncProvider } from "@/components/CloudSyncManager";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SyncSuccessToast } from "@/components/SyncSuccessToast";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AppProvider } from "@/context/AppContext";
 import { JournalProvider } from "@/context/JournalContext";
@@ -25,7 +26,15 @@ import { RagnaLearningProvider, useRagnaLearning } from "@/context/RagnaLearning
 import { RemindersProvider } from "@/context/RemindersContext";
 import { SymptomProvider } from "@/context/SymptomContext";
 import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
+import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
+
+try {
+  initializeRevenueCat();
+} catch (err: unknown) {
+  const e = err as { message?: string };
+  Alert.alert("RevenueCat Unavailable", e?.message ?? "Subscription features may not be available.");
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -212,6 +221,10 @@ function RootLayoutNav() {
         name="legal"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="paywall"
+        options={{ headerShown: false, presentation: "modal" }}
+      />
     </Stack>
   );
 }
@@ -269,15 +282,18 @@ export default function RootLayout() {
               <VeraMemoryProvider>
               <RagnaLearningProvider>
               <QueryClientProvider client={queryClient}>
+                <SubscriptionProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <CloudSyncProvider>
                     <View style={{ flex: 1 }}>
                       <LearningSync />
                       <RootLayoutNav />
                       <OfflineBanner />
+                      <SyncSuccessToast />
                     </View>
                   </CloudSyncProvider>
                 </GestureHandlerRootView>
+                </SubscriptionProvider>
               </QueryClientProvider>
               </RagnaLearningProvider>
               </VeraMemoryProvider>

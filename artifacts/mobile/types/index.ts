@@ -5,13 +5,30 @@ export type UserRole =
   | "caregiver"
   | "other";
 
+/** The five editable scalar fields on a GoalsOfCare document. */
+export type GoalsOfCareField =
+  | "whatMattersMost"
+  | "goodDayLooksLike"
+  | "thingsToAvoid"
+  | "dnrStatus"
+  | "additionalDirectives";
+
 export interface GoalsOfCare {
   whatMattersMost?: string;
   goodDayLooksLike?: string;
   thingsToAvoid?: string;
   dnrStatus?: "dnr" | "full-code" | "unknown" | "not-discussed";
   additionalDirectives?: string;
+  /** Document-level ISO timestamp — the last time any field was saved locally. */
   updatedAt?: string;
+  /**
+   * Per-field ISO timestamps populated by the sync merge step.
+   * When present, these take precedence over the document-level `updatedAt`
+   * during field-level conflict resolution so that a device that only edits
+   * one field while offline does not overwrite unrelated fields from another
+   * device. Set by `mergeGoalsOfCare()` — not written by the UI.
+   */
+  fieldUpdatedAt?: Partial<Record<GoalsOfCareField, string>>;
 }
 
 export interface MedicationEntry {

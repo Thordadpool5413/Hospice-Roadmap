@@ -32,7 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAuthToken } from "@workspace/api-client-react";
 
 import { apiBase, makeRequestTimeoutSignal, mergeJsonHeaders } from "./apiClient";
-import type { GoalsOfCare, JournalEntry, Reminder, SymptomEntry } from "@/types";
+import type { GoalsOfCare, GoalsOfCareField, JournalEntry, Reminder, SymptomEntry } from "@/types";
 
 // ─── Last-success timestamp key ───────────────────────────────────────────────
 
@@ -230,6 +230,142 @@ export function mergeJournalEntries(
   }
 
   return Array.from(merged.values());
+}
+
+/**
+ * Merge local and server reminder entries.
+ *
+ * - Records present on only one side are included as-is.
+ * - Records with matching IDs are resolved by `updatedAt` (server wins on tie).
+ * - For pre-updatedAt records the scheduled datetime is used as the logical
+ *   version (consistent with the upload helper's clientUpdatedAt fallback).
+ */
+export function mergeReminderEntries(
+  local: Reminder[],
+  server: Reminder[],
+): Reminder[] {
+  const merged = new Map<string, Reminder>(local.map((r) => [r.id, r]));
+
+  for (const serverEntry of server) {
+    const localEntry = merged.get(serverEntry.id);
+    if (!localEntry) {
+      merged.set(serverEntry.id, serverEntry);
+    } else {
+      const localTs = localEntry.updatedAt ?? reminderFallbackUpdatedAt(localEntry);
+      const serverTs = serverEntry.updatedAt ?? reminderFallbackUpdatedAt(serverEntry);
+      if (new Date(serverTs) >= new Date(localTs)) {
+        merged.set(serverEntry.id, serverEntry);
+      }
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+// ─── Goals of care field-level merge ─────────────────────────────────────────
+//
+// The five editable GoC fields are resolved independently. For each field the
+// effective timestamp is: fieldUpdatedAt[field] ?? documentUpdatedAt. This
+// lets two devices that each edited a different field while offline both keep
+// their edits rather than one clobbering the other.
+//
+// Falls back gracefully to document-level LWW when neither side carries
+// per-field timestamps (the state before this feature was introduced).
+//
+// The merged result carries a fresh `fieldUpdatedAt` map so that subsequent
+// syncs can continue to resolve at field level rather than falling back to
+// document-level comparison.
+
+const GOC_FIELDS: GoalsOfCareField[] = [
+  "whatMattersMost",
+  "goodDayLooksLike",
+  "thingsToAvoid",
+  "dnrStatus",
+  "additionalDirectives",
+];
+
+/**
+ * Merge local and server GoalsOfCare at field granularity.
+ *
+ * For each of the five GoC fields the effective timestamp is
+ * `fieldUpdatedAt[field] ?? documentUpdatedAt`. Whichever side has the newer
+ * effective timestamp for a given field wins that field's value. The merged
+ * result is a new GoalsOfCare with a `fieldUpdatedAt` map recording the
+ * winning timestamp for each field so that future syncs remain field-precise.
+ *
+ * Falls back to document-level LWW when neither side has `fieldUpdatedAt`
+ * (current behaviour, preserved for backward compatibility).
+ *
+ * Returns `null` when both sides are empty/undefined.
+ */
+export function mergeGoalsOfCare(
+  local: GoalsOfCare | undefined,
+  serverContent: GoalsOfCare | undefined,
+  serverDocUpdatedAt: string | undefined,
+): GoalsOfCare | null {
+  const hasLocal = !!(
+    local?.whatMattersMost?.trim() ||
+    local?.goodDayLooksLike?.trim() ||
+    local?.thingsToAvoid?.trim() ||
+    local?.dnrStatus ||
+    local?.additionalDirectives?.trim()
+  );
+  const hasServer = !!(
+    serverContent?.whatMattersMost?.trim() ||
+    serverContent?.goodDayLooksLike?.trim() ||
+    serverContent?.thingsToAvoid?.trim() ||
+    serverContent?.dnrStatus ||
+    serverContent?.additionalDirectives?.trim()
+  );
+
+  if (!hasServer && !hasLocal) return null;
+  if (!hasServer) return local!;
+  if (!hasLocal) return serverContent!;
+
+  const localDocTs = local!.updatedAt;
+  const merged: GoalsOfCare = {};
+  const mergedFieldTs: Partial<Record<GoalsOfCareField, string>> = {};
+
+  for (const field of GOC_FIELDS) {
+    const localFieldTs = local!.fieldUpdatedAt?.[field] ?? localDocTs;
+    const serverFieldTs = serverContent!.fieldUpdatedAt?.[field] ?? serverDocUpdatedAt;
+
+    let useServer: boolean;
+    if (localFieldTs && serverFieldTs) {
+      // Both sides have a timestamp — server wins on tie (authoritative source)
+      useServer = new Date(serverFieldTs) >= new Date(localFieldTs);
+    } else if (serverFieldTs && !localFieldTs) {
+      // Server has an explicit version; local predates per-field tracking
+      useServer = true;
+    } else {
+      // Local has a timestamp but server doesn't, or neither does — keep local
+      useServer = false;
+    }
+
+    const winningValue = useServer
+      ? (serverContent as Record<string, unknown>)[field]
+      : (local as Record<string, unknown>)[field];
+    const winningTs = useServer ? serverFieldTs : localFieldTs;
+
+    if (winningValue !== undefined) {
+      (merged as Record<string, unknown>)[field] = winningValue;
+    }
+    if (winningTs) {
+      mergedFieldTs[field] = winningTs;
+    }
+  }
+
+  // Document-level updatedAt = the most recent winning field timestamp
+  const allTs = Object.values(mergedFieldTs).filter((t): t is string => !!t);
+  const docTs =
+    allTs.length > 0
+      ? allTs.reduce((a, b) => (new Date(a) > new Date(b) ? a : b))
+      : (localDocTs ?? serverDocUpdatedAt);
+
+  if (docTs) merged.updatedAt = docTs;
+  if (Object.keys(mergedFieldTs).length > 0) merged.fieldUpdatedAt = mergedFieldTs;
+
+  return merged;
 }
 
 // ─── Full fetch from server ───────────────────────────────────────────────────
