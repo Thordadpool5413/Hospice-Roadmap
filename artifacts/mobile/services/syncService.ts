@@ -34,6 +34,26 @@ import { getAuthToken } from "@workspace/api-client-react";
 import { apiBase, makeRequestTimeoutSignal, mergeJsonHeaders } from "./apiClient";
 import type { GoalsOfCare, JournalEntry, Reminder, SymptomEntry } from "@/types";
 
+// ─── Last-success timestamp key ───────────────────────────────────────────────
+
+export const SYNC_LAST_SUCCESS_KEY = "@sync_last_success";
+
+/**
+ * Persist the current wall-clock time as the most recent successful sync.
+ * Called by CloudSyncManager after every full push phase completes.
+ */
+export async function recordSyncSuccess(): Promise<void> {
+  await AsyncStorage.setItem(SYNC_LAST_SUCCESS_KEY, new Date().toISOString());
+}
+
+/**
+ * Read the ISO timestamp of the last successful sync, or null if none has
+ * ever been recorded on this device.
+ */
+export async function readSyncLastSuccess(): Promise<string | null> {
+  return AsyncStorage.getItem(SYNC_LAST_SUCCESS_KEY);
+}
+
 // ─── Migration flag keys ──────────────────────────────────────────────────────
 
 const MIGRATED_SYMPTOMS  = "@sync_migrated_symptoms";

@@ -29,6 +29,7 @@ import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
 import {
   fetchServerData,
+  recordSyncSuccess,
   runOnceLocalMigration,
   uploadGoals,
   uploadJournal,
@@ -148,7 +149,19 @@ export function CloudSyncManager() {
 
       if (reminders.length > 0) pushOps.push(uploadReminders(reminders));
 
-      await Promise.allSettled(pushOps);
+      const pushResults = await Promise.allSettled(pushOps);
+
+      // Record the timestamp only when every attempted upload actually succeeded.
+      // Each upload helper returns Promise<boolean> and resolves false on network
+      // or HTTP failure rather than rejecting, so allSettled alone is not
+      // sufficient — we must also check that every fulfilled value is true.
+      const allPushesSucceeded =
+        pushOps.length === 0 ||
+        pushResults.every((r) => r.status === "fulfilled" && r.value === true);
+
+      if (allPushesSucceeded) {
+        await recordSyncSuccess();
+      }
     } catch {
       // Sync failures are silent — app continues to work offline
     } finally {

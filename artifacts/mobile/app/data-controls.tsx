@@ -1,7 +1,8 @@
+import { useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -20,13 +21,34 @@ import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
+import { useAppNetwork } from "@/hooks/useAppNetwork";
 import {
   deleteServerGoals,
   deleteServerJournal,
   deleteServerLivingProfile,
   deleteServerReminders,
   deleteServerSymptoms,
+  readSyncLastSuccess,
 } from "@/services/syncService";
+
+// ─── Sync timestamp formatter ────────────────────────────────────────────────
+
+function formatSyncTime(iso: string): string {
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "Unknown";
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  const timeStr = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  if (diffDays === 0) return `Today at ${timeStr}`;
+  if (diffDays === 1) return `Yesterday at ${timeStr}`;
+
+  const monthDay = date.toLocaleDateString([], { month: "short", day: "numeric" });
+  return `${monthDay} at ${timeStr}`;
+}
 
 // ─── Helpers to determine empty states ───────────────────────────────────────
 
@@ -74,12 +96,24 @@ function deriveRagnaMemoryStatus(
 
 export default function DataControlsScreen() {
   const insets = useSafeAreaInsets();
+  const { isSignedIn } = useAuth();
+  const { isOnline } = useAppNetwork();
   const { user, clearPatientProfile, clearGoalsOfCare, clearSavedResources, clearSavedProviders } = useApp();
   const { entries: journalEntries, clearEntries: clearJournal } = useJournal();
   const { entries: symptomEntries, clearEntries: clearSymptoms } = useSymptoms();
   const { reminders, clearReminders } = useReminders();
   const { memories, livingProfile, recentTiles, clearMemories } = useVeraMemory();
   const { observations, clearObservations } = useRagnaLearning();
+
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [syncLoaded, setSyncLoaded] = useState(false);
+
+  useEffect(() => {
+    readSyncLastSuccess().then((ts) => {
+      setLastSynced(ts);
+      setSyncLoaded(true);
+    });
+  }, []);
 
   // Derived statuses
   const profileStatus = derivePatientProfileStatus(user);
@@ -281,6 +315,50 @@ export default function DataControlsScreen() {
           </Text>
         </View>
 
+        {/* Cloud backup status — only shown to signed-in users once we've read AsyncStorage */}
+        {isSignedIn && syncLoaded && (() => {
+          const synced = !!lastSynced;
+          const pending = !isOnline;
+
+          let icon: React.ComponentProps<typeof Feather>["name"];
+          let dotColor: string;
+          let label: string;
+          let sublabel: string;
+
+          if (synced && !pending) {
+            icon = "check-circle";
+            dotColor = Colors.success;
+            label = "Last backed up";
+            sublabel = formatSyncTime(lastSynced!);
+          } else if (synced && pending) {
+            icon = "cloud-off";
+            dotColor = Colors.warning;
+            label = "Offline — sync pending";
+            sublabel = `Last backed up ${formatSyncTime(lastSynced!)}`;
+          } else if (!synced && pending) {
+            icon = "cloud-off";
+            dotColor = Colors.textSubtle;
+            label = "Offline";
+            sublabel = "Not yet backed up to the cloud";
+          } else {
+            icon = "cloud";
+            dotColor = Colors.textSubtle;
+            label = "Not yet backed up";
+            sublabel = "Data will sync automatically when online";
+          }
+
+          return (
+            <View style={[styles.syncBanner, { borderColor: dotColor + "30" }]}>
+              <View style={[styles.syncDot, { backgroundColor: dotColor }]} />
+              <Feather name={icon} size={15} color={dotColor} style={styles.syncIcon} />
+              <View style={styles.syncText}>
+                <Text style={[styles.syncLabel, { color: dotColor }]}>{label}</Text>
+                <Text style={styles.syncSublabel}>{sublabel}</Text>
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Category list */}
         <View style={styles.categoryList}>
           {categories.map((cat, idx) => (
@@ -478,6 +556,39 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.divider,
     marginHorizontal: 16,
+  },
+  syncBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderWidth: 1,
+  },
+  syncDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  syncIcon: {
+    flexShrink: 0,
+  },
+  syncText: {
+    flex: 1,
+    gap: 1,
+  },
+  syncLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.1,
+  },
+  syncSublabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
   },
   noteCard: {
     backgroundColor: Colors.surface,
