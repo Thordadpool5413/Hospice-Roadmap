@@ -76,6 +76,22 @@ function ComparisonCell({ included }: { included: boolean }) {
   );
 }
 
+function RagnaCallout() {
+  return (
+    <View style={styles.ragnaCallout}>
+      <View style={styles.ragnaCalloutIcon}>
+        <Feather name="message-circle" size={18} color={Colors.primary} />
+      </View>
+      <View style={styles.ragnaCalloutBody}>
+        <Text style={styles.ragnaCalloutTitle}>Ragna AI</Text>
+        <Text style={styles.ragnaCalloutDesc}>
+          A conversational AI companion that remembers your caregiving journey and delivers personalized guidance — exclusive to the Companion plan.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function PlanComparisonTable() {
   return (
     <View style={styles.compTable}>
@@ -279,6 +295,7 @@ export default function PaywallScreen() {
 
         {/* Plan comparison table */}
         <Text style={styles.compSectionLabel}>Compare Plans</Text>
+        <RagnaCallout />
         <PlanComparisonTable />
 
         {/* Caregiver plan */}
@@ -602,6 +619,44 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 8,
   },
+  // ── Ragna AI callout ──────────────────────────────────────────────────────
+  ragnaCallout: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    backgroundColor: Colors.primary + "12",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.primary + "40",
+    padding: 12,
+    marginBottom: 10,
+  },
+  ragnaCalloutIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.primary + "22",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  ragnaCalloutBody: {
+    flex: 1,
+  },
+  ragnaCalloutTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primary,
+    marginBottom: 3,
+  },
+  ragnaCalloutDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+
   // ── Plan comparison table ──────────────────────────────────────────────────
   compSectionLabel: {
     fontSize: 11,
