@@ -3,7 +3,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   Platform,
@@ -16,11 +16,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { ProfileSetupWizard } from "@/components/ProfileSetupWizard";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
+import { useProfileWizard } from "@/hooks/useProfileWizard";
 import { JourneyStage, JournalEntry, Reminder, SymptomEntry } from "@/types";
 
 // ─── Stage config ─────────────────────────────────────────────────────────────
@@ -708,6 +710,9 @@ export default function HomeScreen() {
   const { reminders } = useReminders();
 
   const [setupDismissed, setSetupDismissed] = useState(false);
+  const [wizardVisible, setWizardVisible] = useState(false);
+  const hasTriggeredWizard = useRef(false);
+  const { loaded: wizardLoaded, canShow: wizardCanShow, markCompleted: markWizardCompleted, markDismissed: markWizardDismissed } = useProfileWizard();
 
   useEffect(() => {
     AsyncStorage.getItem(SETUP_DISMISSED_KEY)
@@ -735,6 +740,17 @@ export default function HomeScreen() {
   const profileFields = useMemo(() => getProfileFields(user?.patientProfile), [user?.patientProfile]);
   const allFieldsFilled = profileFields.every((f) => f.filled);
   const showSetupCard = !setupDismissed && !allFieldsFilled;
+
+  // Wizard trigger — show once after onboarding with a 1.5s delay.
+  // A session ref prevents re-triggering on every re-render.
+  const isOnboarded = !!user?.onboardingComplete;
+  useEffect(() => {
+    if (hasTriggeredWizard.current) return;
+    if (!wizardLoaded || !isOnboarded || allFieldsFilled || !wizardCanShow) return;
+    hasTriggeredWizard.current = true;
+    const t = setTimeout(() => setWizardVisible(true), 1500);
+    return () => clearTimeout(t);
+  }, [wizardLoaded, isOnboarded, allFieldsFilled, wizardCanShow]);
 
   const statusChips: StatusChip[] = [
     todayEntry
@@ -843,6 +859,18 @@ export default function HomeScreen() {
         <JourneyCard stageLabel={stageStyle.label} onPress={() => tap("/(tabs)/journey")} />
 
       </ScrollView>
+
+      <ProfileSetupWizard
+        visible={wizardVisible}
+        onComplete={() => {
+          setWizardVisible(false);
+          markWizardCompleted().catch(() => {});
+        }}
+        onDismiss={() => {
+          setWizardVisible(false);
+          markWizardDismissed().catch(() => {});
+        }}
+      />
     </View>
   );
 }
