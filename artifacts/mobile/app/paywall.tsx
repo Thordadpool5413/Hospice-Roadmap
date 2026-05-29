@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -72,6 +72,66 @@ function ComparisonCell({ included }: { included: boolean }) {
       ) : (
         <Text style={styles.compCellDash}>—</Text>
       )}
+    </View>
+  );
+}
+
+const COMPANION_EXCLUSIVE_FEATURES: Array<{ icon: string; title: string; desc: string }> = [
+  {
+    icon: "message-circle",
+    title: "Ragna AI companion",
+    desc: "Ask anything, anytime. Ragna understands your caregiving situation and delivers personalized guidance in plain language.",
+  },
+  {
+    icon: "cpu",
+    title: "AI-powered personalized guidance",
+    desc: "Ragna tailors every response to your loved one's diagnosis, symptoms, and care goals — not generic advice.",
+  },
+  {
+    icon: "bookmark",
+    title: "Cross-session AI memory",
+    desc: "Ragna remembers your journey across conversations so you never have to repeat yourself.",
+  },
+  {
+    icon: "zap",
+    title: "Smart follow-up suggestions",
+    desc: "Ragna proactively surfaces questions worth asking and next steps you might not have considered.",
+  },
+];
+
+function WhatYouGainSection({ companionPrice }: { companionPrice?: string }) {
+  return (
+    <View style={styles.gainSection}>
+      <View style={styles.gainHeader}>
+        <View style={styles.gainIconWrap}>
+          <Feather name="arrow-up-circle" size={20} color={Colors.primary} />
+        </View>
+        <View style={styles.gainHeaderText}>
+          <Text style={styles.gainTitle}>What you'll gain</Text>
+          <Text style={styles.gainSubtitle}>
+            Companion adds these features on top of your current Caregiver plan
+          </Text>
+        </View>
+      </View>
+
+      {COMPANION_EXCLUSIVE_FEATURES.map((f) => (
+        <View key={f.title} style={styles.gainFeatureRow}>
+          <View style={styles.gainFeatureIconWrap}>
+            <Feather name={f.icon as any} size={15} color={Colors.primary} />
+          </View>
+          <View style={styles.gainFeatureBody}>
+            <Text style={styles.gainFeatureTitle}>{f.title}</Text>
+            <Text style={styles.gainFeatureDesc}>{f.desc}</Text>
+          </View>
+        </View>
+      ))}
+
+      <View style={styles.gainPriceRow}>
+        <Feather name="tag" size={13} color={Colors.amber} />
+        <Text style={styles.gainPriceText}>
+          {companionPrice ?? "$9.99"}/mo — cancel anytime
+        </Text>
+      </View>
     </View>
   );
 }
@@ -198,6 +258,9 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const { offerings, isPremium, purchase, restorePurchases, isPurchasing, isRestoring } =
     useSubscription();
+  const { fromPlan } = useLocalSearchParams<{ fromPlan?: string }>();
+
+  const isUpgradeFromCaregiver = fromPlan === "caregiver";
 
   const [pendingPackage, setPendingPackage] = useState<PurchasesPackage | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -264,7 +327,9 @@ export default function PaywallScreen() {
         <Pressable onPress={() => router.back()} style={styles.closeBtn} hitSlop={12}>
           <Feather name="x" size={22} color={Colors.textSecondary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Choose a Plan</Text>
+        <Text style={styles.headerTitle}>
+          {isUpgradeFromCaregiver ? "Upgrade to Companion" : "Choose a Plan"}
+        </Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -273,12 +338,16 @@ export default function PaywallScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero */}
-        <Text style={styles.heroTitle}>Upgrade Hospice Roadmap</Text>
+        <Text style={styles.heroTitle}>
+          {isUpgradeFromCaregiver ? "Unlock Ragna AI" : "Upgrade Hospice Roadmap"}
+        </Text>
         <Text style={styles.heroSub}>
-          Get the tools and guidance you need — right when you need them most.
+          {isUpgradeFromCaregiver
+            ? "You're already getting the most out of Caregiver. Add AI-powered guidance to go further."
+            : "Get the tools and guidance you need — right when you need them most."}
         </Text>
 
-        {isPremium && (
+        {isPremium && !isUpgradeFromCaregiver && (
           <View style={styles.alreadyPremium}>
             <Feather name="check-circle" size={18} color={Colors.success} />
             <Text style={styles.alreadyPremiumText}>
@@ -301,76 +370,134 @@ export default function PaywallScreen() {
           </View>
         )}
 
-        {/* Plan comparison table */}
-        <Text style={styles.compSectionLabel}>Compare Plans</Text>
-        <RagnaCallout />
-        <PlanComparisonTable caregiverPkg={caregiverPkg} companionPkg={companionPkg} />
+        {isUpgradeFromCaregiver ? (
+          <>
+            {/* Focused upgrade view: what you'll gain */}
+            <WhatYouGainSection companionPrice={companionPkg?.product.priceString} />
 
-        {/* Caregiver plan */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.planName}>Caregiver</Text>
-            <Text style={styles.planPrice}>
-              {caregiverPkg?.product.priceString ?? "$4.99"}
-              <Text style={styles.planPeriod}>/mo</Text>
-            </Text>
-          </View>
-          <Text style={styles.planDesc}>
-            Core tools to support daily caregiving.
-          </Text>
-          <View style={styles.divider} />
-          {CAREGIVER_FEATURES.map((f) => (
-            <FeatureRow key={f.text} feature={f} />
-          ))}
-          <Pressable
-            style={[styles.ctaBtn, styles.caregiverBtn, (isBusy || !caregiverPkg) && styles.ctaBtnDisabled]}
-            onPress={() => caregiverPkg && handleSelectPlan(caregiverPkg)}
-            disabled={isBusy || !caregiverPkg}
-          >
-            {isPurchasing && pendingPackage?.identifier === CAREGIVER_PACKAGE_IDENTIFIER ? (
-              <ActivityIndicator color={Colors.background} size="small" />
-            ) : (
-              <Text style={styles.ctaBtnText}>Start Caregiver Plan</Text>
-            )}
-          </Pressable>
-        </View>
+            {/* Companion CTA card */}
+            <View style={[styles.card, styles.companionCard]}>
+              <View style={styles.bestValueBadge}>
+                <Text style={styles.bestValueText}>Upgrade</Text>
+              </View>
+              <View style={styles.cardHeader}>
+                <Text style={[styles.planName, styles.companionPlanName]}>Companion</Text>
+                <Text style={[styles.planPrice, styles.companionPrice]}>
+                  {companionPkg?.product.priceString ?? "$9.99"}
+                  <Text style={styles.planPeriod}>/mo</Text>
+                </Text>
+              </View>
+              <Text style={styles.planDesc}>
+                Full access, including Ragna AI for personalized guidance.
+              </Text>
+              {Platform.OS !== "web" && (
+                <Text style={styles.trialNote}>
+                  7-day free trial available on App Store &amp; Play Store.
+                </Text>
+              )}
+              <Pressable
+                style={[styles.ctaBtn, styles.companionBtn, (isBusy || !companionPkg) && styles.ctaBtnDisabled]}
+                onPress={() => companionPkg && handleSelectPlan(companionPkg)}
+                disabled={isBusy || !companionPkg}
+              >
+                {isPurchasing && pendingPackage?.identifier === COMPANION_PACKAGE_IDENTIFIER ? (
+                  <ActivityIndicator color={Colors.background} size="small" />
+                ) : (
+                  <Text style={styles.ctaBtnText}>Upgrade to Companion</Text>
+                )}
+              </Pressable>
+            </View>
 
-        {/* Companion plan */}
-        <View style={[styles.card, styles.companionCard]}>
-          <View style={styles.bestValueBadge}>
-            <Text style={styles.bestValueText}>Best Value</Text>
-          </View>
-          <View style={styles.cardHeader}>
-            <Text style={[styles.planName, styles.companionPlanName]}>Companion</Text>
-            <Text style={[styles.planPrice, styles.companionPrice]}>
-              {companionPkg?.product.priceString ?? "$9.99"}
-              <Text style={styles.planPeriod}>/mo</Text>
-            </Text>
-          </View>
-          <Text style={styles.planDesc}>
-            Full access, including Ragna AI for personalized guidance.
-          </Text>
-          {Platform.OS !== "web" && (
-            <Text style={styles.trialNote}>
-              7-day free trial available on App Store &amp; Play Store.
-            </Text>
-          )}
-          <View style={styles.divider} />
-          {COMPANION_FEATURES.map((f) => (
-            <FeatureRow key={f.text} feature={f} />
-          ))}
-          <Pressable
-            style={[styles.ctaBtn, styles.companionBtn, (isBusy || !companionPkg) && styles.ctaBtnDisabled]}
-            onPress={() => companionPkg && handleSelectPlan(companionPkg)}
-            disabled={isBusy || !companionPkg}
-          >
-            {isPurchasing && pendingPackage?.identifier === COMPANION_PACKAGE_IDENTIFIER ? (
-              <ActivityIndicator color={Colors.background} size="small" />
-            ) : (
-              <Text style={styles.ctaBtnText}>Start Companion Plan</Text>
-            )}
-          </Pressable>
-        </View>
+            {/* De-emphasized Caregiver card */}
+            <View style={[styles.card, styles.caregiverCardDimmed]}>
+              <View style={styles.cardHeader}>
+                <Text style={[styles.planName, styles.planNameDimmed]}>Caregiver</Text>
+                <Text style={[styles.planPrice, styles.planPriceDimmed]}>
+                  {caregiverPkg?.product.priceString ?? "$4.99"}
+                  <Text style={styles.planPeriod}>/mo</Text>
+                </Text>
+              </View>
+              <Text style={styles.planDesc}>Your current plan.</Text>
+              <View style={styles.divider} />
+              {CAREGIVER_FEATURES.map((f) => (
+                <FeatureRow key={f.text} feature={f} />
+              ))}
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Standard full paywall view */}
+            <Text style={styles.compSectionLabel}>Compare Plans</Text>
+            <RagnaCallout />
+            <PlanComparisonTable caregiverPkg={caregiverPkg} companionPkg={companionPkg} />
+
+            {/* Caregiver plan */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.planName}>Caregiver</Text>
+                <Text style={styles.planPrice}>
+                  {caregiverPkg?.product.priceString ?? "$4.99"}
+                  <Text style={styles.planPeriod}>/mo</Text>
+                </Text>
+              </View>
+              <Text style={styles.planDesc}>
+                Core tools to support daily caregiving.
+              </Text>
+              <View style={styles.divider} />
+              {CAREGIVER_FEATURES.map((f) => (
+                <FeatureRow key={f.text} feature={f} />
+              ))}
+              <Pressable
+                style={[styles.ctaBtn, styles.caregiverBtn, (isBusy || !caregiverPkg) && styles.ctaBtnDisabled]}
+                onPress={() => caregiverPkg && handleSelectPlan(caregiverPkg)}
+                disabled={isBusy || !caregiverPkg}
+              >
+                {isPurchasing && pendingPackage?.identifier === CAREGIVER_PACKAGE_IDENTIFIER ? (
+                  <ActivityIndicator color={Colors.background} size="small" />
+                ) : (
+                  <Text style={styles.ctaBtnText}>Start Caregiver Plan</Text>
+                )}
+              </Pressable>
+            </View>
+
+            {/* Companion plan */}
+            <View style={[styles.card, styles.companionCard]}>
+              <View style={styles.bestValueBadge}>
+                <Text style={styles.bestValueText}>Best Value</Text>
+              </View>
+              <View style={styles.cardHeader}>
+                <Text style={[styles.planName, styles.companionPlanName]}>Companion</Text>
+                <Text style={[styles.planPrice, styles.companionPrice]}>
+                  {companionPkg?.product.priceString ?? "$9.99"}
+                  <Text style={styles.planPeriod}>/mo</Text>
+                </Text>
+              </View>
+              <Text style={styles.planDesc}>
+                Full access, including Ragna AI for personalized guidance.
+              </Text>
+              {Platform.OS !== "web" && (
+                <Text style={styles.trialNote}>
+                  7-day free trial available on App Store &amp; Play Store.
+                </Text>
+              )}
+              <View style={styles.divider} />
+              {COMPANION_FEATURES.map((f) => (
+                <FeatureRow key={f.text} feature={f} />
+              ))}
+              <Pressable
+                style={[styles.ctaBtn, styles.companionBtn, (isBusy || !companionPkg) && styles.ctaBtnDisabled]}
+                onPress={() => companionPkg && handleSelectPlan(companionPkg)}
+                disabled={isBusy || !companionPkg}
+              >
+                {isPurchasing && pendingPackage?.identifier === COMPANION_PACKAGE_IDENTIFIER ? (
+                  <ActivityIndicator color={Colors.background} size="small" />
+                ) : (
+                  <Text style={styles.ctaBtnText}>Start Companion Plan</Text>
+                )}
+              </Pressable>
+            </View>
+          </>
+        )}
 
         {/* Restore */}
         <Pressable
@@ -819,5 +946,103 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: Colors.background,
+  },
+
+  // ── What you'll gain section (fromPlan=caregiver) ─────────────────────────
+  gainSection: {
+    backgroundColor: Colors.primary + "0E",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.primary + "35",
+    padding: 16,
+    marginBottom: 20,
+  },
+  gainHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 16,
+  },
+  gainIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary + "20",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  gainHeaderText: {
+    flex: 1,
+  },
+  gainTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primary,
+    marginBottom: 3,
+  },
+  gainSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  gainFeatureRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 12,
+  },
+  gainFeatureIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.primary + "18",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  gainFeatureBody: {
+    flex: 1,
+  },
+  gainFeatureTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  gainFeatureDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 17,
+  },
+  gainPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.primary + "30",
+  },
+  gainPriceText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.amber,
+  },
+
+  // ── De-emphasized Caregiver card (shown when fromPlan=caregiver) ──────────
+  caregiverCardDimmed: {
+    opacity: 0.5,
+    marginTop: 8,
+  },
+  planNameDimmed: {
+    color: Colors.textSecondary,
+  },
+  planPriceDimmed: {
+    color: Colors.textSecondary,
   },
 });

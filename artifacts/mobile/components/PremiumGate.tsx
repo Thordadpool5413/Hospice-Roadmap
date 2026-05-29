@@ -70,7 +70,7 @@ export function PremiumGate({
           <Text style={styles.description}>{desc}</Text>
 
           <Pressable
-            onPress={openPaywall}
+            onPress={() => openPaywall()}
             style={({ pressed }) => [
               styles.cta,
               pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },

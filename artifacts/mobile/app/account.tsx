@@ -209,7 +209,7 @@ export default function AccountScreen() {
                 </Pressable>
                 {planName === "Caregiver" && (
                   <Pressable
-                    onPress={openPaywall}
+                    onPress={() => openPaywall({ fromPlan: "caregiver" })}
                     style={({ pressed }) => [
                       styles.upgradeCompanionBtn,
                       pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
@@ -223,7 +223,7 @@ export default function AccountScreen() {
               </>
             ) : (
               <Pressable
-                onPress={openPaywall}
+                onPress={() => openPaywall()}
                 style={({ pressed }) => [
                   styles.upgradeBtn,
                   pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
