@@ -664,6 +664,38 @@ export const HOSPICE_KNOWLEDGE_CATALOG: HospiceKnowledgeBlock[] = [
     sources: ["NHPCO Quality Standards", "Joint Commission Hospice Standards"],
   },
 
+  // ─── CRISIS CARE LEVELS ───────────────────────────────────────────────────────
+
+  {
+    id: "CL001",
+    domain: "care_gap",
+    title: "Crisis Care Levels — When to Request Continuous Home Care or General Inpatient",
+    tags: [
+      "GIP", "general inpatient", "CHC", "continuous home care", "crisis care", "hospital level",
+      "intensive nursing", "inpatient hospice", "symptoms not controlled", "can't manage at home",
+      "crisis level", "continuous care", "nursing stays", "nurse in home", "request crisis",
+    ],
+    urgency: "urgent",
+    journeyStages: ["stable", "weeks_to_days", "days", "hours"],
+    summary: "Medicare hospice includes two elevated care levels — intensive nursing at home (Continuous Home Care) and a temporary inpatient facility stay (General Inpatient) — that most families never learn exist until they're already in crisis.",
+    explanation: "Medicare's hospice benefit covers four levels of care. The two elevated levels are: (1) Continuous Home Care (CHC) — a registered or licensed nurse is present in the home for 8+ hours per day, typically during an acute crisis where symptoms cannot be managed remotely. This is covered at 100% when criteria are met and allows medication titration in real time without a 911 call. (2) General Inpatient Care (GIP) — the patient is transferred temporarily to an inpatient hospice unit, hospital, or skilled nursing facility with 24-hour nursing care. GIP is used when symptoms cannot be controlled in the home environment even with continuous home nursing. Once symptoms stabilize, the patient returns home under routine or continuous care. Both levels require that symptoms be uncontrolled and unmanageable at the current level — the hospice IDG must make this determination, but a family's explicit, documented request triggers the assessment obligation.",
+    whatMayBeHappening: "Symptoms may have crossed the threshold where phone guidance and intermittent nursing visits are not enough. Qualifying crises include: pain ≥ 8/10 unresponsive to comfort kit, acute respiratory distress not controlled with opioid/repositioning/fan, severe terminal agitation requiring IV or subcutaneous medications, or refractory nausea preventing oral medication administration.",
+    whatToDoNow: "Tell the caregiver: 'Call hospice now and use the exact phrase: I need to request continuous care or crisis-level care. Describe what is happening: which symptoms, how long, what you have tried, and why you cannot manage safely at home. The hospice must assess for these levels when you request them — they cannot simply decline without documentation.' If comfortable with the request language, coach them to say: 'I am requesting a formal assessment for Continuous Home Care or General Inpatient care under the Medicare hospice benefit.'",
+    whatToSay: "The exact ask: 'I need to request continuous care — can you initiate that assessment right now?' For GIP specifically: 'I believe we need General Inpatient care. Symptoms are not controllable at home. What is the process to arrange that today?' These words matter — using benefit names signals the caregiver knows their rights and triggers a formal response.",
+    whatToWatchFor: "Signs that crisis-level care may be needed: pain, breathlessness, agitation, or nausea that is severe and not improving with comfort kit; caregiver stating they 'cannot manage' or feel 'unsafe'; symptoms described as 'out of control'; any expression of considering calling 911 due to severity.",
+    whatNotToAssume: "Do not assume the hospice will proactively offer these levels — most families must request them. Do not assume 'inpatient' means giving up home-centered care — GIP is temporary and the patient returns home. Do not advise calling 911 as a first step — 911 typically breaks the hospice plan and causes involuntary hospitalization.",
+    whenToEscalate: "If the hospice declines to assess for crisis-level care: advise the caregiver to ask for the denial in writing, ask what criteria were not met, and contact their Medicare Quality Improvement Organization (QIO) for a fast appeal. Hospice is required to inform patients of QIO appeal rights. If symptoms are immediately life-threatening and hospice is unresponsive, 911 may be appropriate as a last resort.",
+    hardStops: [
+      "If symptoms are acutely life-threatening and hospice cannot respond within 30 minutes — call 911",
+      "If DNR is NOT in place and family wants resuscitative care — call 911 immediately",
+    ],
+    relatedIds: ["HF003", "CG002", "CGAP003", "SM001", "SM002", "SM003"],
+    sources: [
+      "42 CFR § 418.108 (Continuous Home Care)", "42 CFR § 418.110 (General Inpatient Care)",
+      "CMS Medicare Benefit Policy Manual Ch. 9", "NHPCO Standards of Practice (Crisis Care)",
+    ],
+  },
+
   // ─── DOCUMENTATION AND ADVOCACY ──────────────────────────────────────────────
 
   {

@@ -40,6 +40,8 @@ export const SCENARIO_TO_SCRIPT: Record<string, string> = {
   "urinary-changes":     "nurse-visit",
   // End of life / emotional
   "approaching-death":   "dying-process",
+  // Crisis care
+  "crisis-care-gip":     "request-crisis-care",
 };
 
 export const CALL_SCRIPTS: CallScript[] = [
@@ -135,6 +137,16 @@ export const CALL_SCRIPTS: CallScript[] = [
     urgency: "routine",
     template:
       "Hi, my name is {{callerName}} and I'm calling about {{patientName}}, who has {{diagnosis}}. We've been thinking about {{patientName}}'s care plan and I'd like to talk with someone about making some changes. Our main priorities right now are comfort and {{whatMattersMost}}. Can a nurse or social worker schedule a time to discuss updating the plan with us?",
+  },
+  {
+    id: "request-crisis-care",
+    title: "Request Crisis-Level Care",
+    subtitle: "Intensive nursing at home or inpatient facility for uncontrolled symptoms",
+    icon: "alert-triangle",
+    urgency: "urgent",
+    guidanceScenarioId: "crisis-care-gip",
+    template:
+      "Hi, my name is {{callerName}} and I'm calling about {{patientName}}, who has {{diagnosis}}. I need to request continuous care or crisis-level care. Symptoms are not controlled and I cannot manage this safely at home. {{painContext}}. I am asking for a formal assessment for Continuous Home Care or General Inpatient care. Please send a nurse or advise on next steps right now.",
   },
 ];
 

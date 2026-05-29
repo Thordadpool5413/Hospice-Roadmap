@@ -243,6 +243,28 @@ export default function EmergencyCardScreen() {
           </View>
         )}
 
+        {/* Crisis Care Guide */}
+        <Pressable
+          onPress={() => router.push("/crisis-care-guide" as any)}
+          style={({ pressed }) => [
+            styles.crisisBanner,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={styles.crisisLeft}>
+            <View style={styles.crisisIconWrap}>
+              <Feather name="alert-triangle" size={18} color="#E85040" />
+            </View>
+            <View style={styles.crisisText}>
+              <Text style={styles.crisisTitle}>Need Crisis-Level Care?</Text>
+              <Text style={styles.crisisSub}>
+                Check if you qualify for intensive nursing or inpatient hospice
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={16} color={"#E8504099"} />
+        </Pressable>
+
         {/* Call Scripts */}
         <Pressable
           onPress={() => router.push("/call-scripts" as any)}
@@ -275,6 +297,7 @@ export default function EmergencyCardScreen() {
             {[
               { label: "Breathing changes", id: "breathing-changes" },
               { label: "Worsening pain", id: "pain-worsening" },
+              { label: "When to ask for hospital-level care", id: "crisis-care-gip" },
               { label: "Signs of dying", id: "approaching-death" },
               { label: "After death — what to do", id: "after-death-guidance" },
               { label: "Not sure what's happening", id: "not-sure-whats-happening" },
@@ -522,6 +545,44 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#3A5080",
     fontStyle: "italic",
+  },
+  crisisBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(232,80,64,0.10)",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(232,80,64,0.30)",
+  },
+  crisisLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  crisisIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(232,80,64,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crisisText: {
+    flex: 1,
+    gap: 2,
+  },
+  crisisTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#EEF4FF",
+  },
+  crisisSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#5A78A8",
   },
   callScriptsBanner: {
     flexDirection: "row",

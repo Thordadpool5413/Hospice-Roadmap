@@ -189,6 +189,29 @@ export const SCENARIO_MAP: ScenarioMatch[] = [
     keywords: ["how to document", "what to write down", "how to file complaint", "document this", "keep track of", "write down", "document care"],
   },
 
+  // ─── CRISIS CARE LEVELS ──────────────────────────────────────────────────────
+
+  {
+    scenarioId: "SCN-CRISIS-CARE",
+    label: "Caregiver needs crisis-level care — CHC or GIP",
+    domains: ["care_gap", "symptom_management"],
+    journeyStages: ["stable", "weeks_to_days", "days", "hours"],
+    urgency: "urgent",
+    keywords: [
+      "can't manage at home", "cannot manage", "need a nurse here", "need someone here",
+      "can I get a nurse to stay", "nurse to stay overnight", "nurse stay all night",
+      "request continuous care", "continuous home care", "crisis care level",
+      "general inpatient", "GIP care", "inpatient hospice", "hospital level hospice",
+      "should I call 911", "thinking about calling 911", "considering 911",
+      "symptoms out of control", "nothing is working", "medications aren't helping",
+      "comfort kit not working", "breakthrough not working and", "pain is uncontrollable",
+      "can't control the pain", "breathing is uncontrollable", "can't control the breathing",
+      "agitation is uncontrollable", "can't control the agitation",
+      "nausea is uncontrollable", "vomiting everything", "can't keep anything down",
+      "unsafe at home", "I'm scared to be alone with", "need more help than phone",
+    ],
+  },
+
   // ─── CAREGIVER ────────────────────────────────────────────────────────────────
 
   {
