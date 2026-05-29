@@ -21,6 +21,10 @@ import { FontScale, useA11y } from "@/context/AccessibilityContext";
 import { useApp } from "@/context/AppContext";
 import { JourneyStage, UserRole } from "@/types";
 
+import { PlanBadge } from "@/components/PlanBadge";
+import { ENTITLEMENT_IDENTIFIER, getPlanName } from "@/constants/subscriptionProducts";
+import { useSubscription } from "@/context/SubscriptionContext";
+
 const roleLabels: Record<UserRole, string> = {
   patient: "Patient",
   caregiver: "Caregiver",
@@ -68,6 +72,10 @@ export default function MoreScreen() {
   const { fontScale, highContrast, setFontScale, setHighContrast } = useA11y();
   const { signOut } = useClerk();
   const { user: clerkUser } = useUser();
+  const { isPremium, customerInfo } = useSubscription();
+  const productId =
+    customerInfo?.entitlements.active?.[ENTITLEMENT_IDENTIFIER]?.productIdentifier;
+  const planName = getPlanName(isPremium, productId);
 
   const isPatient = user?.role === "patient";
 
@@ -222,29 +230,32 @@ export default function MoreScreen() {
           </View>
         </Pressable>
 
-        {/* ── Profile Card ── */}
+        {/* ── Account Row ── */}
         {user && (
-          <View style={s.profileCard}>
+          <Pressable
+            onPress={() => router.push("/account" as any)}
+            style={({ pressed }) => [
+              s.profileCard,
+              pressed && { opacity: 0.87, transform: [{ scale: 0.98 }] },
+            ]}
+          >
             <View style={[s.profileAvatar, { backgroundColor: Colors.primary + "28" }]}>
               <Feather name="user" size={22} color={Colors.primary} />
             </View>
             <View style={s.profileInfo}>
-              <Text style={s.profileRole}>{roleLabels[user.role] ?? "User"}</Text>
-              {clerkUser?.primaryEmailAddress?.emailAddress ? (
-                <Text style={s.profileStage} numberOfLines={1}>
-                  {clerkUser.primaryEmailAddress.emailAddress}
-                </Text>
-              ) : (
-                <Text style={s.profileStage}>{stageLabels[user.journeyStage]}</Text>
-              )}
-            </View>
-            <View style={[s.stageIndicator, { backgroundColor: stageColors[user.journeyStage] + "22", borderColor: stageColors[user.journeyStage] + "50" }]}>
-              <View style={[s.stageDot, { backgroundColor: stageColors[user.journeyStage] }]} />
-              <Text style={[s.stageIndicatorText, { color: stageColors[user.journeyStage] }]}>
-                {user.journeyStage.charAt(0).toUpperCase() + user.journeyStage.slice(1)}
+              <Text style={s.profileRole} numberOfLines={1}>
+                {clerkUser?.fullName ?? roleLabels[user.role] ?? "User"}
+              </Text>
+              <Text style={s.profileStage} numberOfLines={1}>
+                {clerkUser?.primaryEmailAddress?.emailAddress ??
+                  stageLabels[user.journeyStage]}
               </Text>
             </View>
-          </View>
+            <View style={s.profileRight}>
+              <PlanBadge plan={planName} />
+              <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
+            </View>
+          </Pressable>
         )}
 
         {/* ── Journey Stage ── */}
@@ -497,7 +508,8 @@ const s = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     flexShrink: 0,
   },
-  profileInfo: { flex: 1, gap: 3 },
+  profileInfo: { flex: 1, gap: 3, minWidth: 0 },
+  profileRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   profileRole: {
     fontSize: 17, fontFamily: "Inter_700Bold",
     color: "#EEF4FF", letterSpacing: -0.3,
