@@ -2,9 +2,10 @@
  * Family Updates Service
  *
  * Provides typed wrappers around the family-updates API endpoints:
- *   POST /api/family-updates/draft    — generate a warm AI care update draft
- *   POST /api/family-updates/send     — send the approved message via Twilio SMS
- *   GET  /api/family-updates/history  — fetch last 10 send history entries
+ *   POST /api/family-updates/draft      — generate a warm AI care update draft
+ *   POST /api/family-updates/send       — send the approved message via Twilio SMS
+ *   GET  /api/family-updates/history    — fetch last 10 send history entries
+ *   GET  /api/family-updates/opt-outs   — check which phone numbers have replied STOP
  */
 
 import { apiBase, fetchJson, mergeJsonHeaders, makeRequestTimeoutSignal } from "./apiClient";
@@ -23,7 +24,7 @@ export interface DraftResponse {
 
 export interface SendResult {
   to: string;
-  status: "sent" | "failed";
+  status: "sent" | "failed" | "opted_out";
   sid?: string;
   error?: string;
 }
@@ -36,6 +37,7 @@ export interface SendRequest {
 export interface SendResponse {
   sentCount: number;
   failedCount: number;
+  optedOutCount: number;
   results: SendResult[];
 }
 
@@ -48,6 +50,10 @@ export interface SendHistoryEntry {
 
 export interface HistoryResponse {
   history: SendHistoryEntry[];
+}
+
+export interface OptOutsResponse {
+  optedOut: string[];
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────
@@ -72,6 +78,7 @@ export async function generateFamilyUpdateDraft(
 /**
  * Send the approved care update message to all saved family contacts via SMS.
  * The Twilio call happens entirely on the server — no keys on the device.
+ * Opted-out numbers are automatically skipped by the server.
  */
 export async function sendFamilyUpdate(
   params: SendRequest,
@@ -100,4 +107,28 @@ export async function fetchFamilyUpdateHistory(
     signal: makeRequestTimeoutSignal(10_000),
   });
   return data.history;
+}
+
+/**
+ * Check which of the supplied phone numbers (E.164) have opted out by replying
+ * STOP to an SMS. Returns the subset that are opted out.
+ * Silently returns an empty array on network error so the UI degrades gracefully.
+ */
+export async function fetchOptedOutPhones(
+  phones: string[],
+  authToken: string,
+): Promise<string[]> {
+  if (phones.length === 0) return [];
+  const query = phones.join(",");
+  const url = `${apiBase()}/family-updates/opt-outs?phones=${encodeURIComponent(query)}`;
+  try {
+    const data = await fetchJson<OptOutsResponse>(url, {
+      method: "GET",
+      headers: mergeJsonHeaders({ Authorization: `Bearer ${authToken}` }),
+      signal: makeRequestTimeoutSignal(8_000),
+    });
+    return data.optedOut;
+  } catch {
+    return [];
+  }
 }

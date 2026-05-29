@@ -43,6 +43,7 @@ import {
   generateFamilyUpdateDraft,
   sendFamilyUpdate,
   fetchFamilyUpdateHistory,
+  fetchOptedOutPhones,
 } from "@/services/familyUpdatesService";
 
 // ─── Local history cache (offline fallback) ───────────────────────────────────
@@ -220,7 +221,7 @@ function FamilyUpdatesContent() {
   const insets = useSafeAreaInsets();
   const { getToken } = useAuth();
 
-  const { contacts, isLoading: contactsLoading, addContact, updateContact, deleteContact } =
+  const { contacts: rawContacts, isLoading: contactsLoading, addContact, updateContact, deleteContact } =
     useFamilyContacts();
   const { getTodayEntry } = useSymptoms();
   const { entries: journalEntries } = useJournal();
@@ -232,7 +233,18 @@ function FamilyUpdatesContent() {
   const [lastSendResult, setLastSendResult] = useState<{
     sentCount: number;
     failedCount: number;
+    optedOutCount: number;
   } | null>(null);
+  const [optedOutPhones, setOptedOutPhones] = useState<Set<string>>(new Set());
+
+  // Merge opt-out status into contacts for display
+  const contacts = rawContacts.map((c) => ({
+    ...c,
+    optedOut: optedOutPhones.has(c.phone),
+  }));
+
+  // Active (non-opted-out) contacts for sending
+  const activeContacts = contacts.filter((c) => !c.optedOut);
 
   useEffect(() => {
     let cancelled = false;
@@ -257,6 +269,25 @@ function FamilyUpdatesContent() {
     loadHistory();
     return () => { cancelled = true; };
   }, [getToken]);
+
+  // Fetch opt-out status whenever the contact list changes
+  useEffect(() => {
+    if (contactsLoading || rawContacts.length === 0) return;
+    let cancelled = false;
+    async function loadOptOuts() {
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+        const phones = rawContacts.map((c) => c.phone);
+        const optedOut = await fetchOptedOutPhones(phones, token);
+        if (!cancelled) setOptedOutPhones(new Set(optedOut));
+      } catch {
+        // silently ignore — opt-out status is best-effort
+      }
+    }
+    loadOptOuts();
+    return () => { cancelled = true; };
+  }, [contactsLoading, rawContacts, getToken]);
 
   // ── Source material ────────────────────────────────────────────────────────
 
@@ -323,11 +354,22 @@ function FamilyUpdatesContent() {
       Alert.alert("No contacts", "Add at least one family contact below.");
       return;
     }
+    if (activeContacts.length === 0) {
+      Alert.alert(
+        "All contacts opted out",
+        "All saved contacts have replied STOP and will not receive messages. Remove them or add new contacts."
+      );
+      return;
+    }
 
-    const names = contacts.map((c) => c.name).join(", ");
+    const names = activeContacts.map((c) => c.name).join(", ");
+    const optedOutNote =
+      contacts.length > activeContacts.length
+        ? ` (${contacts.length - activeContacts.length} opted-out contact${contacts.length - activeContacts.length > 1 ? "s" : ""} will be skipped)`
+        : "";
     Alert.alert(
       "Send family update?",
-      `This will send an SMS to ${contacts.length} contact${contacts.length > 1 ? "s" : ""}: ${names}.`,
+      `This will send an SMS to ${activeContacts.length} contact${activeContacts.length > 1 ? "s" : ""}: ${names}.${optedOutNote}`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -350,6 +392,7 @@ function FamilyUpdatesContent() {
               setLastSendResult({
                 sentCount: response.sentCount,
                 failedCount: response.failedCount,
+                optedOutCount: response.optedOutCount ?? 0,
               });
 
               if (response.sentCount > 0) {
@@ -385,7 +428,7 @@ function FamilyUpdatesContent() {
         },
       ]
     );
-  }, [draft, contacts, getToken, history]);
+  }, [draft, contacts, activeContacts, getToken, history]);
 
   const sourceChips = [
     { label: "Symptom check-in", filled: !!symptomSummary, icon: "activity" },
@@ -522,10 +565,10 @@ function FamilyUpdatesContent() {
 
               <Pressable
                 onPress={handleSend}
-                disabled={isSending || !draft.trim() || contacts.length === 0}
+                disabled={isSending || !draft.trim() || activeContacts.length === 0}
                 style={({ pressed }) => [
                   s.sendBtn,
-                  (isSending || !draft.trim() || contacts.length === 0) && {
+                  (isSending || !draft.trim() || activeContacts.length === 0) && {
                     opacity: 0.45,
                   },
                   pressed && { opacity: 0.80 },
@@ -537,7 +580,7 @@ function FamilyUpdatesContent() {
                   <Feather name="send" size={14} color="#fff" />
                 )}
                 <Text style={s.sendText}>
-                  {isSending ? "Sending…" : `Send to ${contacts.length}`}
+                  {isSending ? "Sending…" : `Send to ${activeContacts.length}`}
                 </Text>
               </Pressable>
             </View>
@@ -555,8 +598,8 @@ function FamilyUpdatesContent() {
                   { color: lastSendResult.failedCount === 0 ? Colors.success : Colors.amber },
                 ]}>
                   {lastSendResult.failedCount === 0
-                    ? `Sent to ${lastSendResult.sentCount} contact${lastSendResult.sentCount !== 1 ? "s" : ""}`
-                    : `${lastSendResult.sentCount} sent, ${lastSendResult.failedCount} failed`}
+                    ? `Sent to ${lastSendResult.sentCount} contact${lastSendResult.sentCount !== 1 ? "s" : ""}${lastSendResult.optedOutCount > 0 ? ` · ${lastSendResult.optedOutCount} skipped (opted out)` : ""}`
+                    : `${lastSendResult.sentCount} sent, ${lastSendResult.failedCount} failed${lastSendResult.optedOutCount > 0 ? `, ${lastSendResult.optedOutCount} opted out` : ""}`}
                 </Text>
               </View>
             )}

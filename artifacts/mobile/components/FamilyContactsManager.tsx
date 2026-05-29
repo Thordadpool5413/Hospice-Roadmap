@@ -3,6 +3,7 @@
  *
  * Manages a list of up to 6 named family contacts (name + phone number).
  * Contacts are persisted in AsyncStorage and exposed via a custom hook.
+ * Contacts that have replied STOP are shown with an "opted out" note.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -30,6 +31,8 @@ export interface FamilyContact {
   id: string;
   name: string;
   phone: string;
+  /** Set by the screen after checking the server's opt-out list. */
+  optedOut?: boolean;
 }
 
 const STORAGE_KEY = "@family_contacts_v1";
@@ -327,12 +330,29 @@ function ContactRow({ contact, onEdit, onDelete }: ContactRowProps) {
 
   return (
     <View style={cr.row}>
-      <View style={cr.avatar}>
-        <Text style={cr.avatarText}>{contact.name.charAt(0).toUpperCase()}</Text>
+      <View style={[cr.avatar, contact.optedOut && cr.avatarOptedOut]}>
+        <Text style={[cr.avatarText, contact.optedOut && cr.avatarTextOptedOut]}>
+          {contact.name.charAt(0).toUpperCase()}
+        </Text>
       </View>
       <View style={cr.info}>
-        <Text style={cr.name}>{contact.name}</Text>
+        <View style={cr.nameRow}>
+          <Text style={[cr.name, contact.optedOut && cr.nameOptedOut]}>
+            {contact.name}
+          </Text>
+          {contact.optedOut && (
+            <View style={cr.optedOutBadge}>
+              <Feather name="slash" size={9} color="#E8844A" />
+              <Text style={cr.optedOutText}>opted out</Text>
+            </View>
+          )}
+        </View>
         <Text style={cr.phone}>{contact.phone}</Text>
+        {contact.optedOut && (
+          <Text style={cr.optedOutHint}>
+            Replied STOP — won't receive future updates
+          </Text>
+        )}
       </View>
       <Pressable
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onEdit(); }}
@@ -369,21 +389,59 @@ const cr = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
+  avatarOptedOut: {
+    backgroundColor: "rgba(232, 132, 74, 0.10)",
+  },
   avatarText: {
     fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: Colors.primary,
   },
+  avatarTextOptedOut: {
+    color: "#8A6050",
+  },
   info: { flex: 1, gap: 2 },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
   name: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: "#E8F0FF",
   },
+  nameOptedOut: {
+    color: "#7A6A60",
+  },
   phone: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: "#5A78A8",
+  },
+  optedOutBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(232, 132, 74, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(232, 132, 74, 0.28)",
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  optedOutText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: "#E8844A",
+    letterSpacing: 0.2,
+  },
+  optedOutHint: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#7A5A40",
+    lineHeight: 15,
   },
   iconBtn: {
     width: 32,
@@ -434,6 +492,7 @@ export function FamilyContactsManager({
   };
 
   const canAddMore = contacts.length < MAX_CONTACTS;
+  const optedOutCount = contacts.filter((c) => c.optedOut).length;
 
   return (
     <View style={mgr.root}>
@@ -457,6 +516,18 @@ export function FamilyContactsManager({
               />
             </View>
           ))}
+        </View>
+      )}
+
+      {optedOutCount > 0 && (
+        <View style={mgr.optedOutBanner}>
+          <Feather name="info" size={12} color="#7A5A40" />
+          <Text style={mgr.optedOutBannerText}>
+            {optedOutCount === 1
+              ? "1 contact opted out — they replied STOP and will be skipped."
+              : `${optedOutCount} contacts opted out — they replied STOP and will be skipped.`}
+            {" "}You can remove them or leave them in case they opt back in.
+          </Text>
         </View>
       )}
 
@@ -512,6 +583,26 @@ const mgr = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(50, 80, 160, 0.18)",
     marginHorizontal: 14,
+  },
+  optedOutBanner: {
+    flexDirection: "row",
+    gap: 7,
+    alignItems: "flex-start",
+    marginHorizontal: 14,
+    marginTop: 8,
+    backgroundColor: "rgba(232, 132, 74, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(232, 132, 74, 0.18)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  optedOutBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#9A7060",
+    lineHeight: 17,
   },
   addBtn: {
     flexDirection: "row",
