@@ -1,9 +1,10 @@
 /**
  * Family Updates Service
  *
- * Provides typed wrappers around the two family-updates API endpoints:
- *   POST /api/family-updates/draft  — generate a warm AI care update draft
- *   POST /api/family-updates/send   — send the approved message via Twilio SMS
+ * Provides typed wrappers around the family-updates API endpoints:
+ *   POST /api/family-updates/draft    — generate a warm AI care update draft
+ *   POST /api/family-updates/send     — send the approved message via Twilio SMS
+ *   GET  /api/family-updates/history  — fetch last 10 send history entries
  */
 
 import { apiBase, fetchJson, mergeJsonHeaders, makeRequestTimeoutSignal } from "./apiClient";
@@ -36,6 +37,17 @@ export interface SendResponse {
   sentCount: number;
   failedCount: number;
   results: SendResult[];
+}
+
+export interface SendHistoryEntry {
+  id: string;
+  sentAt: string;
+  recipientCount: number;
+  preview: string;
+}
+
+export interface HistoryResponse {
+  history: SendHistoryEntry[];
 }
 
 // ─── API calls ────────────────────────────────────────────────────────────────
@@ -72,4 +84,20 @@ export async function sendFamilyUpdate(
     signal: makeRequestTimeoutSignal(30_000),
     body: JSON.stringify(params),
   });
+}
+
+/**
+ * Fetch the last 10 family update send history entries from the server.
+ * Throws on network error so the caller can fall back to local storage.
+ */
+export async function fetchFamilyUpdateHistory(
+  authToken: string,
+): Promise<SendHistoryEntry[]> {
+  const url = `${apiBase()}/family-updates/history`;
+  const data = await fetchJson<HistoryResponse>(url, {
+    method: "GET",
+    headers: mergeJsonHeaders({ Authorization: `Bearer ${authToken}` }),
+    signal: makeRequestTimeoutSignal(10_000),
+  });
+  return data.history;
 }

@@ -5,7 +5,8 @@
  * symptom check-in and journal entry, edit it, then send it as SMS to up to
  * 6 saved family contacts via Twilio (server-side — no keys on device).
  *
- * Send history (last 10) is persisted in AsyncStorage.
+ * Send history (last 10) is stored server-side so it syncs across devices.
+ * AsyncStorage is used as an offline fallback cache.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -38,38 +39,32 @@ import { Colors } from "@/constants/colors";
 import { useJournal } from "@/context/JournalContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import {
+  type SendHistoryEntry,
   generateFamilyUpdateDraft,
   sendFamilyUpdate,
+  fetchFamilyUpdateHistory,
 } from "@/services/familyUpdatesService";
 
-// ─── Send history ─────────────────────────────────────────────────────────────
+// ─── Local history cache (offline fallback) ───────────────────────────────────
 
-const HISTORY_KEY = "@family_update_history_v1";
+const HISTORY_CACHE_KEY = "@family_update_history_v1";
 const MAX_HISTORY = 10;
 
-export interface SendHistoryEntry {
-  id: string;
-  sentAt: string;
-  recipientCount: number;
-  preview: string;
-}
-
-async function loadHistory(): Promise<SendHistoryEntry[]> {
+async function loadLocalHistory(): Promise<SendHistoryEntry[]> {
   try {
-    const raw = await AsyncStorage.getItem(HISTORY_KEY);
+    const raw = await AsyncStorage.getItem(HISTORY_CACHE_KEY);
     return raw ? (JSON.parse(raw) as SendHistoryEntry[]) : [];
   } catch {
     return [];
   }
 }
 
-async function appendHistory(
-  entry: SendHistoryEntry,
-  current: SendHistoryEntry[]
-): Promise<SendHistoryEntry[]> {
-  const updated = [entry, ...current].slice(0, MAX_HISTORY);
-  await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-  return updated;
+async function cacheHistory(entries: SendHistoryEntry[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(entries));
+  } catch {
+    // cache writes are best-effort
+  }
 }
 
 // ─── Section card wrapper ─────────────────────────────────────────────────────
@@ -240,8 +235,28 @@ function FamilyUpdatesContent() {
   } | null>(null);
 
   useEffect(() => {
-    loadHistory().then(setHistory).catch(() => {});
-  }, []);
+    let cancelled = false;
+    async function loadHistory() {
+      try {
+        const token = await getToken();
+        if (cancelled) return;
+        if (token) {
+          const serverHistory = await fetchFamilyUpdateHistory(token);
+          if (cancelled) return;
+          setHistory(serverHistory);
+          cacheHistory(serverHistory);
+          return;
+        }
+      } catch {
+        // server unavailable — fall through to local cache
+      }
+      if (cancelled) return;
+      const local = await loadLocalHistory();
+      if (!cancelled) setHistory(local);
+    }
+    loadHistory();
+    return () => { cancelled = true; };
+  }, [getToken]);
 
   // ── Source material ────────────────────────────────────────────────────────
 
@@ -342,10 +357,11 @@ function FamilyUpdatesContent() {
                   id: `fuh-${Date.now()}`,
                   sentAt: new Date().toISOString(),
                   recipientCount: response.sentCount,
-                  preview: draft.trim().slice(0, 140),
+                  preview: draft.trim().slice(0, 200),
                 };
-                const updated = await appendHistory(historyEntry, history);
+                const updated = [historyEntry, ...history].slice(0, MAX_HISTORY);
                 setHistory(updated);
+                cacheHistory(updated);
               }
 
               if (response.failedCount > 0 && response.sentCount === 0) {

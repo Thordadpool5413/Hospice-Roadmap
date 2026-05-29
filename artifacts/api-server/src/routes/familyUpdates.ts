@@ -1,6 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { db, familyUpdateLog } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 import { MODELS } from "../config/models.js";
 import twilio from "twilio";
 
@@ -191,11 +193,56 @@ router.post("/send", async (req: Request, res: Response) => {
   const sentCount = results.filter((r) => r.status === "sent").length;
   const failedCount = results.filter((r) => r.status === "failed").length;
 
+  if (sentCount > 0) {
+    try {
+      await db.insert(familyUpdateLog).values({
+        id: `fuh-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        userId,
+        sentAt: new Date(),
+        recipientCount: sentCount,
+        preview: message.slice(0, 200),
+      });
+    } catch (err: unknown) {
+      req.log.error({ err }, "Failed to persist family update log entry");
+    }
+  }
+
   res.json({
     sentCount,
     failedCount,
     results,
   });
+});
+
+// ─── GET /family-updates/history ──────────────────────────────────────────────
+
+router.get("/history", async (req: Request, res: Response) => {
+  const userId = getAuth(req).userId;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    const rows = await db
+      .select()
+      .from(familyUpdateLog)
+      .where(eq(familyUpdateLog.userId, userId))
+      .orderBy(desc(familyUpdateLog.sentAt))
+      .limit(10);
+
+    const history = rows.map((row) => ({
+      id: row.id,
+      sentAt: row.sentAt.toISOString(),
+      recipientCount: row.recipientCount,
+      preview: row.preview,
+    }));
+
+    res.json({ history });
+  } catch (err: unknown) {
+    req.log.error({ err }, "Failed to fetch family update history");
+    res.status(500).json({ error: "Failed to fetch history." });
+  }
 });
 
 export default router;
