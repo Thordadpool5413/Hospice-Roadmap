@@ -179,6 +179,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     const updated = reminders.filter((r) => r.id !== id);
     setReminders(updated);
     await save(updated);
+    uploadReminders(updated).catch(() => {});
   }, [reminders, save]);
 
   const clearReminders = useCallback(async () => {

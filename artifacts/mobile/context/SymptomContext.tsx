@@ -81,7 +81,8 @@ export function SymptomProvider({ children }: { children: React.ReactNode }) {
   }, [entries]);
 
   const deleteEntry = useCallback(async (id: string) => {
-    await saveEntries(entries.filter((e) => e.id !== id));
+    const saved = await saveEntries(entries.filter((e) => e.id !== id));
+    uploadSymptoms(saved).catch(() => {});
   }, [entries]);
 
   const clearEntries = useCallback(async () => {

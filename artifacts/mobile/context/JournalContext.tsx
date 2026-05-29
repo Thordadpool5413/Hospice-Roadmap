@@ -68,6 +68,7 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
       const updated = entries.filter((e) => e.id !== id);
       setEntries(updated);
       await save(updated);
+      uploadJournal(updated).catch(() => {});
     },
     [entries, save]
   );
