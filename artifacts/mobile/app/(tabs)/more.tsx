@@ -125,6 +125,9 @@ export default function MoreScreen() {
         { label: isPatient ? "Journal" : "Caregiver Journal", icon: "edit-3", route: "/journal", color: Colors.accentJournal },
         { label: "Reminders", icon: "bell", route: "/reminders", color: Colors.accentReminders },
         { label: "Symptom Tracker", icon: "activity", route: "/symptom-tracker", color: Colors.accentSymptom },
+        ...(!isPatient ? [
+          { label: "Family Updates", icon: "message-square", route: "/family-updates", color: Colors.success } as MenuItem,
+        ] : []),
       ],
     },
     {
@@ -134,13 +137,13 @@ export default function MoreScreen() {
       icon: "clipboard",
       items: [
         { label: "Situation Finder", icon: "compass", route: "/situation-finder", color: Colors.accentSituation },
+        { label: "Call Scripts", icon: "phone-call", route: "/call-scripts", color: Colors.error },
         { label: "Medication Lookup", icon: "package", route: "/medication-lookup", color: Colors.primary },
         ...(!isPatient ? [
           { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying", color: Colors.journeyDuring } as MenuItem,
           { label: "Pain Assessment Tool (PAINAD)", icon: "activity", route: "/painad", color: Colors.amber } as MenuItem,
         ] : []),
         { label: "Hospice Interview Scorecard", icon: "check-square", route: "/hospice-interview", color: Colors.accentGoals },
-        { label: "Hospice Eligibility Check", icon: "clipboard", route: "/evaluation", color: Colors.accentCareWishes },
         { label: "Advance Directives & State Forms", icon: "file-text", route: "/legal", color: Colors.accentJourney },
         { label: "Resource Library", icon: "book-open", route: "/resources", color: Colors.textMuted },
       ],

@@ -123,6 +123,10 @@ export interface Provider {
   phone: string;
   website?: string;
   distance?: number;
+  /** Geocoded latitude — present when the server successfully resolved the address. */
+  latitude?: number;
+  /** Geocoded longitude — present when the server successfully resolved the address. */
+  longitude?: number;
   services: string[];
   accreditations: string[];
   rating?: number;
@@ -306,6 +310,25 @@ export interface JournalEntry {
   tags?: string[];
   /** ISO timestamp of last local modification — used as LWW version key for sync. */
   updatedAt?: string;
+}
+
+// ─── Drug Interaction types ───────────────────────────────────────────────────
+
+export interface DrugInteractionPair {
+  drugA: string;
+  drugB: string;
+  /** "serious" = red, "monitor" = amber, "none" = no significant interaction found */
+  severity: "serious" | "monitor" | "none";
+  /** Plain-language 1–2 sentence summary extracted from FDA label text */
+  summary: string;
+  rawText?: string;
+}
+
+export interface DrugInteractionResult {
+  /** ISO timestamp of when the check was performed */
+  checkedAt: string;
+  medications: string[];
+  pairs: DrugInteractionPair[];
 }
 
 export type ReminderRecurrence = "none" | "daily" | "weekly";

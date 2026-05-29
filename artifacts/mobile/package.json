@@ -63,10 +63,12 @@
     "@react-native-community/datetimepicker": "^8.4.4",
     "@workspace/api-client-react": "workspace:*",
     "expo-audio": "~1.1.1",
+    "expo-clipboard": "^56.0.3",
     "expo-local-authentication": "^56.0.4",
     "expo-modules-core": "3.0.30",
     "expo-notifications": "^0.32.17",
     "expo-speech": "~14.0.8",
+    "react-native-maps": "1.20.1",
     "react-native-purchases": "^10.2.0"
   }
 }

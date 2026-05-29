@@ -29,6 +29,8 @@ function getStagesForCategory(categoryId: GuidanceCategoryId): GuidanceStage[] {
       return ["during", "after"];
     case "hospice-services":
       return ["before", "during"];
+    case "advocacy":
+      return ["before", "during", "after"];
     case "unsure":
     default:
       return ["before", "during", "after"];
@@ -2498,6 +2500,341 @@ const endOfLife: GuidanceScenario[] = [
   },
 ];
 
+const advocacy: GuidanceScenario[] = [
+  {
+    id: "not-enough-visits",
+    categoryId: "advocacy",
+    title: "We're Not Getting Enough Visits",
+    subtitle: "Nurse visits feel too infrequent for the level of care needed",
+    urgencyLevel: "soon",
+    icon: "calendar",
+    tags: [
+      "not enough visits", "too few visits", "nurse not coming", "no aide",
+      "visit frequency", "not seeing us enough", "we need more help",
+      "hospice not visiting", "infrequent visits",
+    ],
+    whatYouMayNotice: [
+      "Nurse visits feel too infrequent given how much the patient's condition has changed",
+      "You are managing complex care without enough professional guidance",
+      "Aide visits have not started or were reduced without explanation",
+      "You feel exhausted and unsupported between visits",
+      "Medication needs have changed but no one has come to assess",
+    ],
+    whatItMeans:
+      "Under the Medicare Hospice Benefit, your loved one is entitled to nursing visits, home health aide services, social work, and chaplain visits based on their individual needs — not a fixed minimum schedule. If the patient's condition is worsening or you are struggling as a caregiver, the plan of care should be updated to reflect that. Visit frequency is not one-size-fits-all, and you have the right to ask for more.",
+    whatToDoNow: [
+      {
+        text: "Call your hospice nurse and describe specifically what is happening: 'Since the last visit, here is what has changed...' Be concrete.",
+        tip: "The more specific you are, the easier it is for the team to justify increasing visits in the plan of care.",
+      },
+      {
+        text: "Request a formal care conference — this is your right under the Medicare Hospice Benefit. Ask to review the current plan of care and discuss visit frequency.",
+      },
+      {
+        text: "Ask directly: 'Can we increase nurse visits to [X] per week given what is happening?' You are allowed to ask.",
+      },
+      {
+        text: "Document each visit date, who came, and what was done. If aide services were promised but not delivered, note that too.",
+        tip: "A written log gives you clear evidence if you need to escalate.",
+      },
+      {
+        text: "If the nurse visit frequency does not change and you remain unsatisfied, ask to speak with the hospice director of clinical services.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not assume the current schedule is the maximum — hospice can and does increase visits when conditions warrant",
+      "Do not wait until a crisis to ask for more support — advocate before things deteriorate",
+      "Do not feel embarrassed about asking — advocating for appropriate care is your role",
+      "Do not accept 'everything looks fine' if you feel otherwise — you see the patient daily",
+    ],
+    whenToCallHospice: [
+      "Symptoms have changed significantly since the last visit",
+      "You are overwhelmed and cannot manage care safely between visits",
+      "A promised service (aide, social worker, chaplain) has not started",
+      "You want to formally request increased visit frequency",
+    ],
+    whatHappensNext:
+      "Hospice is required by Medicare to update the plan of care when patient needs change. If your request is documented and still denied, you have the right to contact your state's hospice licensure authority or the Medicare ombudsman. Most often, a direct conversation with the clinical director resolves the issue.",
+  },
+  {
+    id: "disagree-with-care-team",
+    categoryId: "advocacy",
+    title: "I Disagree with What I'm Being Told",
+    subtitle: "Getting a second opinion or challenging a clinical recommendation",
+    urgencyLevel: "soon",
+    icon: "message-square",
+    tags: [
+      "disagree", "second opinion", "don't agree", "wrong diagnosis", "wrong medication",
+      "challenge the team", "dispute", "care team wrong", "question the nurse",
+      "doctor wrong", "want another opinion", "don't trust the recommendation",
+    ],
+    whatYouMayNotice: [
+      "A recommendation from the hospice team does not feel right to you",
+      "You believe a symptom is being undertreated or misidentified",
+      "The nurse or physician explained something that contradicts what you have read or been told previously",
+      "Your loved one's wishes are not being honored in the care approach",
+      "You feel dismissed when you raise concerns",
+    ],
+    whatItMeans:
+      "You have every right to question, challenge, and seek clarification on any recommendation the hospice team makes. Good hospice care is collaborative — you are a partner, not a passive recipient. A second opinion within hospice is a legitimate and accepted request. If you feel unheard, there are structured escalation paths.",
+    whatToDoNow: [
+      {
+        text: "Write down your specific concern before the conversation: What was recommended? What bothers you about it? What outcome do you want?",
+        tip: "Clarity on your concern helps the conversation move forward rather than staying in frustration.",
+      },
+      {
+        text: "Ask your nurse or physician to explain the recommendation in plain language: 'Help me understand why this is being recommended and what the alternatives are.'",
+      },
+      {
+        text: "Request to speak with the hospice medical director — this is your right. The medical director oversees clinical decisions and can review your case directly.",
+      },
+      {
+        text: "Ask for a care conference that includes the full interdisciplinary team: nurse, social worker, physician, and if appropriate, chaplain.",
+      },
+      {
+        text: "If you want a second opinion from a palliative care physician outside the hospice, you may seek one — hospice does not end if you ask an outside provider for a consultation.",
+        caution: "Check with your primary care provider about how this interacts with the hospice benefit, as some specialty consultations may need prior authorization.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not withhold your concern out of politeness — the team cannot address what they do not know",
+      "Do not assume the team is always right simply because they are professionals — you know your loved one",
+      "Do not go around the team without first trying direct communication — document your attempts",
+    ],
+    whenToCallHospice: [
+      "You disagree with a specific treatment recommendation and want it reviewed",
+      "You feel your concerns have been dismissed without explanation",
+      "You want to request a care conference or speak with the medical director",
+      "Your loved one's documented wishes are not being followed",
+    ],
+    whatHappensNext:
+      "Most disagreements resolve when families are given a thorough explanation and feel genuinely heard. If you remain unsatisfied after speaking with the clinical director and medical director, you may contact your state's hospice oversight body. You also have the right to transfer to a different hospice agency at any time — this is your choice.",
+  },
+  {
+    id: "patient-wants-to-stop-hospice",
+    categoryId: "advocacy",
+    title: "The Patient Wants to Stop Hospice",
+    subtitle: "Understanding the revocation process and what comes next",
+    urgencyLevel: "routine",
+    icon: "log-out",
+    tags: [
+      "revoke hospice", "stop hospice", "leave hospice", "discharge from hospice",
+      "revocation", "wants curative treatment", "wants chemo again", "going back to treatment",
+      "re-enrollment", "can we re-enroll", "changing their mind",
+    ],
+    whatYouMayNotice: [
+      "The patient is expressing a wish to pursue curative or life-prolonging treatment again",
+      "The patient wants to try a new clinical trial or therapy",
+      "The patient or family is asking whether they can stop hospice and start again later",
+      "There is uncertainty about whether revoking hospice is reversible",
+    ],
+    whatItMeans:
+      "A patient enrolled in hospice has the unconditional right to revoke — stop — hospice care at any time and for any reason. This is protected under Medicare law. Revoking hospice means the Medicare Hospice Benefit ends, and the patient returns to standard Medicare coverage for any treatments they choose. They can re-enroll in hospice at any point if they again meet eligibility criteria (prognosis of 6 months or less if the disease runs its natural course).",
+    whatToDoNow: [
+      {
+        text: "Contact your hospice agency and state clearly: 'The patient wants to revoke hospice enrollment.' The agency will provide a written Revocation Statement for the patient or their legal representative to sign.",
+      },
+      {
+        text: "Understand that revocation is effective the day the statement is signed and submitted. There is no waiting period.",
+      },
+      {
+        text: "Ask the hospice social worker to help coordinate the transition back to standard Medicare — they can assist with getting primary care and specialist appointments reinstated.",
+        tip: "Medications supplied by hospice typically stop at revocation — ask about bridge prescriptions before you sign.",
+      },
+      {
+        text: "Ask what equipment (hospital bed, wheelchair, oxygen) was supplied by hospice — these items may need to be returned or transferred to a different billing arrangement.",
+      },
+      {
+        text: "If the patient may want to re-enroll in hospice later, know that they can — re-enrollment is available as long as they continue to meet the 6-month prognosis criteria.",
+        tip: "There is no limit to how many times a patient may revoke and re-enroll.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not assume revoking hospice is permanent — re-enrollment is always an option if eligibility is met",
+      "Do not feel that honoring the patient's wish to revoke means abandoning them — it is their right",
+      "Do not delay notifying hospice once the patient has decided — the transition requires coordination",
+    ],
+    whenToCallHospice: [
+      "The patient has expressed a wish to revoke or is asking questions about it",
+      "You want to understand what stops being covered at revocation",
+      "You need help coordinating the care transition to standard Medicare",
+      "You want to understand re-enrollment eligibility",
+    ],
+    whatHappensNext:
+      "Once the Revocation Statement is signed, the hospice will process the discharge and standard Medicare coverage resumes immediately. The hospice team is still available to help with the transition for a short window. If curative treatment is later unsuccessful or the patient's goals shift again, the hospice team can help with re-enrollment.",
+  },
+  {
+    id: "patient-keeps-falling",
+    categoryId: "advocacy",
+    title: "The Patient Keeps Falling",
+    subtitle: "Fall prevention, PT evaluation, and making the home safer",
+    urgencyLevel: "soon",
+    icon: "alert-triangle",
+    tags: [
+      "fall", "falling", "keeps falling", "fell again", "fall prevention",
+      "physical therapy", "PT evaluation", "unsafe", "home safety",
+      "balance problems", "unsteady", "can't walk safely",
+    ],
+    callHospiceNow: false,
+    whatYouMayNotice: [
+      "The patient has fallen more than once in a short period",
+      "Walking has become increasingly unsteady or requires more assistance",
+      "The patient is determined to walk independently despite the risk",
+      "The home has hazards — loose rugs, poor lighting, bathroom without grab bars",
+      "You are afraid to leave the patient alone even briefly",
+    ],
+    whatItMeans:
+      "Falls in hospice patients are common and carry serious risk — injury from a fall can accelerate decline and cause significant pain. At the same time, forcing someone to stop all movement can harm dignity and quality of life. The goal is not elimination of all risk but reduction of serious harm through practical changes, equipment, and a formal safety evaluation. Repeated falls are a care signal that warrants a hospice response.",
+    whatToDoNow: [
+      {
+        text: "Call hospice and report the falls — document the date, time, circumstances, and whether there was any injury for each fall.",
+        tip: "Hospice teams use fall documentation to trigger a formal safety review and determine if a physical therapy (PT) evaluation is indicated.",
+      },
+      {
+        text: "Ask specifically: 'Can we request a physical therapy evaluation for fall risk and home safety?' Under the Medicare Hospice Benefit, PT is a covered service when clinically indicated.",
+      },
+      {
+        text: "Walk through the home and address immediate hazards: remove loose rugs, clear walkways, ensure lighting is adequate, and place a nightlight in the bathroom.",
+      },
+      {
+        text: "Ask hospice about obtaining a bedside commode, grab bars, or a transfer belt — these are often supplied by hospice as durable medical equipment.",
+        tip: "A grab bar in the bathroom and a raised toilet seat often prevent the most common fall locations.",
+      },
+      {
+        text: "If the patient gets up at night unassisted, consider a fall mat beside the bed and a bed alarm to alert you before they stand.",
+      },
+      {
+        text: "Discuss the balance between safety and autonomy with the hospice social worker — this is often a difficult family conversation and they can help mediate.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not physically restrain the patient — this is considered a dignity violation and increases agitation",
+      "Do not assume falls are inevitable and untreatable — most falls have identifiable contributing causes",
+      "Do not wait for another fall to request a PT evaluation — advocate proactively",
+      "Do not blame yourself if a fall occurs despite precautions — falls happen in the best of care environments",
+    ],
+    whenToCallHospice: [
+      "A fall has just occurred — report it even if there is no obvious injury, as internal injury can occur",
+      "You want to request a physical therapy home safety evaluation",
+      "The patient refuses to use a walker or assistive device and you are concerned",
+      "Falls are increasing in frequency",
+    ],
+    whatHappensNext:
+      "After a reported fall, hospice will typically conduct a fall risk assessment and may send a nurse for an in-person evaluation. A PT evaluation can result in a home exercise plan, assistive device recommendations, and a formal home safety assessment. Hospice can also order equipment like a hospital bed with rails, a bedside commode, or a gait belt to make transfers safer.",
+  },
+  {
+    id: "family-conflict-over-care",
+    categoryId: "advocacy",
+    title: "Our Family Is Fighting About Care",
+    subtitle: "Requesting a family meeting and the social worker's mediation role",
+    urgencyLevel: "routine",
+    icon: "users",
+    tags: [
+      "family conflict", "fighting about care", "family disagreeing", "family argument",
+      "family meeting", "disagree about hospice", "some want treatment", "family won't agree",
+      "sibling conflict", "family dispute", "conflict over decisions",
+    ],
+    whatYouMayNotice: [
+      "Family members disagree about whether hospice was the right choice",
+      "Some family members want to pursue more aggressive treatment against the patient's wishes",
+      "The primary caregiver feels unsupported or criticized by other family members",
+      "Decisions about care are becoming contentious and emotionally charged",
+      "The patient is aware of the conflict and it is adding to their distress",
+    ],
+    whatItMeans:
+      "Family conflict around hospice care is extremely common and does not mean the family is dysfunctional. Grief, guilt, fear, and different levels of acceptance create strong emotions that can fracture communication. The hospice social worker is specifically trained to facilitate these conversations. A formal family meeting — facilitated by the social worker and often including the nurse and chaplain — is one of the most powerful tools available and is included in your hospice benefit.",
+    whatToDoNow: [
+      {
+        text: "Contact your hospice social worker and say: 'We are having family conflict about the care plan. Can you facilitate a family meeting?'",
+        tip: "You do not need to have the conflict resolved before asking — the meeting is the tool for resolution.",
+      },
+      {
+        text: "Ask whether the meeting can be held in person or via video — hospice social workers can often accommodate remote family members.",
+      },
+      {
+        text: "Before the meeting, ask the social worker to share the patient's documented goals of care and any advance directives (POLST, living will, healthcare proxy designation) — these documents anchor the conversation.",
+        caution: "If there is no documented healthcare proxy and the patient still has capacity, the patient's own voice is the primary authority.",
+      },
+      {
+        text: "During the meeting, allow the social worker to facilitate — they are skilled at creating space for all voices without letting any one person dominate.",
+      },
+      {
+        text: "If the conflict involves a healthcare proxy designation that is being challenged, ask to speak with the hospice social worker and medical director together — they can clarify the legal authority structure.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not try to force consensus before the meeting — allow the facilitated process to work",
+      "Do not exclude family members from the meeting out of frustration — their presence (even difficult) is usually better than their absence",
+      "Do not override the patient's stated and documented wishes, even under family pressure",
+      "Do not let conflict fester — it typically worsens over time and affects the patient's experience",
+    ],
+    whenToCallHospice: [
+      "Family conflict is escalating and affecting the patient's care or comfort",
+      "You want to request a facilitated family meeting",
+      "You need a social worker to help clarify decision-making authority",
+      "A family member is threatening to call 911 or disrupt the hospice plan",
+    ],
+    whatHappensNext:
+      "The hospice social worker will typically schedule the family meeting within a few days. They will prepare by reviewing the patient's chart, goals of care documentation, and speaking with the primary caregiver. The meeting usually results in a clearer shared understanding of the patient's wishes and a reinforced care plan. If conflict remains severe, the social worker can refer to ethics consultation or a community mediator.",
+  },
+  {
+    id: "hospice-not-responding",
+    categoryId: "advocacy",
+    title: "Hospice Isn't Responding to My Calls",
+    subtitle: "What to do when the on-call line does not call back",
+    urgencyLevel: "immediate",
+    icon: "phone-off",
+    tags: [
+      "not calling back", "no callback", "can't reach hospice", "hospice not responding",
+      "no answer", "waiting for hours", "on-call not answering", "hospice unresponsive",
+      "can't get through", "left a message", "no response",
+    ],
+    callHospiceNow: true,
+    whatYouMayNotice: [
+      "You called the hospice on-call line and no one has called back within 30 minutes",
+      "You have called multiple times and are still waiting",
+      "It is the middle of the night or a weekend and you cannot reach anyone",
+      "There is an active symptom or situation that requires guidance now",
+    ],
+    whatItMeans:
+      "Medicare-certified hospices are required by federal law to provide nursing coverage 24 hours a day, 7 days a week — including evenings, weekends, and holidays. A failure to return calls within a reasonable time (generally 30–60 minutes for a non-emergency, immediately for an urgent symptom) is a care gap. You should not be left without access to a nurse when you need one.",
+    whatToDoNow: [
+      {
+        text: "Call the on-call number again immediately. If you have been waiting more than 30 minutes for an urgent symptom, call again — systems sometimes fail.",
+      },
+      {
+        text: "Write down the exact times you called, the number you used, and whether it rang or went to voicemail. This documentation matters.",
+        tip: "Include the date, time of each call, what you said in the message, and how long you waited. This is your record of the unmet obligation.",
+      },
+      {
+        text: "Look for a backup number — your hospice intake paperwork or plan of care document may list a secondary on-call number or an administrator contact.",
+      },
+      {
+        text: "If the situation is a medical emergency and you cannot reach hospice, call 911. Doing so does not automatically end hospice enrollment, but it does signal a significant care gap.",
+        caution: "If the patient has a DNR or POLST, have it visible for emergency responders.",
+      },
+      {
+        text: "After the situation resolves, call the hospice administrative office during business hours and report the lack of response formally. Ask for the name of the person who takes the complaint.",
+      },
+      {
+        text: "If the problem recurs, file a complaint with your state's health department or the Medicare hospice oversight office. You can also call 1-800-MEDICARE to report the hospice.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not assume you are bothering them or calling too often — calling back when you have an urgent need is appropriate",
+      "Do not wait hours in an emergency hoping someone will call",
+      "Do not accept repeated non-response without filing a formal complaint — this protects future families",
+    ],
+    whenToCallHospice: [
+      "Any time you cannot reach the on-call line — call again",
+      "After a response failure, during business hours, to report it formally",
+      "When you need to speak with the director of nursing or administrator about response failures",
+    ],
+    whatHappensNext:
+      "A formal complaint submitted to the hospice administrator creates a required internal review. If the problem is systemic, Medicare-certified hospices can face corrective action plans and loss of certification. Most agencies respond quickly to a documented complaint because the regulatory stakes are high. You have the right to switch hospice agencies at any time if response failures continue.",
+  },
+];
+
 export const guidanceCategories: GuidanceCategory[] = [
   {
     id: "symptoms",
@@ -2561,6 +2898,15 @@ export const guidanceCategories: GuidanceCategory[] = [
     color: "#7090B8",
     bgColor: "#1A2848",
     scenarios: endOfLife,
+  },
+  {
+    id: "advocacy",
+    title: "Advocacy & Rights",
+    subtitle: "When to push back, escalate, and advocate for better care",
+    icon: "shield",
+    color: "#7BC8A4",
+    bgColor: "#0E2418",
+    scenarios: advocacy,
   },
   {
     id: "unsure",

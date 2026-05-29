@@ -12,7 +12,8 @@ export type GuidanceCategoryId =
   | "emotional"
   | "hospice-services"
   | "end-of-life"
-  | "unsure";
+  | "unsure"
+  | "advocacy";
 
 export interface GuidanceStep {
   text: string;

@@ -21,8 +21,10 @@ import { SparklineCard, CombinedTrendChart } from "@/components/SymptomSparkline
 import { Colors } from "@/constants/colors";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
+import { useApp } from "@/context/AppContext";
 import { SymptomEntry } from "@/types";
 import { PremiumGate } from "@/components/PremiumGate";
+import { checkAndScheduleEscalationAlerts } from "@/utils/escalationNotifier";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -534,6 +536,7 @@ export default function SymptomTrackerScreen() {
   const insets = useSafeAreaInsets();
   const { entries, addEntry, updateEntry, deleteEntry, getTodayEntry, getRecentEntries } = useSymptoms();
   const { addObservation } = useRagnaLearning();
+  const { user } = useApp();
   const today = todayDate();
   const existing = getTodayEntry();
   const isEditing = !!existing;
@@ -591,7 +594,13 @@ export default function SymptomTrackerScreen() {
         : `Symptom check-in logged`,
       { detail, significant: isHighAlert }
     );
-  }, [isSaving, today, pain, breathlessness, nausea, agitation, appetite, restlessness, notes, isEditing, existing, addObservation]);
+
+    // Evaluate escalation rules and fire a notification if warranted
+    const allEntries = isEditing && existing
+      ? entries.map((e) => e.id === existing.id ? { ...e, ...payload, id: e.id } : e)
+      : [...entries, { ...payload, id: "pending" } as any];
+    checkAndScheduleEscalationAlerts(allEntries, user?.patientProfile?.patientName).catch(() => {});
+  }, [isSaving, today, pain, breathlessness, nausea, agitation, appetite, restlessness, notes, isEditing, existing, addObservation, entries, user]);
 
   const handleDelete = useCallback((entry: SymptomEntry) => {
     Alert.alert("Delete Entry", `Delete the check-in from ${shortDate(entry.date)}?`, [

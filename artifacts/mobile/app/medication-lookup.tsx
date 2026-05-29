@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
+import { fetchFdaLabel } from "@/services/fdaService";
 import { RxNormResult, ttyLabel, useRxNorm } from "@/hooks/useRxNorm";
 
 // ─── Hospice clinical context ─────────────────────────────────────────────────
@@ -162,6 +163,75 @@ const COMMON_MEDS = [
 
 // ─── Components ──────────────────────────────────────────────────────────────
 
+function FdaInteractionsCard({ drugName }: { drugName: string }) {
+  const [loading, setLoading] = useState(false);
+  const [text, setText] = useState<string | null>(null);
+  const [fetched, setFetched] = useState(false);
+
+  useEffect(() => {
+    if (fetched) return;
+    setFetched(true);
+    setLoading(true);
+    fetchFdaLabel(drugName)
+      .then((label) => {
+        setText(label?.drugInteractions ?? null);
+      })
+      .catch(() => setText(null))
+      .finally(() => setLoading(false));
+  }, [drugName, fetched]);
+
+  const handleTellRagna = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: "/(tabs)/help",
+      params: {
+        initialMessage: `Can you tell me about drug interactions for ${drugName}? I want to know what other medications it might interact with and what to watch for.`,
+      },
+    } as any);
+  }, [drugName]);
+
+  return (
+    <View style={styles.fdaCard}>
+      <View style={styles.fdaCardHeader}>
+        <Feather name="shield" size={13} color={Colors.primary} />
+        <Text style={styles.fdaCardTitle}>FDA Interactions</Text>
+        <Text style={styles.fdaCardSource}>FDA Drug Label</Text>
+      </View>
+
+      {loading && (
+        <ActivityIndicator size="small" color={Colors.primary} style={{ marginTop: 8 }} />
+      )}
+
+      {!loading && text === null && (
+        <Text style={styles.fdaNoData}>
+          No FDA interaction data found for this drug. Consult your hospice pharmacist.
+        </Text>
+      )}
+
+      {!loading && text !== null && text.length === 0 && (
+        <Text style={styles.fdaNoData}>
+          FDA label does not list specific drug interactions for this medication.
+        </Text>
+      )}
+
+      {!loading && text && text.length > 0 && (
+        <>
+          <Text style={styles.fdaText} numberOfLines={6}>
+            {text}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.fdaTellRagna, pressed && { opacity: 0.75 }]}
+            onPress={handleTellRagna}
+          >
+            <Feather name="message-circle" size={13} color={Colors.primary} />
+            <Text style={styles.fdaTellRagnaText}>Ask Ragna about {drugName} interactions</Text>
+          </Pressable>
+        </>
+      )}
+    </View>
+  );
+}
+
 function ResultCard({ result, onTap }: { result: RxNormResult; onTap: () => void }) {
   const hospice = getHospiceNote(result.name);
   const [expanded, setExpanded] = useState(false);
@@ -224,6 +294,8 @@ function ResultCard({ result, onTap }: { result: RxNormResult; onTap: () => void
           </Text>
         </View>
       )}
+
+      {expanded && <FdaInteractionsCard drugName={result.name} />}
     </Pressable>
   );
 }
@@ -627,6 +699,58 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#7A90B8",
     lineHeight: 20,
+  },
+  fdaCard: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(55,85,170,0.15)",
+    gap: 8,
+  },
+  fdaCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  fdaCardTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+    flex: 1,
+  },
+  fdaCardSource: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSubtle,
+  },
+  fdaText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#5A78A8",
+    lineHeight: 18,
+  },
+  fdaNoData: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSubtle,
+    lineHeight: 18,
+  },
+  fdaTellRagna: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "rgba(60,120,255,0.10)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(60,120,255,0.25)",
+  },
+  fdaTellRagnaText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
   },
   noResults: {
     alignItems: "center",

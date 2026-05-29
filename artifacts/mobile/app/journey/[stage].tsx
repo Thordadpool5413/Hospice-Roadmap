@@ -175,9 +175,9 @@ export default function JourneyStageScreen() {
             <Feather name="clipboard" size={20} color="#FFFFFF" />
           </View>
           <View style={styles.toolBannerText}>
-            <Text style={styles.toolBannerTitle}>Eligibility Assessment</Text>
+            <Text style={styles.toolBannerTitle}>Is Hospice Right for Us?</Text>
             <Text style={styles.toolBannerSubtitle}>
-              Get informational guidance on hospice readiness
+              A guided assessment to help you understand your options
             </Text>
           </View>
           <Feather name="chevron-right" size={16} color="#FFFFFF" />

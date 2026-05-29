@@ -17,6 +17,8 @@ const explicitApiUrl =
   process.env["EXPO_PUBLIC_API_URL"] ||
   (devDomain ? `https://${devDomain}/api` : "");
 
+const googleMapsApiKey = process.env["GOOGLE_MAPS_API_KEY"] || "";
+
 const withAndroidAutoMedia: ConfigPlugin = (config) => {
   const withManifest = withAndroidManifest(config, (cfg) => {
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(
@@ -83,6 +85,9 @@ const config: ExpoConfig = {
     bundleIdentifier: "com.thordadpool.hospiceroadmap",
     buildNumber: "2",
     appleTeamId: "65C25YHCX9",
+    config: {
+      googleMapsApiKey,
+    },
     infoPlist: {
       NSMicrophoneUsageDescription:
         "Hospice Roadmap uses your microphone so you can speak with Ragna.",
@@ -93,6 +98,11 @@ const config: ExpoConfig = {
   android: {
     package: "app.replit.hospiceroadmap",
     permissions: ["android.permission.RECORD_AUDIO"],
+    config: {
+      googleMaps: {
+        apiKey: googleMapsApiKey,
+      },
+    },
   },
   web: {
     favicon: "./assets/images/app-icon.png",

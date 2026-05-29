@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFamilyContacts } from "@/components/FamilyContactsManager";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { ProfileSetupWizard } from "@/components/ProfileSetupWizard";
@@ -708,6 +709,7 @@ export default function HomeScreen() {
   const { getTodayEntry, entries: symptomEntries } = useSymptoms();
   const { entries: journalEntries } = useJournal();
   const { reminders } = useReminders();
+  const { contacts: familyContacts } = useFamilyContacts();
 
   const [setupDismissed, setSetupDismissed] = useState(false);
   const [wizardVisible, setWizardVisible] = useState(false);
@@ -855,6 +857,36 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* ── Family Updates shortcut (caregiver/other only, when contacts or data exists) ── */}
+        {role !== "patient" && (familyContacts.length > 0 || !!todayEntry || journalEntries.length > 0) && (
+          <Pressable
+            onPress={() => tap("/family-updates")}
+            style={({ pressed }) => [fu.card, pressed && { opacity: 0.82, transform: [{ scale: 0.98 }] }]}
+          >
+            <LinearGradient
+              colors={["rgba(58, 128, 96, 0.14)", "rgba(58, 128, 96, 0.05)"]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={fu.left}>
+              <View style={fu.iconWrap}>
+                <Feather name="message-square" size={20} color={Colors.success} />
+              </View>
+              <View style={fu.textWrap}>
+                <Text style={fu.label}>Send family update</Text>
+                <Text style={fu.sub}>
+                  {familyContacts.length > 0
+                    ? `${familyContacts.length} contact${familyContacts.length !== 1 ? "s" : ""} · SMS update`
+                    : "Keep family in the loop · SMS"}
+                </Text>
+              </View>
+            </View>
+            <View style={fu.chevronWrap}>
+              <Feather name="chevron-right" size={18} color={Colors.success} />
+            </View>
+          </Pressable>
+        )}
+
         {/* ── Journey card ── */}
         <JourneyCard stageLabel={stageStyle.label} onPress={() => tap("/(tabs)/journey")} />
 
@@ -929,4 +961,39 @@ const sc = StyleSheet.create({
   actionGrid: { gap: 10 },
   actionRow: { flexDirection: "row", gap: 10 },
   resourceCol: { gap: 10 },
+});
+
+const fu = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: "rgba(12, 22, 58, 0.88)",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(58, 128, 96, 0.28)",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    overflow: "hidden",
+    shadowColor: "#2A7A58",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  left: { flex: 1, flexDirection: "row", alignItems: "center", gap: 14 },
+  iconWrap: {
+    width: 44, height: 44, borderRadius: 13,
+    backgroundColor: Colors.success + "20",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
+  },
+  textWrap: { flex: 1, gap: 3 },
+  label: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#E8F0FF", letterSpacing: -0.25 },
+  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.success + "AA", lineHeight: 17 },
+  chevronWrap: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: Colors.success + "18",
+    alignItems: "center", justifyContent: "center",
+  },
 });

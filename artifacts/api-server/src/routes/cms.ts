@@ -4,6 +4,64 @@ const router: IRouter = Router();
 
 const CMS_BASE = "https://data.cms.gov/provider-data/api/1/datastore/query";
 
+// ─── Geocoding ────────────────────────────────────────────────────────────────
+// Server-side geocoding via Google Geocoding API.
+// Results are cached with a 24-hour TTL because provider addresses rarely change.
+
+const GEOCODING_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const geocodeCache = new Map<string, { lat: number; lng: number; expiresAt: number }>();
+
+async function geocodeAddress(
+  address: string,
+  city: string,
+  state: string,
+  zip: string
+): Promise<{ lat: number; lng: number } | null> {
+  const apiKey = process.env["GOOGLE_MAPS_API_KEY"];
+  if (!apiKey) return null;
+
+  const cacheKey = `${address}|${city}|${state}|${zip}`;
+  const cached = geocodeCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return { lat: cached.lat, lng: cached.lng };
+  }
+
+  const query = encodeURIComponent(`${address}, ${city}, ${state} ${zip}, USA`);
+  try {
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${apiKey}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      status: string;
+      results: Array<{
+        geometry: { location: { lat: number; lng: number } };
+      }>;
+    };
+    if (data.status !== "OK" || !data.results[0]) return null;
+    const { lat, lng } = data.results[0].geometry.location;
+    geocodeCache.set(cacheKey, { lat, lng, expiresAt: Date.now() + GEOCODING_CACHE_TTL_MS });
+    return { lat, lng };
+  } catch {
+    return null;
+  }
+}
+
+async function geocodeProviders<T extends { address: string; city: string; state: string; zip: string }>(
+  providers: T[]
+): Promise<(T & { latitude?: number; longitude?: number })[]> {
+  if (!process.env["GOOGLE_MAPS_API_KEY"]) return providers;
+  const results = await Promise.all(
+    providers.map(async (p) => {
+      const coords = await geocodeAddress(p.address, p.city, p.state, p.zip);
+      if (!coords) return p;
+      return { ...p, latitude: coords.lat, longitude: coords.lng };
+    })
+  );
+  return results;
+}
+
 const DATASETS = {
   generalInfo: "yc9t-dgbk",
   providerData: "252m-zfp9",
@@ -161,7 +219,8 @@ router.get("/cms/providers", async (req: Request, res: Response) => {
       : 0;
 
     const data = await cmsQuery(DATASETS.generalInfo, conditions, limit, offset);
-    const providers = data.results.map(mapGeneralInfoToProvider);
+    const rawProviders = data.results.map(mapGeneralInfoToProvider);
+    const providers = await geocodeProviders(rawProviders);
     const result = {
       providers,
       total: data.count,

@@ -26,3 +26,5 @@ export * from "./journalEntries";
 export * from "./goalsOfCare";
 export * from "./livingProfiles";
 export * from "./syncReminders";
+export * from "./familyUpdateLog";
+export * from "./smsOptOuts";

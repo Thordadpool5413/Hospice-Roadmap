@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ProviderCard } from "@/components/ProviderCard";
+import { ProviderMapView } from "@/components/ProviderMapView";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
@@ -28,6 +29,8 @@ import {
 } from "@/services/cmsProviderService";
 import type { QualitySummary } from "@/services/cmsProviderService";
 import type { Provider } from "@/types";
+
+type ViewMode = "list" | "map";
 
 export default function ProvidersScreen() {
   const insets = useSafeAreaInsets();
@@ -45,6 +48,7 @@ export default function ProvidersScreen() {
   const [stateFilter, setStateFilter] = useState("");
   const [nameFilter, setNameFilter] = useState("");
   const [qualitySummaries, setQualitySummaries] = useState<Record<string, QualitySummary>>({});
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   const handleSearch = useCallback(async () => {
     if (!selectedState && !zipInput) return;
@@ -101,263 +105,371 @@ export default function ProvidersScreen() {
       )
     : providers;
 
+  const hasResults = searched && !loading && providers.length > 0;
+  const showMapView = hasResults && viewMode === "map" && isOnline;
+
   return (
     <View style={styles.container}>
       <CosmicBackground />
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20),
-            paddingBottom: insets.bottom + 100,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>Find a Hospice</Text>
-          <Text style={styles.subtitle}>
-            Search 6,900+ Medicare-certified hospice providers across the U.S.
-          </Text>
-        </View>
 
-        <View style={styles.searchCard}>
-          <Text style={styles.searchCardLabel}>Where are you located?</Text>
-
-          {!isOnline && (
-            <View style={styles.offlineNotice}>
-              <Feather name="wifi-off" size={14} color={Colors.amber} />
-              <Text style={styles.offlineText}>
-                No internet connection — provider search unavailable offline.
+      {showMapView ? (
+        <View
+          style={[
+            styles.mapContainer,
+            { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20) },
+          ]}
+        >
+          <View style={styles.mapHeader}>
+            <Text style={styles.mapTitle}>Find a Hospice</Text>
+            <View style={styles.toggleRow}>
+              <Text style={styles.resultsCountMap}>
+                {filtered.length} found
               </Text>
+              <ViewToggle mode={viewMode} onChange={setViewMode} />
             </View>
-          )}
-
-          <Pressable
-            onPress={() => setShowStatePicker(!showStatePicker)}
-            style={styles.statePickerBtn}
-          >
-            <Feather name="map-pin" size={15} color={Colors.textMuted} />
-            <Text
-              style={[
-                styles.statePickerText,
-                !selectedState && { color: Colors.textSubtle },
-              ]}
-            >
-              {selectedState
-                ? US_STATES.find((s) => s.value === selectedState)?.label || selectedState
-                : "Select your state…"}
+          </View>
+          <ProviderMapView
+            providers={filtered}
+            qualitySummaries={qualitySummaries}
+            topInset={insets.top}
+          />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20),
+              paddingBottom: insets.bottom + 100,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Find a Hospice</Text>
+            <Text style={styles.subtitle}>
+              Search 6,900+ Medicare-certified hospice providers across the U.S.
             </Text>
-            <Feather
-              name={showStatePicker ? "chevron-up" : "chevron-down"}
-              size={14}
-              color={Colors.textMuted}
-            />
-          </Pressable>
+          </View>
 
-          {showStatePicker && (
-            <View style={styles.stateDropdown}>
-              <View style={styles.stateSearchRow}>
-                <Feather name="search" size={13} color={Colors.textMuted} />
-                <TextInput
-                  style={styles.stateSearchInput}
-                  placeholder="Filter states…"
-                  placeholderTextColor={Colors.textSubtle}
-                  value={stateFilter}
-                  onChangeText={setStateFilter}
-                  autoCapitalize="none"
-                />
+          <View style={styles.searchCard}>
+            <Text style={styles.searchCardLabel}>Where are you located?</Text>
+
+            {!isOnline && (
+              <View style={styles.offlineNotice}>
+                <Feather name="wifi-off" size={14} color={Colors.amber} />
+                <Text style={styles.offlineText}>
+                  No internet connection — provider search unavailable offline.
+                </Text>
               </View>
-              <ScrollView
-                style={styles.stateList}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
+            )}
+
+            <Pressable
+              onPress={() => setShowStatePicker(!showStatePicker)}
+              style={styles.statePickerBtn}
+            >
+              <Feather name="map-pin" size={15} color={Colors.textMuted} />
+              <Text
+                style={[
+                  styles.statePickerText,
+                  !selectedState && { color: Colors.textSubtle },
+                ]}
               >
-                {filteredStates.map((s) => (
-                  <Pressable
-                    key={s.value}
-                    onPress={() => {
-                      setSelectedState(s.value);
-                      setShowStatePicker(false);
-                      setStateFilter("");
-                    }}
-                    style={[
-                      styles.stateItem,
-                      selectedState === s.value && styles.stateItemActive,
-                    ]}
-                  >
-                    <Text
+                {selectedState
+                  ? US_STATES.find((s) => s.value === selectedState)?.label || selectedState
+                  : "Select your state…"}
+              </Text>
+              <Feather
+                name={showStatePicker ? "chevron-up" : "chevron-down"}
+                size={14}
+                color={Colors.textMuted}
+              />
+            </Pressable>
+
+            {showStatePicker && (
+              <View style={styles.stateDropdown}>
+                <View style={styles.stateSearchRow}>
+                  <Feather name="search" size={13} color={Colors.textMuted} />
+                  <TextInput
+                    style={styles.stateSearchInput}
+                    placeholder="Filter states…"
+                    placeholderTextColor={Colors.textSubtle}
+                    value={stateFilter}
+                    onChangeText={setStateFilter}
+                    autoCapitalize="none"
+                  />
+                </View>
+                <ScrollView
+                  style={styles.stateList}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {filteredStates.map((s) => (
+                    <Pressable
+                      key={s.value}
+                      onPress={() => {
+                        setSelectedState(s.value);
+                        setShowStatePicker(false);
+                        setStateFilter("");
+                      }}
                       style={[
-                        styles.stateItemText,
-                        selectedState === s.value && styles.stateItemTextActive,
+                        styles.stateItem,
+                        selectedState === s.value && styles.stateItemActive,
                       ]}
                     >
-                      {s.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                      <Text
+                        style={[
+                          styles.stateItemText,
+                          selectedState === s.value && styles.stateItemTextActive,
+                        ]}
+                      >
+                        {s.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={styles.orRow}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>or search by ZIP</Text>
+              <View style={styles.orLine} />
             </View>
-          )}
 
-          <View style={styles.orRow}>
-            <View style={styles.orLine} />
-            <Text style={styles.orText}>or search by ZIP</Text>
-            <View style={styles.orLine} />
-          </View>
-
-          <View style={styles.zipRow}>
-            <View style={styles.zipInputWrap}>
-              <Feather name="hash" size={14} color={Colors.textMuted} />
-              <TextInput
-                style={styles.zipInput}
-                placeholder="5-digit ZIP code"
-                placeholderTextColor={Colors.textSubtle}
-                value={zipInput}
-                onChangeText={(text) =>
-                  setZipInput(text.replace(/[^0-9]/g, "").slice(0, 5))
-                }
-                keyboardType="number-pad"
-                maxLength={5}
-              />
-            </View>
-            <Pressable
-              onPress={handleSearch}
-              disabled={!selectedState && !zipInput}
-              style={({ pressed }) => [
-                styles.searchBtn,
-                (!selectedState && !zipInput) && styles.searchBtnDisabled,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Feather name="search" size={14} color="#FFFFFF" />
-                  <Text style={styles.searchBtnText}>Search</Text>
-                </>
-              )}
-            </Pressable>
-          </View>
-
-          {error && (
-            <View style={styles.errorBanner}>
-              <Feather name="alert-triangle" size={14} color={Colors.error} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-        </View>
-
-        {searched && !loading && providers.length > 0 && (
-          <View style={styles.filterRow}>
-            <Feather name="search" size={15} color={Colors.textMuted} />
-            <TextInput
-              style={styles.filterInput}
-              placeholder="Filter by name or city…"
-              placeholderTextColor={Colors.textSubtle}
-              value={nameFilter}
-              onChangeText={setNameFilter}
-            />
-            {!!nameFilter && (
-              <Pressable onPress={() => setNameFilter("")} hitSlop={8}>
-                <Feather name="x" size={15} color={Colors.textMuted} />
+            <View style={styles.zipRow}>
+              <View style={styles.zipInputWrap}>
+                <Feather name="hash" size={14} color={Colors.textMuted} />
+                <TextInput
+                  style={styles.zipInput}
+                  placeholder="5-digit ZIP code"
+                  placeholderTextColor={Colors.textSubtle}
+                  value={zipInput}
+                  onChangeText={(text) =>
+                    setZipInput(text.replace(/[^0-9]/g, "").slice(0, 5))
+                  }
+                  keyboardType="number-pad"
+                  maxLength={5}
+                />
+              </View>
+              <Pressable
+                onPress={handleSearch}
+                disabled={!selectedState && !zipInput}
+                style={({ pressed }) => [
+                  styles.searchBtn,
+                  (!selectedState && !zipInput) && styles.searchBtnDisabled,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Feather name="search" size={14} color="#FFFFFF" />
+                    <Text style={styles.searchBtnText}>Search</Text>
+                  </>
+                )}
               </Pressable>
+            </View>
+
+            {error && (
+              <View style={styles.errorBanner}>
+                <Feather name="alert-triangle" size={14} color={Colors.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
             )}
           </View>
-        )}
 
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingTitle}>Searching hospice database…</Text>
-            <Text style={styles.loadingText}>
-              Looking up Medicare-certified providers in your area
-            </Text>
-          </View>
-        ) : !searched ? (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Feather name="map-pin" size={28} color={Colors.primary} />
+          {searched && !loading && providers.length > 0 && (
+            <View style={styles.filterRow}>
+              <Feather name="search" size={15} color={Colors.textMuted} />
+              <TextInput
+                style={styles.filterInput}
+                placeholder="Filter by name or city…"
+                placeholderTextColor={Colors.textSubtle}
+                value={nameFilter}
+                onChangeText={setNameFilter}
+              />
+              {!!nameFilter && (
+                <Pressable onPress={() => setNameFilter("")} hitSlop={8}>
+                  <Feather name="x" size={15} color={Colors.textMuted} />
+                </Pressable>
+              )}
             </View>
-            <Text style={styles.emptyTitle}>Find a hospice near you</Text>
-            <Text style={styles.emptyText}>
-              Every provider in our database is Medicare-certified and required to meet federal quality standards.
-            </Text>
-            <View style={styles.trustRow}>
-              <Feather name="shield" size={13} color={Colors.success} />
-              <Text style={styles.trustText}>Data from CMS (U.S. Centers for Medicare & Medicaid Services)</Text>
-            </View>
-          </View>
-        ) : filtered.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Feather name="map-pin" size={32} color={Colors.textSubtle} />
-            <Text style={styles.emptyTitle}>No providers found</Text>
-            <Text style={styles.emptyText}>
-              Try a different state or ZIP code. Some rural areas have providers in nearby counties.
-            </Text>
-          </View>
-        ) : (
-          <>
-            <View style={styles.resultsHeader}>
-              <Text style={styles.resultsCount}>
-                {filtered.length} hospice{filtered.length !== 1 ? "s" : ""} found
-                {total > providers.length ? ` (showing ${providers.length} of ${total.toLocaleString()})` : ""}
+          )}
+
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.loadingTitle}>Searching hospice database…</Text>
+              <Text style={styles.loadingText}>
+                Looking up Medicare-certified providers in your area
               </Text>
-              <View style={styles.cmsSourceBadge}>
-                <Feather name="shield" size={11} color={Colors.success} />
-                <Text style={styles.cmsSourceText}>Medicare-certified</Text>
+            </View>
+          ) : !searched ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Feather name="map-pin" size={28} color={Colors.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>Find a hospice near you</Text>
+              <Text style={styles.emptyText}>
+                Every provider in our database is Medicare-certified and required to meet federal quality standards.
+              </Text>
+              <View style={styles.trustRow}>
+                <Feather name="shield" size={13} color={Colors.success} />
+                <Text style={styles.trustText}>Data from CMS (U.S. Centers for Medicare & Medicaid Services)</Text>
               </View>
             </View>
-
-            <View style={styles.providerList}>
-              {filtered.map((provider) => (
-                <ProviderCard
-                  key={provider.id}
-                  provider={provider}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/provider/[id]",
-                      params: { id: provider.id },
-                    })
-                  }
-                  onSave={() => toggleSavedProvider(provider.id)}
-                  isSaved={isSavedProvider(provider.id)}
-                  isCms={!!provider.ccn}
-                  qualitySummary={provider.ccn ? qualitySummaries[provider.ccn] : undefined}
-                />
-              ))}
-            </View>
-
-            <Pressable
-              onPress={() =>
-                Linking.openURL("https://data.cms.gov/provider-data/topics/hospice")
-              }
-              style={styles.dataSourceLink}
-            >
-              <Feather name="external-link" size={12} color={Colors.textSubtle} />
-              <Text style={styles.dataSourceText}>
-                Data from the CMS Provider Data Catalog · Updated by CMS periodically
+          ) : filtered.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Feather name="map-pin" size={32} color={Colors.textSubtle} />
+              <Text style={styles.emptyTitle}>No providers found</Text>
+              <Text style={styles.emptyText}>
+                Try a different state or ZIP code. Some rural areas have providers in nearby counties.
               </Text>
-            </Pressable>
-          </>
-        )}
+            </View>
+          ) : (
+            <>
+              <View style={styles.resultsHeader}>
+                <Text style={styles.resultsCount}>
+                  {filtered.length} hospice{filtered.length !== 1 ? "s" : ""} found
+                  {total > providers.length ? ` (showing ${providers.length} of ${total.toLocaleString()})` : ""}
+                </Text>
+                <View style={styles.resultsHeaderRight}>
+                  <View style={styles.cmsSourceBadge}>
+                    <Feather name="shield" size={11} color={Colors.success} />
+                    <Text style={styles.cmsSourceText}>Medicare-certified</Text>
+                  </View>
+                  {isOnline && (
+                    <ViewToggle mode={viewMode} onChange={setViewMode} />
+                  )}
+                </View>
+              </View>
 
-        <View style={styles.disclaimer}>
-          <Feather name="info" size={13} color={Colors.textSubtle} />
-          <Text style={styles.disclaimerText}>
-            Always contact providers directly to confirm availability, services, and whether they accept your specific insurance plan.
-          </Text>
-        </View>
-      </ScrollView>
+              <View style={styles.providerList}>
+                {filtered.map((provider) => (
+                  <ProviderCard
+                    key={provider.id}
+                    provider={provider}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/provider/[id]",
+                        params: { id: provider.id },
+                      })
+                    }
+                    onSave={() => toggleSavedProvider(provider.id)}
+                    isSaved={isSavedProvider(provider.id)}
+                    isCms={!!provider.ccn}
+                    qualitySummary={provider.ccn ? qualitySummaries[provider.ccn] : undefined}
+                  />
+                ))}
+              </View>
+
+              <Pressable
+                onPress={() =>
+                  Linking.openURL("https://data.cms.gov/provider-data/topics/hospice")
+                }
+                style={styles.dataSourceLink}
+              >
+                <Feather name="external-link" size={12} color={Colors.textSubtle} />
+                <Text style={styles.dataSourceText}>
+                  Data from the CMS Provider Data Catalog · Updated by CMS periodically
+                </Text>
+              </Pressable>
+            </>
+          )}
+
+          <View style={styles.disclaimer}>
+            <Feather name="info" size={13} color={Colors.textSubtle} />
+            <Text style={styles.disclaimerText}>
+              Always contact providers directly to confirm availability, services, and whether they accept your specific insurance plan.
+            </Text>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
 
+function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
+  return (
+    <View style={toggleStyles.container}>
+      <Pressable
+        onPress={() => onChange("list")}
+        style={[toggleStyles.btn, mode === "list" && toggleStyles.btnActive]}
+      >
+        <Feather name="list" size={14} color={mode === "list" ? Colors.primary : Colors.textMuted} />
+        <Text style={[toggleStyles.label, mode === "list" && toggleStyles.labelActive]}>List</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => onChange("map")}
+        style={[toggleStyles.btn, mode === "map" && toggleStyles.btnActive]}
+      >
+        <Feather name="map" size={14} color={mode === "map" ? Colors.primary : Colors.textMuted} />
+        <Text style={[toggleStyles.label, mode === "map" && toggleStyles.labelActive]}>Map</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const toggleStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    overflow: "hidden",
+  },
+  btn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  btnActive: {
+    backgroundColor: Colors.primaryPale,
+  },
+  label: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  labelActive: {
+    color: Colors.primary,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: 20, gap: 16 },
+
+  mapContainer: { flex: 1 },
+  mapHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 6,
+  },
+  mapTitle: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.5,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  resultsCountMap: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+
   header: { gap: 4 },
   title: {
     fontSize: 28,
@@ -610,8 +722,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
+  },
+  resultsHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   resultsCount: {
+    flex: 1,
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: Colors.textSecondary,

@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { CALL_SCRIPTS, SCENARIO_TO_SCRIPT } from "@/constants/callScripts";
 import { useA11y } from "@/context/AccessibilityContext";
 import {
   findCategoryById,
@@ -236,6 +237,38 @@ export default function GuidanceDetailScreen() {
 
         {/* Call Hospice CTA */}
         <CallHospiceCTA urgent={scenario.urgencyLevel === "immediate"} />
+
+        {/* Know What to Say — Call Script CTA */}
+        {SCENARIO_TO_SCRIPT[id ?? ""] && (() => {
+          const scriptId = SCENARIO_TO_SCRIPT[id ?? ""]!;
+          const script = CALL_SCRIPTS.find((s) => s.id === scriptId);
+          if (!script) return null;
+          return (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: "/call-scripts", params: { initialScriptId: scriptId } } as any);
+              }}
+              style={({ pressed }) => [
+                styles.callScriptCta,
+                pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <View style={styles.callScriptCtaLeft}>
+                <View style={styles.callScriptCtaIcon}>
+                  <Feather name="phone-call" size={18} color={Colors.error} />
+                </View>
+                <View style={styles.callScriptCtaText}>
+                  <Text style={styles.callScriptCtaTitle}>Know what to say</Text>
+                  <Text style={styles.callScriptCtaSub} numberOfLines={1}>
+                    {script.title}
+                  </Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={16} color={Colors.error + "99"} />
+            </Pressable>
+          );
+        })()}
 
         {/* Ask Ragna */}
         <Pressable
@@ -649,6 +682,45 @@ const styles = StyleSheet.create({
     gap: 14,
     borderRadius: 16,
     padding: 18,
+  },
+  callScriptCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(192,48,64,0.10)",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(192,48,64,0.25)",
+    marginBottom: 12,
+  },
+  callScriptCtaLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  callScriptCtaIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(192,48,64,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  callScriptCtaText: {
+    flex: 1,
+    gap: 2,
+  },
+  callScriptCtaTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  callScriptCtaSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
   },
   askRagnaBtn: {
     flexDirection: "row",
