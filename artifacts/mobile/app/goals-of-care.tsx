@@ -256,6 +256,12 @@ export default function GoalsOfCareScreen() {
             onPress={() => {
               const saved = whatMattersMost.trim();
               const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: The initialMessage below carries a short excerpt of the user's current
+              // (possibly unsaved) field value so Ragna can reference it in her reply.
+              // The FULL saved GoalsOfCare profile is automatically injected into Ragna's
+              // system prompt on every message via buildRagnaPatientContext() →
+              // buildPatientContext() in AppContext (includeGoalsOfCare flag).
+              // No additional wiring is needed here — Ragna always has the full GoC context.
               const initialMessage = saved
                 ? `You've noted that what matters most right now is: "${excerpt}". Can you help me think more deeply about what my loved one truly values at this stage, and how I can make sure their care reflects those priorities?`
                 : "Can you help me understand what typically matters most to people at this stage of the hospice journey, and how I can make sure my loved one's care reflects what they value most?";
@@ -377,6 +383,9 @@ export default function GoalsOfCareScreen() {
             onPress={() => {
               const saved = fearsAndConcerns.trim();
               const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: initialMessage carries only an excerpt for conversational framing.
+              // The full saved GoalsOfCare (including all fields) is automatically sent to
+              // Ragna via buildRagnaPatientContext() → buildPatientContext() on every message.
               const initialMessage = saved
                 ? `You've noted that my loved one fears: "${excerpt}". Can you help me understand what my loved one is likely to fear most at this stage, and how I can prepare for those moments?`
                 : "Can you help me understand what my loved one is likely to fear most at this stage of the hospice journey, and how I can prepare for those moments?";
@@ -414,6 +423,9 @@ export default function GoalsOfCareScreen() {
             onPress={() => {
               const saved = finalDaysWishes.trim();
               const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: initialMessage carries only an excerpt for conversational framing.
+              // The full saved GoalsOfCare (including all fields) is automatically sent to
+              // Ragna via buildRagnaPatientContext() → buildPatientContext() on every message.
               const initialMessage = saved
                 ? `You've noted that your loved one wants: "${excerpt}". Can you help me think through what else might matter for those final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?`
                 : "Can you help me think through what my loved one might want for their final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?";
@@ -451,6 +463,9 @@ export default function GoalsOfCareScreen() {
             onPress={() => {
               const saved = afterDeathWishes.trim();
               const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: initialMessage carries only an excerpt for conversational framing.
+              // The full saved GoalsOfCare (including all fields) is automatically sent to
+              // Ragna via buildRagnaPatientContext() → buildPatientContext() on every message.
               const initialMessage = saved
                 ? `You've noted that your loved one wants: "${excerpt}". Can you help me think through what else might matter after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?`
                 : "Can you help me think through what my loved one might want after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?";
