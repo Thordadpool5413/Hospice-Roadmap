@@ -7,6 +7,8 @@ import React, {
   useState,
 } from "react";
 
+import { GOC_FIELDS } from "@workspace/goc-merge";
+
 import {
   GoalsOfCare,
   GoalsOfCareField,
@@ -16,19 +18,6 @@ import {
   User,
   UserRole,
 } from "@/types";
-
-// ─── GoC field-level timestamp helpers ────────────────────────────────────────
-
-const GOC_FIELDS: GoalsOfCareField[] = [
-  "whatMattersMost",
-  "goodDayLooksLike",
-  "thingsToAvoid",
-  "dnrStatus",
-  "additionalDirectives",
-  "fearsAndConcerns",
-  "finalDaysWishes",
-  "afterDeathWishes",
-];
 
 /**
  * Compute per-field timestamps for a GoalsOfCare object saved from the UI.
