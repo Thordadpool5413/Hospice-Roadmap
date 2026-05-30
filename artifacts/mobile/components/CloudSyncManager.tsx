@@ -133,6 +133,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     entries: wellnessEntries,
     isLoading: wellnessLoading,
     hydrateFromServer: hydrateWellness,
+    markSynced: markWellnessSynced,
   } = useCaregiverWellness();
 
   const initialized = useRef(false);
@@ -334,6 +335,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         // decide whether the toast threshold has elapsed.
         const prevSuccessRaw = await readSyncLastSuccess();
         await recordSyncSuccess();
+        // Dismiss the wellness pending-sync badge now that all entries have
+        // been confirmed uploaded to the server.
+        markWellnessSynced();
         // A successful full sync pushed the current state of every store, so
         // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
@@ -372,6 +376,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     hydrateWellness,
     updatePatientProfile,
     updateLivingProfile,
+    markWellnessSynced,
   ]);
 
   // Initial sync — runs once per sign-in, but only after ALL contexts have
