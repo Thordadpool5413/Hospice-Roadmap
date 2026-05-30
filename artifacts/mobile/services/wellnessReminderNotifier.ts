@@ -5,10 +5,11 @@ import { Platform } from "react-native";
 import { CaregiverWellnessEntry } from "@/types";
 
 const NOTIF_ID_KEY = "@wellness_reminder_notif_id_v1";
+export const WELLNESS_TIME_KEY = "@wellness_reminder_time_v1";
 
 const MISSED_DAYS_THRESHOLD = 3;
-const REMINDER_HOUR = 19;
-const REMINDER_MINUTE = 0;
+const DEFAULT_REMINDER_HOUR = 19;
+const DEFAULT_REMINDER_MINUTE = 0;
 
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
@@ -41,6 +42,41 @@ async function storeNotifId(id: string): Promise<void> {
 async function clearStoredNotifId(): Promise<void> {
   try {
     await AsyncStorage.removeItem(NOTIF_ID_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Returns the user's preferred wellness reminder time.
+ * Falls back to 7:00 PM if no preference has been saved.
+ */
+export async function getWellnessReminderTime(): Promise<{ hour: number; minute: number }> {
+  try {
+    const raw = await AsyncStorage.getItem(WELLNESS_TIME_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { hour: number; minute: number };
+      if (
+        typeof parsed.hour === "number" &&
+        typeof parsed.minute === "number" &&
+        parsed.hour >= 0 && parsed.hour <= 23 &&
+        parsed.minute >= 0 && parsed.minute <= 59
+      ) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { hour: DEFAULT_REMINDER_HOUR, minute: DEFAULT_REMINDER_MINUTE };
+}
+
+/**
+ * Persists the user's preferred wellness reminder time.
+ */
+export async function setWellnessReminderTime(hour: number, minute: number): Promise<void> {
+  try {
+    await AsyncStorage.setItem(WELLNESS_TIME_KEY, JSON.stringify({ hour, minute }));
   } catch {
     // ignore
   }
@@ -81,8 +117,8 @@ export async function cancelWellnessReminder(): Promise<void> {
 }
 
 /**
- * Schedules a one-time notification at 7 PM on (fromDate + 3 days).
- * This fires even if the app is never reopened.
+ * Schedules a one-time notification at the user's preferred time on
+ * (fromDate + 3 days). This fires even if the app is never reopened.
  * Cancels any existing reminder first.
  *
  * @param fromDate - ISO date string (YYYY-MM-DD) of the most recent check-in.
@@ -93,13 +129,15 @@ export async function scheduleForwardReminder(fromDate: string): Promise<void> {
 
   await cancelWellnessReminder();
 
+  const { hour, minute } = await getWellnessReminderTime();
+
   // Parse the ISO date string as LOCAL calendar components to avoid UTC-offset
   // skew. `new Date("YYYY-MM-DD")` is parsed as UTC midnight, which in negative
   // UTC-offset zones resolves to the prior local calendar day — causing the
   // reminder to fire one day too early. Using Date constructor with explicit
   // year/month/day args creates the date in local time instead.
   const [year, month, day] = fromDate.split("-").map(Number);
-  const targetDate = new Date(year, month - 1, day + MISSED_DAYS_THRESHOLD, REMINDER_HOUR, REMINDER_MINUTE, 0, 0);
+  const targetDate = new Date(year, month - 1, day + MISSED_DAYS_THRESHOLD, hour, minute, 0, 0);
 
   // Only schedule if the target time is still in the future
   if (targetDate.getTime() <= Date.now()) return;
@@ -119,7 +157,7 @@ export async function scheduleForwardReminder(fromDate: string): Promise<void> {
 }
 
 /**
- * Schedules a daily repeating 7 PM reminder.
+ * Schedules a daily repeating reminder at the user's preferred time.
  * Used as a fallback when the app is opened after the threshold has
  * already been exceeded (no forward-scheduled notification was set).
  * Cancels any existing reminder first.
@@ -130,13 +168,15 @@ async function scheduleFallbackDailyReminder(): Promise<void> {
 
   await cancelWellnessReminder();
 
+  const { hour, minute } = await getWellnessReminderTime();
+
   try {
     const id = await Notifications.scheduleNotificationAsync({
       content: NOTIFICATION_CONTENT,
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: REMINDER_HOUR,
-        minute: REMINDER_MINUTE,
+        hour,
+        minute,
       } as any,
     });
     await storeNotifId(id);
@@ -163,8 +203,9 @@ function computeDaysMissed(entries: CaregiverWellnessEntry[]): { missed: number;
  *
  * Scheduling model:
  * - 0–2 days missed and no notification stored → schedule a one-time
- *   forward notification at 7 PM on (lastEntryDate + 3 days). This fires
- *   even if the app is never reopened before the threshold.
+ *   forward notification at the user's preferred time on
+ *   (lastEntryDate + 3 days). This fires even if the app is never
+ *   reopened before the threshold.
  * - 3+ days missed and no notification stored → schedule a daily repeating
  *   fallback (user has already exceeded the threshold; we can only notify
  *   going forward from now).
