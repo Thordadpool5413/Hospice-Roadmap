@@ -242,15 +242,38 @@ export default function GoalsOfCareScreen() {
         </View>
 
         {/* Questions */}
-        <QuestionField
-          label="What matters most right now?"
-          hint="To your loved one — or to you as their caregiver"
-          icon="star"
-          value={whatMattersMost}
-          onChange={setWhatMattersMost}
-          placeholder="e.g. Being at home. Seeing grandchildren. No pain. Being heard."
-          why="Ragna uses this to prioritize guidance. If being at home matters most, she'll always factor that into her advice."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="What matters most right now?"
+            hint="To your loved one — or to you as their caregiver"
+            icon="star"
+            value={whatMattersMost}
+            onChange={setWhatMattersMost}
+            placeholder="e.g. Being at home. Seeing grandchildren. No pain. Being heard."
+            why="Ragna uses this to prioritize guidance. If being at home matters most, she'll always factor that into her advice."
+          />
+          <Pressable
+            onPress={() => {
+              const saved = whatMattersMost.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              const initialMessage = saved
+                ? `You've noted that what matters most right now is: "${excerpt}". Can you help me think more deeply about what my loved one truly values at this stage, and how I can make sure their care reflects those priorities?`
+                : "Can you help me understand what typically matters most to people at this stage of the hospice journey, and how I can make sure my loved one's care reflects what they value most?";
+              router.push({
+                pathname: "/(tabs)/help",
+                params: { initialMessage },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
         <QuestionField
           label="What does a good day look like?"
@@ -340,15 +363,38 @@ export default function GoalsOfCareScreen() {
           <View style={styles.sectionDividerLine} />
         </View>
 
-        <QuestionField
-          label="What does your loved one fear most?"
-          hint="Their deepest worries about how this journey unfolds"
-          icon="alert-circle"
-          value={fearsAndConcerns}
-          onChange={setFearsAndConcerns}
-          placeholder="e.g. Being alone at the end. Being in pain. Losing dignity. Not recognizing family."
-          why="When Ragna knows what your loved one fears most, she can proactively address those concerns rather than waiting for you to bring them up. She can also help you prepare for those moments before they arrive."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="What does your loved one fear most?"
+            hint="Their deepest worries about how this journey unfolds"
+            icon="alert-circle"
+            value={fearsAndConcerns}
+            onChange={setFearsAndConcerns}
+            placeholder="e.g. Being alone at the end. Being in pain. Losing dignity. Not recognizing family."
+            why="When Ragna knows what your loved one fears most, she can proactively address those concerns rather than waiting for you to bring them up. She can also help you prepare for those moments before they arrive."
+          />
+          <Pressable
+            onPress={() => {
+              const saved = fearsAndConcerns.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              const initialMessage = saved
+                ? `You've noted that my loved one fears: "${excerpt}". Can you help me understand what my loved one is likely to fear most at this stage, and how I can prepare for those moments?`
+                : "Can you help me understand what my loved one is likely to fear most at this stage of the hospice journey, and how I can prepare for those moments?";
+              router.push({
+                pathname: "/(tabs)/help",
+                params: { initialMessage },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
         <View style={styles.fieldGroup}>
           <QuestionField
