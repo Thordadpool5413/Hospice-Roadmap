@@ -33,6 +33,10 @@ import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
 
+// Must be called before ANY other module-scope setup so the splash screen
+// never auto-hides before fonts are loaded and the component tree is ready.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -48,10 +52,9 @@ try {
   initializeRevenueCat();
 } catch (err: unknown) {
   const e = err as { message?: string };
-  Alert.alert("RevenueCat Unavailable", e?.message ?? "Subscription features may not be available.");
+  // Log to Metro console so the error is visible when debugging with Expo Go.
+  console.warn("[RevenueCat] Initialization skipped:", e?.message ?? "unknown error");
 }
-
-SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
@@ -353,7 +356,11 @@ export default function RootLayout() {
     document.head.appendChild(el);
   }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  // Render an opaque background instead of null so there is never a black
+  // frame if the splash screen dismisses before fonts have finished loading.
+  if (!fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: "#091734" }} />;
+  }
 
   return (
     <ClerkProvider
