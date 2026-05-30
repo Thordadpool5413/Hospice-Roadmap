@@ -366,12 +366,14 @@ export default function GoalsOfCareScreen() {
           />
           <Pressable
             onPress={() => {
+              const saved = finalDaysWishes.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              const initialMessage = saved
+                ? `You've noted that your loved one wants: "${excerpt}". Can you help me think through what else might matter for those final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?`
+                : "Can you help me think through what my loved one might want for their final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?";
               router.push({
                 pathname: "/(tabs)/help",
-                params: {
-                  initialMessage:
-                    "Can you help me think through what my loved one might want for their final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?",
-                },
+                params: { initialMessage },
               } as any);
             }}
             style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
@@ -401,12 +403,14 @@ export default function GoalsOfCareScreen() {
           />
           <Pressable
             onPress={() => {
+              const saved = afterDeathWishes.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              const initialMessage = saved
+                ? `You've noted that your loved one wants: "${excerpt}". Can you help me think through what else might matter after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?`
+                : "Can you help me think through what my loved one might want after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?";
               router.push({
                 pathname: "/(tabs)/help",
-                params: {
-                  initialMessage:
-                    "Can you help me think through what my loved one might want after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?",
-                },
+                params: { initialMessage },
               } as any);
             }}
             style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
