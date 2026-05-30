@@ -19,10 +19,10 @@ import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
+import { GOC_FIELDS } from "@workspace/goc-merge";
+
 import { GoalsOfCare } from "@/types";
 import { PremiumGate } from "@/components/PremiumGate";
-
-const TOTAL_SECTIONS = 8;
 
 const DNR_OPTIONS: { value: GoalsOfCare["dnrStatus"]; label: string; desc: string; color: string }[] = [
   { value: "dnr", label: "DNR / Allow Natural Death", desc: "If the heart stops, we let it stop peacefully. No CPR.", color: "#7A5C8A" },
@@ -93,7 +93,10 @@ export default function GoalsOfCareScreen() {
   const [afterDeathWishes, setAfterDeathWishes] = useState(existing?.afterDeathWishes ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
-  const filledCount = [
+  // Map current state values by field name so GOC_FIELDS drives the count.
+  // Any new field added to GOC_FIELDS (and the corresponding useState) will be
+  // included automatically once added to this map.
+  const fieldValues: Record<string, unknown> = {
     whatMattersMost,
     goodDayLooksLike,
     thingsToAvoid,
@@ -102,7 +105,8 @@ export default function GoalsOfCareScreen() {
     fearsAndConcerns,
     finalDaysWishes,
     afterDeathWishes,
-  ].filter(Boolean).length;
+  };
+  const filledCount = GOC_FIELDS.filter((f) => Boolean(fieldValues[f])).length;
 
   const hasAnyContent = filledCount > 0;
 
@@ -232,12 +236,12 @@ export default function GoalsOfCareScreen() {
             <View
               style={[
                 styles.completionBarFill,
-                { width: `${Math.round((filledCount / TOTAL_SECTIONS) * 100)}%` },
+                { width: `${Math.round((filledCount / GOC_FIELDS.length) * 100)}%` },
               ]}
             />
           </View>
           <Text style={styles.completionLabel}>
-            {filledCount} of {TOTAL_SECTIONS} sections filled
+            {filledCount} of {GOC_FIELDS.length} sections filled
           </Text>
         </View>
 
