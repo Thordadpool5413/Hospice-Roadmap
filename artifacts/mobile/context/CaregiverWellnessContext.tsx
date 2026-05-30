@@ -9,6 +9,7 @@ import React, {
 
 import { CaregiverMood, CaregiverWellnessEntry } from "@/types";
 import { uploadCaregiverWellness, SYNC_LAST_SUCCESS_KEY } from "@/services/syncService";
+import { enqueuePendingDelete } from "@/services/pendingDeletes";
 import {
   cancelWellnessReminder,
   scheduleForwardReminder,
@@ -44,6 +45,12 @@ interface CaregiverWellnessContextValue {
    */
   hasPendingSync: boolean;
   addEntry: (mood: CaregiverMood, note?: string) => Promise<void>;
+  /**
+   * Delete a single wellness entry by ID. If the upload fails (offline),
+   * the ID is added to the pending-deletes queue so the next sync does not
+   * restore the entry from the server side of the union merge.
+   */
+  deleteEntry: (id: string) => Promise<void>;
   getTodayEntry: () => CaregiverWellnessEntry | null;
   getRecentEntries: (days: number) => CaregiverWellnessEntry[];
   getWellnessSummary: (days?: number) => string;
@@ -187,6 +194,23 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
     [getRecentEntries],
   );
 
+  const deleteEntry = useCallback(
+    async (id: string) => {
+      const updated = entries.filter((e) => e.id !== id);
+      await saveEntries(updated);
+      uploadCaregiverWellness(updated)
+        .then((ok) => {
+          if (!ok) {
+            enqueuePendingDelete("wellness", id);
+          }
+        })
+        .catch(() => {
+          enqueuePendingDelete("wellness", id);
+        });
+    },
+    [entries],
+  );
+
   const clearEntries = useCallback(async () => {
     try {
       await AsyncStorage.setItem(WELLNESS_STORAGE_KEY, JSON.stringify([]));
@@ -231,6 +255,7 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
         isLoading,
         hasPendingSync,
         addEntry,
+        deleteEntry,
         getTodayEntry,
         getRecentEntries,
         getWellnessSummary,
