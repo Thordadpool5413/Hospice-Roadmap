@@ -28,6 +28,7 @@ import { JournalProvider } from "@/context/JournalContext";
 import { RagnaLearningProvider, useRagnaLearning } from "@/context/RagnaLearningContext";
 import { RemindersProvider } from "@/context/RemindersContext";
 import { SymptomProvider } from "@/context/SymptomContext";
+import { CaregiverWellnessProvider } from "@/context/CaregiverWellnessContext";
 import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
@@ -353,6 +354,7 @@ export default function RootLayout() {
               <JournalProvider>
               <RemindersProvider>
               <SymptomProvider>
+              <CaregiverWellnessProvider>
               <VeraMemoryProvider>
               <RagnaLearningProvider>
               <QueryClientProvider client={queryClient}>
@@ -374,6 +376,7 @@ export default function RootLayout() {
               </QueryClientProvider>
               </RagnaLearningProvider>
               </VeraMemoryProvider>
+              </CaregiverWellnessProvider>
               </SymptomProvider>
               </RemindersProvider>
               </JournalProvider>

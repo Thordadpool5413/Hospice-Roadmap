@@ -32,7 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAuthToken } from "@workspace/api-client-react";
 
 import { apiBase, makeRequestTimeoutSignal, mergeJsonHeaders } from "./apiClient";
-import type { GoalsOfCare, GoalsOfCareField, JournalEntry, Reminder, SymptomEntry } from "@/types";
+import type { CaregiverWellnessEntry, GoalsOfCare, GoalsOfCareField, JournalEntry, Reminder, SymptomEntry } from "@/types";
 
 // ─── Last-success timestamp key ───────────────────────────────────────────────
 
@@ -61,6 +61,7 @@ const MIGRATED_JOURNAL   = "@sync_migrated_journal";
 const MIGRATED_GOALS     = "@sync_migrated_goals";
 const MIGRATED_PROFILE   = "@sync_migrated_profile";
 const MIGRATED_REMINDERS = "@sync_migrated_reminders";
+const MIGRATED_WELLNESS  = "@sync_migrated_wellness";
 
 // ─── AsyncStorage source keys (must not be changed) ──────────────────────────
 
@@ -69,6 +70,7 @@ const AS_JOURNAL   = "@hospice_roadmap_journal";
 const AS_USER      = "@hospice_roadmap_user";
 const AS_PROFILE   = "@vera_living_profile_v1";
 const AS_REMINDERS = "@hospice_roadmap_reminders";
+const AS_WELLNESS  = "@caregiver_wellness_v1";
 
 // ─── Auth header helper ───────────────────────────────────────────────────────
 
@@ -165,6 +167,8 @@ export interface ServerSyncData {
    */
   livingProfile: { profile: string; updatedAt?: string } | null;
   reminders: Reminder[];
+  /** Caregiver daily wellness check-in entries. Empty array when none exist. */
+  caregiverWellness: CaregiverWellnessEntry[];
 }
 
 // ─── Per-record merge helpers ─────────────────────────────────────────────────
@@ -436,6 +440,16 @@ export async function uploadReminders(reminders: Reminder[]): Promise<boolean> {
   return syncPut("/reminders", { reminders: payload });
 }
 
+export async function uploadCaregiverWellness(
+  entries: CaregiverWellnessEntry[],
+): Promise<boolean> {
+  const payload = entries.map((e) => ({
+    ...e,
+    clientUpdatedAt: e.updatedAt ?? new Date(e.timestamp).toISOString(),
+  }));
+  return syncPut("/caregiver-wellness", { entries: payload });
+}
+
 // ─── Delete helpers (called from data-controls) ───────────────────────────────
 
 export async function deleteServerSymptoms(): Promise<boolean> {
@@ -458,8 +472,40 @@ export async function deleteServerReminders(): Promise<boolean> {
   return syncDelete("/reminders");
 }
 
+export async function deleteServerCaregiverWellness(): Promise<boolean> {
+  return syncDelete("/caregiver-wellness");
+}
+
 export async function deleteAllServerData(): Promise<boolean> {
   return syncDelete("/all");
+}
+
+// ─── Caregiver wellness merge ─────────────────────────────────────────────────
+
+/**
+ * Merge local and server caregiver wellness entries (one per day, LWW by updatedAt).
+ * Records present on only one side are included as-is.
+ */
+export function mergeWellnessEntries(
+  local: CaregiverWellnessEntry[],
+  server: CaregiverWellnessEntry[],
+): CaregiverWellnessEntry[] {
+  const merged = new Map<string, CaregiverWellnessEntry>(local.map((e) => [e.id, e]));
+
+  for (const serverEntry of server) {
+    const localEntry = merged.get(serverEntry.id);
+    if (!localEntry) {
+      merged.set(serverEntry.id, serverEntry);
+    } else {
+      const localTs = localEntry.updatedAt ?? new Date(localEntry.timestamp).toISOString();
+      const serverTs = serverEntry.updatedAt ?? new Date(serverEntry.timestamp).toISOString();
+      if (new Date(serverTs) >= new Date(localTs)) {
+        merged.set(serverEntry.id, serverEntry);
+      }
+    }
+  }
+
+  return Array.from(merged.values());
 }
 
 // ─── One-time local-to-server migration ───────────────────────────────────────
@@ -478,6 +524,7 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
     MIGRATED_GOALS,
     MIGRATED_PROFILE,
     MIGRATED_REMINDERS,
+    MIGRATED_WELLNESS,
   ]);
   const flagMap: Record<string, boolean> = {};
   for (const [key, val] of flags) {
@@ -580,6 +627,24 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
         } else {
           const ok = await uploadReminders(local);
           if (ok) await AsyncStorage.setItem(MIGRATED_REMINDERS, "1");
+        }
+      }
+    })());
+  }
+
+  if (!flagMap[MIGRATED_WELLNESS]) {
+    migrations.push((async () => {
+      const serverWellness = serverData.caregiverWellness ?? [];
+      if (serverWellness.length > 0) {
+        await AsyncStorage.setItem(MIGRATED_WELLNESS, "1");
+      } else {
+        const raw = await AsyncStorage.getItem(AS_WELLNESS);
+        const local: CaregiverWellnessEntry[] = raw ? JSON.parse(raw) : [];
+        if (local.length === 0) {
+          await AsyncStorage.setItem(MIGRATED_WELLNESS, "1");
+        } else {
+          const ok = await uploadCaregiverWellness(local);
+          if (ok) await AsyncStorage.setItem(MIGRATED_WELLNESS, "1");
         }
       }
     })());

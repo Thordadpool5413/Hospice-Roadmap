@@ -107,6 +107,8 @@ export interface RagnaPrivacySettings {
   includeRecentJournal: boolean;
   includeConversationMemory: boolean;
   includeTimeContext: boolean;
+  /** When enabled, Ragna receives a summary of the caregiver's recent mood check-ins. */
+  includeCaregiverWellness: boolean;
 }
 
 export interface User {
@@ -351,6 +353,30 @@ export interface Reminder {
   recurrence: ReminderRecurrence;
   enabled: boolean;
   notificationId?: string;
+  /** ISO timestamp of last local modification — used as LWW version key for sync. */
+  updatedAt?: string;
+}
+
+// ─── Caregiver Wellness ───────────────────────────────────────────────────────
+
+/** Five mood states for the caregiver daily wellness check-in. */
+export type CaregiverMood =
+  | "doing_okay"
+  | "holding_up"
+  | "tired"
+  | "sad"
+  | "overwhelmed";
+
+/** One caregiver wellness check-in entry. One per day, stored locally. */
+export interface CaregiverWellnessEntry {
+  id: string;
+  /** YYYY-MM-DD local date of the check-in. */
+  date: string;
+  /** Unix epoch milliseconds — used for ordering and fallback LWW. */
+  timestamp: number;
+  mood: CaregiverMood;
+  /** Optional one-line free-text note from the caregiver. */
+  note?: string;
   /** ISO timestamp of last local modification — used as LWW version key for sync. */
   updatedAt?: string;
 }

@@ -94,6 +94,7 @@ export const DEFAULT_RAGNA_PRIVACY: RagnaPrivacySettings = {
   includeRecentJournal: true,
   includeConversationMemory: true,
   includeTimeContext: true,
+  includeCaregiverWellness: true,
 };
 
 function normalizeUser(user: User): User {
