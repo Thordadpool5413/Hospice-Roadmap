@@ -34,6 +34,11 @@ const PLAN_CONFIG: Record<string, PlanConfig> = {
     bg: "rgba(20, 30, 60, 0.90)",
     border: "rgba(60, 90, 160, 0.30)",
   },
+  Beta: {
+    color: "#59D0D5",
+    bg: "rgba(89, 208, 213, 0.12)",
+    border: "rgba(89, 208, 213, 0.35)",
+  },
 };
 
 function resolveConfig(plan: string): PlanConfig {

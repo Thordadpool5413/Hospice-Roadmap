@@ -5,6 +5,12 @@
  *   REVENUECAT_PROJECT_ID     – enables the check; absent → dev bypass
  *   REVENUECAT_SECRET_API_KEY – RevenueCat v1 secret API key (not the public SDK key)
  *
+ * Beta testing (TestFlight):
+ *   REVENUECAT_BETA_BYPASS=true – bypasses the entitlement check entirely so
+ *   TestFlight testers can use all premium features without a real subscription.
+ *   Set this on the API server that serves TestFlight builds. NEVER set it on
+ *   the production API server — it would grant free access to all users.
+ *
  * Behaviour on error: FAIL CLOSED.
  *   • 503 when the API key is missing or RevenueCat is unreachable.
  *   • 402 when the user has no active premium entitlement.
@@ -99,6 +105,14 @@ export async function requirePremium(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
+  // Beta bypass — REVENUECAT_BETA_BYPASS=true unlocks premium for TestFlight builds.
+  // Set this env var on the API server that backs TestFlight; never on the production server.
+  if (process.env["REVENUECAT_BETA_BYPASS"] === "true") {
+    req.log.debug("requirePremium: beta bypass active — skipping entitlement check");
+    next();
+    return;
+  }
+
   // Dev bypass — REVENUECAT_PROJECT_ID not set means local development
   const projectId = process.env["REVENUECAT_PROJECT_ID"];
   if (!projectId) {
