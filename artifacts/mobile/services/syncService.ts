@@ -2,12 +2,13 @@
  * Cloud sync service — uploads local data to the server and restores it on
  * sign-in / app foreground / reconnect.
  *
- * Five data stores are synced:
- *   - symptom entries     (@hospice_roadmap_symptoms)
- *   - journal entries     (@hospice_roadmap_journal)
- *   - goals of care       (user.patientProfile.goalsOfCare in @hospice_roadmap_user)
- *   - living profile      (@vera_living_profile_v1)
- *   - reminders           (@hospice_roadmap_reminders)
+ * Six data stores are synced:
+ *   - symptom entries          (@hospice_roadmap_symptoms)
+ *   - journal entries          (@hospice_roadmap_journal)
+ *   - goals of care            (user.patientProfile.goalsOfCare in @hospice_roadmap_user)
+ *   - living profile           (@vera_living_profile_v1)
+ *   - reminders                (@hospice_roadmap_reminders)
+ *   - caregiver wellness       (@caregiver_wellness_v1)
  *
  * Per-record conflict resolution (last-write-wins):
  *   Each record now carries an `updatedAt` field stamped at create/update time
@@ -389,29 +390,57 @@ export async function deleteAllServerData(): Promise<boolean> {
 // ─── Caregiver wellness merge ─────────────────────────────────────────────────
 
 /**
- * Merge local and server caregiver wellness entries (one per day, LWW by updatedAt).
- * Records present on only one side are included as-is.
+ * Merge local and server caregiver wellness entries.
+ *
+ * Two-pass strategy:
+ *
+ * Pass 1 — ID-level LWW: union all entries by ID. When both sides have the
+ * same ID, the record with the newer `updatedAt` wins (server wins on tie).
+ * This handles edits to an existing check-in from two different devices.
+ *
+ * Pass 2 — Date-level deduplication: if two devices each recorded a check-in
+ * on the same calendar day they will have different IDs and both survive
+ * Pass 1. Keep only the most recent entry per date (by `updatedAt`, falling
+ * back to `timestamp`) so the Wellness screen always shows one row per day.
  */
 export function mergeWellnessEntries(
   local: CaregiverWellnessEntry[],
   server: CaregiverWellnessEntry[],
 ): CaregiverWellnessEntry[] {
-  const merged = new Map<string, CaregiverWellnessEntry>(local.map((e) => [e.id, e]));
+  // Pass 1: ID-level merge (LWW by updatedAt)
+  const byId = new Map<string, CaregiverWellnessEntry>(local.map((e) => [e.id, e]));
 
   for (const serverEntry of server) {
-    const localEntry = merged.get(serverEntry.id);
+    const localEntry = byId.get(serverEntry.id);
     if (!localEntry) {
-      merged.set(serverEntry.id, serverEntry);
+      byId.set(serverEntry.id, serverEntry);
     } else {
       const localTs = localEntry.updatedAt ?? new Date(localEntry.timestamp).toISOString();
       const serverTs = serverEntry.updatedAt ?? new Date(serverEntry.timestamp).toISOString();
       if (new Date(serverTs) >= new Date(localTs)) {
-        merged.set(serverEntry.id, serverEntry);
+        byId.set(serverEntry.id, serverEntry);
       }
     }
   }
 
-  return Array.from(merged.values());
+  // Pass 2: Date-level deduplication — keep the most-recent entry per date
+  // (by updatedAt, falling back to timestamp). This resolves the case where
+  // two devices check in on the same day and produce entries with different IDs.
+  const byDate = new Map<string, CaregiverWellnessEntry>();
+  for (const entry of byId.values()) {
+    const existing = byDate.get(entry.date);
+    if (!existing) {
+      byDate.set(entry.date, entry);
+    } else {
+      const existingTs = existing.updatedAt ?? new Date(existing.timestamp).toISOString();
+      const entryTs = entry.updatedAt ?? new Date(entry.timestamp).toISOString();
+      if (new Date(entryTs) > new Date(existingTs)) {
+        byDate.set(entry.date, entry);
+      }
+    }
+  }
+
+  return Array.from(byDate.values());
 }
 
 // ─── One-time local-to-server migration ───────────────────────────────────────
