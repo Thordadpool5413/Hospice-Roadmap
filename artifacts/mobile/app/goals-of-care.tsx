@@ -350,33 +350,75 @@ export default function GoalsOfCareScreen() {
           why="When Ragna knows what your loved one fears most, she can proactively address those concerns rather than waiting for you to bring them up. She can also help you prepare for those moments before they arrive."
         />
 
-        <QuestionField
-          label="Wishes for the final days"
-          hint="Who should be present, environment, sensory preferences, spiritual rites"
-          icon="moon"
-          value={finalDaysWishes}
-          onChange={setFinalDaysWishes}
-          placeholder={
-            "e.g. Immediate family only. Soft music — Bach or nature sounds. " +
-            "Room dim and quiet. Wants to be held. Priest for last rites. " +
-            "No TV. Favorite blanket nearby."
-          }
-          why="The final days often unfold faster than families expect. Ragna can help you prepare the environment, guide conversations with the hospice team, and gently remind you of your loved one's wishes when it's hardest to think clearly."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="Wishes for the final days"
+            hint="Who should be present, environment, sensory preferences, spiritual rites"
+            icon="moon"
+            value={finalDaysWishes}
+            onChange={setFinalDaysWishes}
+            placeholder={
+              "e.g. Immediate family only. Soft music — Bach or nature sounds. " +
+              "Room dim and quiet. Wants to be held. Priest for last rites. " +
+              "No TV. Favorite blanket nearby."
+            }
+            why="The final days often unfold faster than families expect. Ragna can help you prepare the environment, guide conversations with the hospice team, and gently remind you of your loved one's wishes when it's hardest to think clearly."
+          />
+          <Pressable
+            onPress={() => {
+              router.push({
+                pathname: "/(tabs)/help",
+                params: {
+                  initialMessage:
+                    "Can you help me think through what my loved one might want for their final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?",
+                },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
-        <QuestionField
-          label="After-death wishes"
-          hint="Arrangements, notifications, and memorial preferences"
-          icon="feather"
-          value={afterDeathWishes}
-          onChange={setAfterDeathWishes}
-          placeholder={
-            "e.g. Cremation. Scatter ashes at the lake. " +
-            "Call sister first. No funeral home — home funeral preferred. " +
-            "Memorial service at the church. Organ donor card on file."
-          }
-          why="Ragna can help you start conversations about what comes next — at the pace and time that feels right for your family. Having this recorded means you won't have to rely on memory in the most difficult moments."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="After-death wishes"
+            hint="Arrangements, notifications, and memorial preferences"
+            icon="feather"
+            value={afterDeathWishes}
+            onChange={setAfterDeathWishes}
+            placeholder={
+              "e.g. Cremation. Scatter ashes at the lake. " +
+              "Call sister first. No funeral home — home funeral preferred. " +
+              "Memorial service at the church. Organ donor card on file."
+            }
+            why="Ragna can help you start conversations about what comes next — at the pace and time that feels right for your family. Having this recorded means you won't have to rely on memory in the most difficult moments."
+          />
+          <Pressable
+            onPress={() => {
+              router.push({
+                pathname: "/(tabs)/help",
+                params: {
+                  initialMessage:
+                    "Can you help me think through what my loved one might want after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?",
+                },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
         {/* Vera context preview */}
         {hasAnyContent && (
@@ -594,4 +636,7 @@ const styles = StyleSheet.create({
     gap: 7, paddingVertical: 8,
   },
   veraLinkText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.primary },
+
+  fieldGroup: { gap: 6 },
+  fieldGroupLink: { paddingVertical: 6 },
 });
