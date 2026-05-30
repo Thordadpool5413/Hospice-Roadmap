@@ -8,6 +8,7 @@ import {
   goalsOfCare,
   livingProfiles,
   syncReminders,
+  gocContentSchema,
 } from "@workspace/db/schema";
 
 const router = Router();
@@ -224,6 +225,9 @@ router.delete("/journal", async (req, res) => {
 // ─── PUT /api/sync/goals — upsert goals of care (one row per user, LWW) ──────
 //
 // Client sends `clientUpdatedAt` from goalsOfCare.updatedAt if available.
+// Content is validated through gocContentSchema so all eight editable fields
+// (including fearsAndConcerns, finalDaysWishes, afterDeathWishes) are
+// accepted and unknown keys are stripped before storage.
 
 router.put("/goals", async (req, res) => {
   const { userId } = getAuth(req);
@@ -232,9 +236,15 @@ router.put("/goals", async (req, res) => {
     return;
   }
 
-  const body = req.body as { content?: Record<string, unknown>; clientUpdatedAt?: unknown };
-  if (!body.content || typeof body.content !== "object") {
+  const body = req.body as { content?: unknown; clientUpdatedAt?: unknown };
+  if (!body.content || typeof body.content !== "object" || Array.isArray(body.content)) {
     res.status(400).json({ error: "content object required" });
+    return;
+  }
+
+  const parsed = gocContentSchema.safeParse(body.content);
+  if (!parsed.success) {
+    res.status(400).json({ error: "invalid content", issues: parsed.error.issues });
     return;
   }
 
@@ -243,7 +253,7 @@ router.put("/goals", async (req, res) => {
 
     await db
       .insert(goalsOfCare)
-      .values({ userId, content: body.content, updatedAt: clientUpdatedAt })
+      .values({ userId, content: parsed.data, updatedAt: clientUpdatedAt })
       .onConflictDoUpdate({
         target: goalsOfCare.userId,
         set: {
