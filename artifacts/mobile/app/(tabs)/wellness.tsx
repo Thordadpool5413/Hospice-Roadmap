@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -120,11 +121,30 @@ function RagnaCTABanner({ count }: { count: number }) {
 interface DayDetailModalProps {
   entry: CaregiverWellnessEntry | null;
   onClose: () => void;
+  onDelete: (id: string) => void;
 }
 
-function DayDetailModal({ entry, onClose }: DayDetailModalProps) {
+function DayDetailModal({ entry, onClose, onDelete }: DayDetailModalProps) {
   if (!entry) return null;
   const cfg = MOOD_CONFIG[entry.mood];
+
+  const handleDelete = useCallback(() => {
+    Alert.alert(
+      "Delete Check-in",
+      "Remove this wellness check-in? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            onDelete(entry.id);
+            onClose();
+          },
+        },
+      ],
+    );
+  }, [entry.id, onDelete, onClose]);
 
   return (
     <Modal
@@ -154,6 +174,13 @@ function DayDetailModal({ entry, onClose }: DayDetailModalProps) {
             style={({ pressed }) => [ws.modalClose, pressed && { opacity: 0.65 }]}
           >
             <Text style={ws.modalCloseText}>Close</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleDelete}
+            style={({ pressed }) => [ws.modalDelete, pressed && { opacity: 0.65 }]}
+          >
+            <Feather name="trash-2" size={13} color={Colors.error} />
+            <Text style={ws.modalDeleteText}>Delete check-in</Text>
           </Pressable>
         </View>
       </Pressable>
@@ -490,7 +517,7 @@ function SummaryStats({ entries }: { entries: CaregiverWellnessEntry[] }) {
 
 export default function WellnessScreen() {
   const { user } = useApp();
-  const { entries, getRecentEntries, isLoading } = useCaregiverWellness();
+  const { entries, getRecentEntries, isLoading, deleteEntry } = useCaregiverWellness();
   const insets = useSafeAreaInsets();
 
   const [selectedEntry, setSelectedEntry] = useState<CaregiverWellnessEntry | null>(null);
@@ -591,6 +618,7 @@ export default function WellnessScreen() {
         <DayDetailModal
           entry={selectedEntry}
           onClose={() => setSelectedEntry(null)}
+          onDelete={(id) => { deleteEntry(id); setSelectedEntry(null); }}
         />
       )}
     </View>
@@ -984,5 +1012,18 @@ const ws = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.textMuted,
+  },
+  modalDelete: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 2,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  modalDeleteText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.error,
   },
 });

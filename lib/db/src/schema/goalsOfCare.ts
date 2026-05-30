@@ -1,5 +1,6 @@
 import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { GOC_FIELDS, type GoalsOfCareField } from "@workspace/goc-merge";
 import { z } from "zod/v4";
 
 export interface GoalsOfCareContent {
@@ -14,10 +15,16 @@ export interface GoalsOfCareContent {
   updatedAt?: string;
 }
 
+const DNR_STATUS_ENUM = ["dnr", "full-code", "unknown", "not-discussed"] as const;
+
 /**
  * Zod schema for the GoC JSONB content blob.
  *
- * All eight user-editable fields are optional strings (dnrStatus is an enum).
+ * Field entries are derived programmatically from GOC_FIELDS so that adding
+ * a new field to GOC_FIELDS automatically includes it here without a manual
+ * edit. `dnrStatus` retains its enum constraint; all other fields are optional
+ * strings.
+ *
  * `updatedAt` is the document-level ISO timestamp written by the mobile client.
  * `fieldUpdatedAt` is a per-field ISO timestamp map written by mergeGoalsOfCare.
  *
@@ -25,15 +32,19 @@ export interface GoalsOfCareContent {
  * parse, keeping the stored JSONB tidy even if a future client sends new
  * fields before the server schema is updated.
  */
+const gocFieldShape = GOC_FIELDS.reduce<Record<GoalsOfCareField, z.ZodTypeAny>>(
+  (shape, field) => {
+    shape[field] =
+      field === "dnrStatus"
+        ? z.enum(DNR_STATUS_ENUM).optional()
+        : z.string().optional();
+    return shape;
+  },
+  {} as Record<GoalsOfCareField, z.ZodTypeAny>,
+);
+
 export const gocContentSchema = z.object({
-  whatMattersMost: z.string().optional(),
-  goodDayLooksLike: z.string().optional(),
-  thingsToAvoid: z.string().optional(),
-  dnrStatus: z.enum(["dnr", "full-code", "unknown", "not-discussed"]).optional(),
-  additionalDirectives: z.string().optional(),
-  fearsAndConcerns: z.string().optional(),
-  finalDaysWishes: z.string().optional(),
-  afterDeathWishes: z.string().optional(),
+  ...gocFieldShape,
   updatedAt: z.string().optional(),
   fieldUpdatedAt: z.record(z.string(), z.string()).optional(),
 });

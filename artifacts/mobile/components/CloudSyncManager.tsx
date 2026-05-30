@@ -276,8 +276,12 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // Union of local and server wellness entries, resolving conflicts by
       // `updatedAt` (server wins on tie). The server returns an empty array
       // when the user has no records, so merging is always safe.
-      const serverWellness = serverData.caregiverWellness ?? [];
-      const mergedWellness = mergeWellnessEntries(wellnessEntries, serverWellness);
+      // Uses filteredServerWellness — pending-deleted IDs have been removed so
+      // the union merge cannot restore entries the user already deleted offline.
+      const filteredServerWellness = pendingDeletes.wellness.length > 0
+        ? (serverData.caregiverWellness ?? []).filter((e) => !pendingDeletes.wellness.includes(e.id))
+        : (serverData.caregiverWellness ?? []);
+      const mergedWellness = mergeWellnessEntries(wellnessEntries, filteredServerWellness);
       await hydrateWellness(mergedWellness);
 
       // Step 3: push current local state to server with stored LWW timestamps.
@@ -318,7 +322,14 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
       if (mergedReminders.length > 0) pushOps.push(uploadReminders(mergedReminders));
 
-      if (mergedWellness.length > 0) pushOps.push(uploadCaregiverWellness(mergedWellness));
+      // Always push when there are pending wellness deletes so that an empty
+      // merged result (the user deleted their last entry offline) actually
+      // clears the server — otherwise clearAllPendingDeletes() would wipe the
+      // delete marker before the server had received the empty snapshot, and
+      // the next sync would restore the deleted entry.
+      if (mergedWellness.length > 0 || pendingDeletes.wellness.length > 0) {
+        pushOps.push(uploadCaregiverWellness(mergedWellness));
+      }
 
       const pushResults = await Promise.allSettled(pushOps);
 
