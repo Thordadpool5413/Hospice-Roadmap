@@ -189,6 +189,76 @@ export const SCENARIO_MAP: ScenarioMatch[] = [
     keywords: ["how to document", "what to write down", "how to file complaint", "document this", "keep track of", "write down", "document care"],
   },
 
+  // ─── CRISIS CARE LEVELS ──────────────────────────────────────────────────────
+
+  {
+    scenarioId: "SCN-CRISIS-CARE",
+    label: "Caregiver needs crisis-level care — CHC or GIP",
+    domains: ["care_gap", "symptom_management"],
+    journeyStages: ["stable", "weeks_to_days", "days", "hours"],
+    urgency: "urgent",
+    keywords: [
+      "can't manage at home", "cannot manage", "need a nurse here", "need someone here",
+      "can I get a nurse to stay", "nurse to stay overnight", "nurse stay all night",
+      "request continuous care", "continuous home care", "crisis care level",
+      "general inpatient", "GIP care", "inpatient hospice", "hospital level hospice",
+      "should I call 911", "thinking about calling 911", "considering 911",
+      "symptoms out of control", "nothing is working", "medications aren't helping",
+      "comfort kit not working", "breakthrough not working and", "pain is uncontrollable",
+      "can't control the pain", "breathing is uncontrollable", "can't control the breathing",
+      "agitation is uncontrollable", "can't control the agitation",
+      "nausea is uncontrollable", "vomiting everything", "can't keep anything down",
+      "unsafe at home", "I'm scared to be alone with", "need more help than phone",
+    ],
+  },
+
+  // ─── ADVOCACY ─────────────────────────────────────────────────────────────────
+
+  {
+    scenarioId: "SCN-VISIT-RIGHTS",
+    label: "Family not receiving enough visits — advocacy for entitlements",
+    domains: ["documentation_advocacy", "care_gap"],
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days"],
+    urgency: "moderate",
+    keywords: [
+      "not enough visits", "only comes once a week", "aide won't come", "aide not coming",
+      "want more visits", "entitled to more", "not getting enough help", "how many visits",
+      "nurse only once", "nurse only comes once", "social worker never visits",
+      "chaplain never called", "what are we owed", "what are we entitled to",
+      "visit too infrequent", "they never come", "we never see anyone",
+    ],
+  },
+  {
+    scenarioId: "SCN-REVOCATION",
+    label: "Family considering hospice revocation or switching providers",
+    domains: ["care_gap", "documentation_advocacy"],
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days"],
+    urgency: "moderate",
+    keywords: [
+      "want to revoke", "thinking about leaving hospice", "can I leave hospice",
+      "want to switch hospice", "change hospice", "thinking about stopping hospice",
+      "leave hospice", "revoke hospice", "discharge from hospice",
+      "hospice isn't working", "want to try treatment again", "can we come back",
+      "leave and re-enroll", "switch providers", "transfer to another hospice",
+      "live discharge", "revocation",
+    ],
+  },
+  {
+    scenarioId: "SCN-UNMET-NEEDS",
+    label: "Family in conflict with hospice — unmet needs and advocacy record",
+    domains: ["documentation_advocacy", "care_gap"],
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days", "days"],
+    urgency: "moderate",
+    keywords: [
+      "needs aren't being met", "care not provided", "what was promised",
+      "not getting what was promised", "family fighting hospice", "family fighting",
+      "conflict with hospice team", "hospice not following through",
+      "they promised and didn't", "how to build a case", "keep a record",
+      "document unmet needs", "care plan not followed", "promised and not delivered",
+      "advocate in writing", "hospice keeps letting us down",
+    ],
+  },
+
   // ─── CAREGIVER ────────────────────────────────────────────────────────────────
 
   {

@@ -5,31 +5,8 @@ export type UserRole =
   | "caregiver"
   | "other";
 
-/** The five editable scalar fields on a GoalsOfCare document. */
-export type GoalsOfCareField =
-  | "whatMattersMost"
-  | "goodDayLooksLike"
-  | "thingsToAvoid"
-  | "dnrStatus"
-  | "additionalDirectives";
-
-export interface GoalsOfCare {
-  whatMattersMost?: string;
-  goodDayLooksLike?: string;
-  thingsToAvoid?: string;
-  dnrStatus?: "dnr" | "full-code" | "unknown" | "not-discussed";
-  additionalDirectives?: string;
-  /** Document-level ISO timestamp — the last time any field was saved locally. */
-  updatedAt?: string;
-  /**
-   * Per-field ISO timestamps populated by the sync merge step.
-   * When present, these take precedence over the document-level `updatedAt`
-   * during field-level conflict resolution so that a device that only edits
-   * one field while offline does not overwrite unrelated fields from another
-   * device. Set by `mergeGoalsOfCare()` — not written by the UI.
-   */
-  fieldUpdatedAt?: Partial<Record<GoalsOfCareField, string>>;
-}
+import type { DnrStatus, GoalsOfCare, GoalsOfCareField } from "@workspace/goc-merge";
+export type { DnrStatus, GoalsOfCare, GoalsOfCareField };
 
 export interface MedicationEntry {
   id: string;
@@ -98,6 +75,8 @@ export interface RagnaPrivacySettings {
   includeRecentJournal: boolean;
   includeConversationMemory: boolean;
   includeTimeContext: boolean;
+  /** When enabled, Ragna receives a summary of the caregiver's recent mood check-ins. */
+  includeCaregiverWellness: boolean;
 }
 
 export interface User {
@@ -342,6 +321,30 @@ export interface Reminder {
   recurrence: ReminderRecurrence;
   enabled: boolean;
   notificationId?: string;
+  /** ISO timestamp of last local modification — used as LWW version key for sync. */
+  updatedAt?: string;
+}
+
+// ─── Caregiver Wellness ───────────────────────────────────────────────────────
+
+/** Five mood states for the caregiver daily wellness check-in. */
+export type CaregiverMood =
+  | "doing_okay"
+  | "holding_up"
+  | "tired"
+  | "sad"
+  | "overwhelmed";
+
+/** One caregiver wellness check-in entry. One per day, stored locally. */
+export interface CaregiverWellnessEntry {
+  id: string;
+  /** YYYY-MM-DD local date of the check-in. */
+  date: string;
+  /** Unix epoch milliseconds — used for ordering and fallback LWW. */
+  timestamp: number;
+  mood: CaregiverMood;
+  /** Optional one-line free-text note from the caregiver. */
+  note?: string;
   /** ISO timestamp of last local modification — used as LWW version key for sync. */
   updatedAt?: string;
 }

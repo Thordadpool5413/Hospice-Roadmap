@@ -47,6 +47,7 @@ import React, {
 import { AppState, AppStateStatus } from "react-native";
 
 import { useApp } from "@/context/AppContext";
+import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useJournal } from "@/context/JournalContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
@@ -63,9 +64,11 @@ import {
   mergeJournalEntries,
   mergeReminderEntries,
   mergeSymptomEntries,
+  mergeWellnessEntries,
   readSyncLastSuccess,
   recordSyncSuccess,
   runOnceLocalMigration,
+  uploadCaregiverWellness,
   uploadGoals,
   uploadJournal,
   uploadLivingProfile,
@@ -126,6 +129,12 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     isLoading: veraLoading,
     updateLivingProfile,
   } = useVeraMemory();
+  const {
+    entries: wellnessEntries,
+    isLoading: wellnessLoading,
+    hydrateFromServer: hydrateWellness,
+    markSynced: markWellnessSynced,
+  } = useCaregiverWellness();
 
   const initialized = useRef(false);
   const isSyncingRef = useRef(false);
@@ -138,10 +147,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   // "Qualifying" = app is active + previous sync was > SYNC_TOAST_THRESHOLD_MS ago.
   const [syncSucceededAt, setSyncSucceededAt] = useState<Date | null>(null);
 
-  // All five local stores must have finished loading from AsyncStorage before
+  // All six local stores must have finished loading from AsyncStorage before
   // we attempt any sync or hydration. This prevents pushing stale empty-state
   // or missing a restore because any context was still null at sync time.
-  const contextsReady = !appLoading && !sympLoading && !jrnLoading && !remLoading && !veraLoading;
+  const contextsReady = !appLoading && !sympLoading && !jrnLoading && !remLoading && !veraLoading && !wellnessLoading;
 
   const runSync = useCallback(async () => {
     if (!isSignedIn || isSyncingRef.current) return;
@@ -263,6 +272,14 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const mergedReminders = mergeReminderEntries(reminders, filteredServerReminders);
       await hydrateReminders(mergedReminders as Parameters<typeof hydrateReminders>[0]);
 
+      // ── Caregiver wellness (per-record merge) ─────────────────────────────
+      // Union of local and server wellness entries, resolving conflicts by
+      // `updatedAt` (server wins on tie). The server returns an empty array
+      // when the user has no records, so merging is always safe.
+      const serverWellness = serverData.caregiverWellness ?? [];
+      const mergedWellness = mergeWellnessEntries(wellnessEntries, serverWellness);
+      await hydrateWellness(mergedWellness);
+
       // Step 3: push current local state to server with stored LWW timestamps.
       //
       // For symptoms and journal we push the *merged* arrays captured above
@@ -301,6 +318,8 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
       if (mergedReminders.length > 0) pushOps.push(uploadReminders(mergedReminders));
 
+      if (mergedWellness.length > 0) pushOps.push(uploadCaregiverWellness(mergedWellness));
+
       const pushResults = await Promise.allSettled(pushOps);
 
       // Record the timestamp only when every attempted upload actually succeeded.
@@ -316,6 +335,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         // decide whether the toast threshold has elapsed.
         const prevSuccessRaw = await readSyncLastSuccess();
         await recordSyncSuccess();
+        // Dismiss the wellness pending-sync badge now that all entries have
+        // been confirmed uploaded to the server.
+        markWellnessSynced();
         // A successful full sync pushed the current state of every store, so
         // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
@@ -344,14 +366,17 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     symptoms,
     journal,
     reminders,
+    wellnessEntries,
     user,
     livingProfile,
     livingProfileUpdatedAt,
     hydrateSymptoms,
     hydrateJournal,
     hydrateReminders,
+    hydrateWellness,
     updatePatientProfile,
     updateLivingProfile,
+    markWellnessSynced,
   ]);
 
   // Initial sync — runs once per sign-in, but only after ALL contexts have

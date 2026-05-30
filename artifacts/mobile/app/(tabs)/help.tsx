@@ -24,6 +24,7 @@ import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
+import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
@@ -308,6 +309,7 @@ export default function HelpScreen() {
     recordTile,
   } = useVeraMemory();
   const { getObservationContext } = useRagnaLearning();
+  const { getWellnessSummary } = useCaregiverWellness();
   const { isOnline } = useAppNetwork();
   const { initialMessage } = useLocalSearchParams<{
     initialMessage?: string;
@@ -510,6 +512,20 @@ export default function HelpScreen() {
     }, delay);
   }, []);
 
+  /**
+   * Assembles the full patient context string sent to Ragna on every message.
+   *
+   * GoalsOfCare injection path (confirmed):
+   *   buildPatientContext() (AppContext) → includes the "--- Goals of Care ---" block
+   *   when privacy.includeGoalsOfCare is true and the user has saved GoC data.
+   *   This context is appended to the system prompt server-side in
+   *   artifacts/api-server/src/routes/anthropic/index.ts.
+   *
+   * Deep-link conversations (e.g. "Ask Ragna" from Goals of Care screen):
+   *   The initialMessage param carries a short field excerpt for conversational
+   *   framing, but Ragna already receives the FULL saved GoalsOfCare via this
+   *   function — no extra wiring is needed for those entry points.
+   */
   const buildRagnaPatientContext = useCallback(() => {
     if (!ragnaPrivacy.personalizationEnabled) return "";
 
@@ -552,12 +568,20 @@ export default function HelpScreen() {
         })()
       : "";
 
+    const isCaregiver =
+      user?.role === "caregiver" || user?.role === "other";
+    const wellnessSummary =
+      isCaregiver && ragnaPrivacy.includeCaregiverWellness
+        ? getWellnessSummary(7)
+        : "";
+
     return [
       baseContext,
       symptomSummary
         ? `--- Recent Symptom Tracking ---\n${symptomSummary}`
         : "",
       journalContext,
+      wellnessSummary,
       getObservationContext(),
       memorySummary,
       timeContext,
@@ -569,12 +593,15 @@ export default function HelpScreen() {
     getMemorySummary,
     getObservationContext,
     getRecentSummary,
+    getWellnessSummary,
     journalEntries,
+    ragnaPrivacy.includeCaregiverWellness,
     ragnaPrivacy.includeConversationMemory,
     ragnaPrivacy.includeRecentJournal,
     ragnaPrivacy.includeRecentSymptoms,
     ragnaPrivacy.includeTimeContext,
     ragnaPrivacy.personalizationEnabled,
+    user?.role,
   ]);
 
   const loadConversation = useCallback(

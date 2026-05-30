@@ -8,6 +8,8 @@ import {
   goalsOfCare,
   livingProfiles,
   syncReminders,
+  caregiverWellness,
+  gocContentSchema,
 } from "@workspace/db/schema";
 
 const router = Router();
@@ -22,12 +24,13 @@ router.get("/", async (req, res) => {
   }
 
   try {
-    const [symptoms, journal, goals, profile, reminders] = await Promise.all([
+    const [symptoms, journal, goals, profile, reminders, wellness] = await Promise.all([
       db.select().from(symptomEntries).where(eq(symptomEntries.userId, userId)),
       db.select().from(journalEntries).where(eq(journalEntries.userId, userId)),
       db.select().from(goalsOfCare).where(eq(goalsOfCare.userId, userId)),
       db.select().from(livingProfiles).where(eq(livingProfiles.userId, userId)),
       db.select().from(syncReminders).where(eq(syncReminders.userId, userId)),
+      db.select().from(caregiverWellness).where(eq(caregiverWellness.userId, userId)),
     ]);
 
     res.json({
@@ -36,6 +39,7 @@ router.get("/", async (req, res) => {
       goals: goals[0] ?? null,
       livingProfile: profile[0] ?? null,
       reminders,
+      caregiverWellness: wellness,
     });
   } catch (err) {
     req.log.error({ err }, "sync GET failed");
@@ -224,6 +228,9 @@ router.delete("/journal", async (req, res) => {
 // ─── PUT /api/sync/goals — upsert goals of care (one row per user, LWW) ──────
 //
 // Client sends `clientUpdatedAt` from goalsOfCare.updatedAt if available.
+// Content is validated through gocContentSchema so all eight editable fields
+// (including fearsAndConcerns, finalDaysWishes, afterDeathWishes) are
+// accepted and unknown keys are stripped before storage.
 
 router.put("/goals", async (req, res) => {
   const { userId } = getAuth(req);
@@ -232,9 +239,15 @@ router.put("/goals", async (req, res) => {
     return;
   }
 
-  const body = req.body as { content?: Record<string, unknown>; clientUpdatedAt?: unknown };
-  if (!body.content || typeof body.content !== "object") {
+  const body = req.body as { content?: unknown; clientUpdatedAt?: unknown };
+  if (!body.content || typeof body.content !== "object" || Array.isArray(body.content)) {
     res.status(400).json({ error: "content object required" });
+    return;
+  }
+
+  const parsed = gocContentSchema.safeParse(body.content);
+  if (!parsed.success) {
+    res.status(400).json({ error: "invalid content", issues: parsed.error.issues });
     return;
   }
 
@@ -243,7 +256,7 @@ router.put("/goals", async (req, res) => {
 
     await db
       .insert(goalsOfCare)
-      .values({ userId, content: body.content, updatedAt: clientUpdatedAt })
+      .values({ userId, content: parsed.data, updatedAt: clientUpdatedAt })
       .onConflictDoUpdate({
         target: goalsOfCare.userId,
         set: {
@@ -409,6 +422,79 @@ router.delete("/reminders", async (req, res) => {
   }
 });
 
+// ─── PUT /api/sync/caregiver-wellness — upsert wellness entries (LWW per record)
+//
+// Client sends `clientUpdatedAt` derived from entry.updatedAt or entry.timestamp.
+
+router.put("/caregiver-wellness", async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const body = req.body as { entries?: unknown[] };
+  if (!Array.isArray(body.entries)) {
+    res.status(400).json({ error: "entries array required" });
+    return;
+  }
+
+  try {
+    const rows = body.entries
+      .filter((e): e is Record<string, unknown> => typeof e === "object" && e !== null)
+      .map((e) => ({
+        id: String(e["id"] ?? ""),
+        userId,
+        date: String(e["date"] ?? ""),
+        timestamp: Number(e["timestamp"] ?? 0),
+        mood: String(e["mood"] ?? ""),
+        note: typeof e["note"] === "string" ? e["note"] : null,
+        updatedAt: parseClientTs(e["clientUpdatedAt"]),
+      }))
+      .filter((r) => r.id && r.date && r.mood);
+
+    if (rows.length > 0) {
+      await db
+        .insert(caregiverWellness)
+        .values(rows)
+        .onConflictDoUpdate({
+          target: [caregiverWellness.userId, caregiverWellness.id],
+          set: {
+            date: sql`excluded.date`,
+            timestamp: sql`excluded.timestamp`,
+            mood: sql`excluded.mood`,
+            note: sql`excluded.note`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+          setWhere: sql`excluded.updated_at >= ${caregiverWellness.updatedAt}`,
+        });
+    }
+
+    res.json({ upserted: rows.length });
+  } catch (err) {
+    req.log.error({ err }, "sync PUT caregiver-wellness failed");
+    res.status(500).json({ error: "Failed to sync caregiver wellness" });
+  }
+});
+
+// ─── DELETE /api/sync/caregiver-wellness ──────────────────────────────────────
+
+router.delete("/caregiver-wellness", async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    await db.delete(caregiverWellness).where(eq(caregiverWellness.userId, userId));
+    res.json({ deleted: true });
+  } catch (err) {
+    req.log.error({ err }, "sync DELETE caregiver-wellness failed");
+    res.status(500).json({ error: "Failed to delete caregiver wellness" });
+  }
+});
+
 // ─── DELETE /api/sync/all — wipe all sync data for user ──────────────────────
 
 router.delete("/all", async (req, res) => {
@@ -425,6 +511,7 @@ router.delete("/all", async (req, res) => {
       db.delete(goalsOfCare).where(eq(goalsOfCare.userId, userId)),
       db.delete(livingProfiles).where(eq(livingProfiles.userId, userId)),
       db.delete(syncReminders).where(eq(syncReminders.userId, userId)),
+      db.delete(caregiverWellness).where(eq(caregiverWellness.userId, userId)),
     ]);
 
     res.json({ deleted: true });

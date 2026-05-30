@@ -149,6 +149,16 @@ export default function MoreScreen() {
       ],
     },
     {
+      title: "Benefits & Rights",
+      subtitle: "Financial guidance and patient rights",
+      accent: Colors.accentJourney,
+      icon: "file-text",
+      items: [
+        { label: "Hospice & Medicare: What's Covered", icon: "file-text", route: "/benefits-guide", color: Colors.accentJourney },
+        { label: "Crisis Care Guide", icon: "alert-circle", route: "/crisis-care-guide", color: Colors.error },
+      ],
+    },
+    {
       title: "Help & Support",
       subtitle: "App settings and information",
       accent: Colors.textMuted,

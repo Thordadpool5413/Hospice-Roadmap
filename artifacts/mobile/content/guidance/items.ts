@@ -2152,6 +2152,65 @@ const hospiceServices: GuidanceScenario[] = [
       "The hospice social worker can review which documents are in place, explain what each means, and help arrange for any missing documents to be completed. The hospice physician can sign a POLST. These conversations are best done early and calmly, before a crisis.",
   },
   {
+    id: "crisis-care-gip",
+    categoryId: "hospice-services",
+    title: "When to Ask for Hospital-Level Hospice Care",
+    subtitle: "Intensive nursing at home or an inpatient facility — options most families never hear about",
+    urgencyLevel: "immediate",
+    icon: "alert-triangle",
+    callHospiceNow: true,
+    tags: [
+      "crisis", "hospital", "inpatient", "uncontrolled pain", "can't manage at home",
+      "crisis care", "hospital level", "intensive nursing", "continuous care", "severe symptoms",
+      "GIP", "CHC", "general inpatient", "continuous home care", "respiratory distress",
+      "agitation crisis", "refractory nausea", "symptoms out of control",
+    ],
+    whatYouMayNotice: [
+      "Pain that does not respond to the comfort kit medications you have at home",
+      "Severe difficulty breathing — gasping, fast breathing, air hunger that won't calm down",
+      "Extreme agitation or restlessness that does not respond to comfort measures",
+      "Nausea or vomiting so severe that medications cannot be kept down",
+      "You feel you cannot safely manage what is happening alone at home",
+    ],
+    whatItMeans:
+      "Medicare's hospice benefit includes two higher levels of care that go beyond the standard nursing visits most families receive. The first is intensive nursing at home (sometimes called Continuous Home Care or Crisis Care): a nurse comes to your home and stays for most of a 24-hour period until the crisis is controlled. The second is hospital-level care at a facility (called General Inpatient or GIP): your loved one moves temporarily to an inpatient hospice unit or hospital for intensive symptom management, then returns home when stable. Both are fully covered under Medicare when criteria are met — but families almost never learn these options exist until they are already in crisis. The goal is to control symptoms and avoid a 911 call, which breaks the hospice plan and often leads to unnecessary hospital admission.",
+    whatToDoNow: [
+      {
+        text: "Call your hospice nurse right now and use these words: 'I need to request continuous care or crisis-level care. Symptoms are not controlled and I cannot manage this safely at home.'",
+        tip: "Being specific about the words 'continuous care' or 'crisis care' or 'general inpatient' helps the nurse understand you know your rights. They must assess whether criteria are met.",
+      },
+      {
+        text: "Describe what you are seeing clearly: which symptoms are uncontrolled, for how long, and what you have already tried. If comfort kit medications are not working, say so explicitly.",
+      },
+      {
+        text: "If intensive home nursing is arranged (Continuous Home Care), a nurse will come to your home and stay for hours at a time — typically 8 or more hours per day. They will administer and adjust medications directly. You do not need to manage alone.",
+      },
+      {
+        text: "If an inpatient stay is arranged (General Inpatient), your loved one will be transported to an inpatient hospice unit or designated hospital unit with around-the-clock nursing. Once symptoms are controlled — usually within 1–3 days — they return home.",
+        tip: "GIP is not giving up on home care. It is a temporary move to control symptoms, followed by return home when stabilized.",
+      },
+      {
+        text: "While waiting for the nurse's response: use any comfort kit medications as directed, keep the environment as calm as possible, and do not leave your loved one alone if they are in distress.",
+        caution: "Do not call 911 unless the hospice nurse instructs you to. A 911 call bypasses the hospice plan and typically results in hospital admission and loss of hospice comfort care.",
+      },
+    ],
+    whatToAvoid: [
+      "Do not assume that phone guidance is the only level of support hospice can offer during a crisis",
+      "Do not wait until you have completely exhausted yourself before asking for crisis-level support",
+      "Do not call 911 as a first response — call hospice first and let them guide you",
+      "Do not accept 'just watch and wait' if symptoms are severe and uncontrolled — you have the right to request an assessment for crisis care",
+    ],
+    whenToCallHospice: [
+      "Pain is above 7/10 and not responding to comfort kit medications",
+      "Breathing is severely distressed and comfort measures at home are not helping",
+      "Agitation or restlessness is extreme and the person cannot be settled",
+      "Nausea is severe enough that medications cannot be kept down",
+      "You feel unsafe or unable to provide the level of care needed at home",
+    ],
+    whatHappensNext:
+      "The hospice nurse will assess whether criteria for crisis-level care are met. If they qualify: Continuous Home Care can begin within hours, with a nurse coming to your home. General Inpatient care requires a transfer and is arranged the same day when medically necessary. If the hospice says criteria are not met, ask them to explain why in writing and ask what would need to change for that to be reassessed. If you feel the denial is wrong, you have the right to contact your Medicare Quality Improvement Organization (QIO) for a fast appeal — hospice must inform you of this right.",
+  },
+  {
     id: "volunteer-services",
     categoryId: "hospice-services",
     title: "Hospice Volunteer Support",

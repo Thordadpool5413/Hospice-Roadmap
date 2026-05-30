@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFamilyContacts } from "@/components/FamilyContactsManager";
 
+import { CaregiverWellnessCard } from "@/components/CaregiverWellnessCard";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { ProfileSetupWizard } from "@/components/ProfileSetupWizard";
 import { Colors } from "@/constants/colors";
@@ -811,6 +812,11 @@ export default function HomeScreen() {
 
         {/* ── Today at a glance ── */}
         <TodayStatusRow chips={statusChips} onPress={tap} />
+
+        {/* ── Caregiver daily wellness check-in ── */}
+        {(role === "caregiver" || role === "other") && (
+          <CaregiverWellnessCard />
+        )}
 
         {/* ── Profile setup nudge ── */}
         {showSetupCard && (

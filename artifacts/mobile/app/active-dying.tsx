@@ -278,6 +278,29 @@ export default function ActiveDyingScreen() {
           </Text>
         </View>
 
+        {/* Crisis Care Guide */}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push("/crisis-care-guide" as any);
+          }}
+          style={({ pressed }) => [
+            styles.crisisGuideBtn,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={styles.crisisGuideBtnIcon}>
+            <Feather name="alert-triangle" size={18} color="#E85040" />
+          </View>
+          <View style={styles.crisisGuideBtnText}>
+            <Text style={styles.crisisGuideBtnTitle}>Need crisis-level care?</Text>
+            <Text style={styles.crisisGuideBtnSub}>
+              Check if you qualify for intensive nursing or inpatient hospice
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={16} color={"#E8504099"} />
+        </Pressable>
+
         {/* Ask Ragna */}
         <Pressable
           onPress={() => {
@@ -500,6 +523,33 @@ const styles = StyleSheet.create({
     color: "#7A90B8", lineHeight: 20,
   },
 
+  crisisGuideBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "rgba(232,80,64,0.10)",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(232,80,64,0.30)",
+  },
+  crisisGuideBtnIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(232,80,64,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crisisGuideBtnText: { flex: 1 },
+  crisisGuideBtnTitle: {
+    fontSize: 15, fontFamily: "Inter_700Bold",
+    color: "#EEF4FF", letterSpacing: -0.2,
+  },
+  crisisGuideBtnSub: {
+    fontSize: 12, fontFamily: "Inter_400Regular",
+    color: "#5A78A8", marginTop: 2,
+  },
   ragnaBtn: {
     flexDirection: "row",
     alignItems: "center",

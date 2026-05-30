@@ -664,6 +664,116 @@ export const HOSPICE_KNOWLEDGE_CATALOG: HospiceKnowledgeBlock[] = [
     sources: ["NHPCO Quality Standards", "Joint Commission Hospice Standards"],
   },
 
+  // ─── CRISIS CARE LEVELS ───────────────────────────────────────────────────────
+
+  {
+    id: "CL001",
+    domain: "care_gap",
+    title: "Crisis Care Levels — When to Request Continuous Home Care or General Inpatient",
+    tags: [
+      "GIP", "general inpatient", "CHC", "continuous home care", "crisis care", "hospital level",
+      "intensive nursing", "inpatient hospice", "symptoms not controlled", "can't manage at home",
+      "crisis level", "continuous care", "nursing stays", "nurse in home", "request crisis",
+    ],
+    urgency: "urgent",
+    journeyStages: ["stable", "weeks_to_days", "days", "hours"],
+    summary: "Medicare hospice includes two elevated care levels — intensive nursing at home (Continuous Home Care) and a temporary inpatient facility stay (General Inpatient) — that most families never learn exist until they're already in crisis.",
+    explanation: "Medicare's hospice benefit covers four levels of care. The two elevated levels are: (1) Continuous Home Care (CHC) — a registered or licensed nurse is present in the home for 8+ hours per day, typically during an acute crisis where symptoms cannot be managed remotely. This is covered at 100% when criteria are met and allows medication titration in real time without a 911 call. (2) General Inpatient Care (GIP) — the patient is transferred temporarily to an inpatient hospice unit, hospital, or skilled nursing facility with 24-hour nursing care. GIP is used when symptoms cannot be controlled in the home environment even with continuous home nursing. Once symptoms stabilize, the patient returns home under routine or continuous care. Both levels require that symptoms be uncontrolled and unmanageable at the current level — the hospice IDG must make this determination, but a family's explicit, documented request triggers the assessment obligation.",
+    whatMayBeHappening: "Symptoms may have crossed the threshold where phone guidance and intermittent nursing visits are not enough. Qualifying crises include: pain ≥ 8/10 unresponsive to comfort kit, acute respiratory distress not controlled with opioid/repositioning/fan, severe terminal agitation requiring IV or subcutaneous medications, or refractory nausea preventing oral medication administration.",
+    whatToDoNow: "Tell the caregiver: 'Call hospice now and use the exact phrase: I need to request continuous care or crisis-level care. Describe what is happening: which symptoms, how long, what you have tried, and why you cannot manage safely at home. The hospice must assess for these levels when you request them — they cannot simply decline without documentation.' If comfortable with the request language, coach them to say: 'I am requesting a formal assessment for Continuous Home Care or General Inpatient care under the Medicare hospice benefit.'",
+    whatToSay: "The exact ask: 'I need to request continuous care — can you initiate that assessment right now?' For GIP specifically: 'I believe we need General Inpatient care. Symptoms are not controllable at home. What is the process to arrange that today?' These words matter — using benefit names signals the caregiver knows their rights and triggers a formal response.",
+    whatToWatchFor: "Signs that crisis-level care may be needed: pain, breathlessness, agitation, or nausea that is severe and not improving with comfort kit; caregiver stating they 'cannot manage' or feel 'unsafe'; symptoms described as 'out of control'; any expression of considering calling 911 due to severity.",
+    whatNotToAssume: "Do not assume the hospice will proactively offer these levels — most families must request them. Do not assume 'inpatient' means giving up home-centered care — GIP is temporary and the patient returns home. Do not advise calling 911 as a first step — 911 typically breaks the hospice plan and causes involuntary hospitalization.",
+    whenToEscalate: "If the hospice declines to assess for crisis-level care: advise the caregiver to ask for the denial in writing, ask what criteria were not met, and contact their Medicare Quality Improvement Organization (QIO) for a fast appeal. Hospice is required to inform patients of QIO appeal rights. If symptoms are immediately life-threatening and hospice is unresponsive, 911 may be appropriate as a last resort.",
+    hardStops: [
+      "If symptoms are acutely life-threatening and hospice cannot respond within 30 minutes — call 911",
+      "If DNR is NOT in place and family wants resuscitative care — call 911 immediately",
+    ],
+    relatedIds: ["HF003", "CG002", "CGAP003", "SM001", "SM002", "SM003"],
+    sources: [
+      "42 CFR § 418.108 (Continuous Home Care)", "42 CFR § 418.110 (General Inpatient Care)",
+      "CMS Medicare Benefit Policy Manual Ch. 9", "NHPCO Standards of Practice (Crisis Care)",
+    ],
+  },
+
+  // ─── ADVOCACY — CAREGIVER RIGHTS & SYSTEM NAVIGATION ────────────────────────
+
+  {
+    id: "AV001",
+    domain: "documentation_advocacy",
+    title: "Caregiver Rights and Visit Entitlements Under 42 CFR Part 418",
+    tags: [
+      "not enough visits", "visit entitlement", "aide won't come", "only comes once a week",
+      "want more visits", "entitled to", "rights", "how many visits", "not getting enough help",
+      "nurse only once", "aide not coming", "social worker never visits", "chaplain never called",
+      "what are we owed", "medicare hospice rights", "42 CFR", "part 418",
+    ],
+    urgency: "moderate",
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days"],
+    summary: "Under 42 CFR Part 418, every hospice family has defined entitlements — nursing visits, aide services, social work, and chaplaincy — and has the right to advocate for the frequency of care written into their plan.",
+    explanation: "The Medicare Hospice Benefit (42 CFR Part 418) requires hospices to provide an individualized plan of care (POC) that specifies visit frequencies for each discipline. Required core services include: skilled nursing visits (frequency determined by need and documented in the POC), home health aide visits (personal care — bathing, hygiene, positioning), social worker visits (minimum of one per election period, but should be ongoing), chaplain/spiritual care (as requested), and bereavement support. There is no regulatory floor for weekly nursing visits — frequency is driven by clinical need and must be documented and justified. If you believe visits are insufficient for the level of need, this is an advocacy issue: you can request a care conference, ask to see the plan of care, and formally request increased visit frequency. The hospice must document why a request was not met.",
+    whatMayBeHappening: "The family may be receiving the minimum care level while the patient's condition warrants more. Some hospices under-schedule visits by default and only increase them when families actively push back.",
+    whatToDoNow: "Request a written copy of the current plan of care. Identify which disciplines are scheduled and at what frequency. Compare that to the patient's actual daily needs. Then formally request a care conference to review visit frequency.",
+    whatToSay: "Say: 'I'd like to see the current plan of care so I understand what services are scheduled. I'd also like a care conference to discuss whether the current visit schedule matches [patient name]'s needs. We feel we need more frequent nursing visits.'",
+    whatToWatchFor: "Plans of care that have not been updated in weeks despite clinical changes. Aide visits that are repeatedly canceled without rescheduling. Social worker contact limited to one intake call. Families told 'that's all that's covered' without reviewing the plan of care.",
+    whatNotToAssume: "Do not assume the current visit frequency is the maximum allowed. Frequency should match clinical need. Do not assume a single call requesting more visits is enough — put it in writing and request confirmation.",
+    whenToEscalate: "If a care conference does not result in increased services that match documented need, contact the hospice administrator in writing. If unresolved, contact your state hospice licensure office and reference 42 CFR § 418.56 (Plan of Care requirements).",
+    hardStops: [],
+    relatedIds: ["HF003", "DA001", "CGAP002"],
+    sources: ["42 CFR § 418.56 (Plan of Care)", "42 CFR § 418.64 (Core Services)", "CMS Medicare Benefit Policy Manual Ch. 9"],
+  },
+
+  {
+    id: "AV002",
+    domain: "care_gap",
+    title: "Hospice Revocation and Re-Enrollment — Your Right to Leave and Return",
+    tags: [
+      "want to revoke", "leave hospice", "stop hospice", "revoke hospice", "thinking about leaving hospice",
+      "can I leave hospice", "switch hospice", "change hospice", "discharge from hospice",
+      "thinking about stopping hospice", "leave and come back", "re-enroll hospice",
+      "revocation", "live discharge", "hospice isn't working", "want to try treatment again",
+    ],
+    urgency: "moderate",
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days"],
+    summary: "A patient can voluntarily revoke hospice at any time — and can re-enroll later. Revocation is a right, not a failure, and does not permanently close the door to hospice care.",
+    explanation: "Under 42 CFR § 418.28, a Medicare hospice beneficiary may revoke their hospice election at any time. Revocation is voluntary and must be in writing. Key facts: (1) Once revoked, Medicare Part A and B coverage for the terminal diagnosis immediately resumes — the patient can seek curative or aggressive treatment again. (2) If a patient chooses to return to hospice, they can re-enroll with the same or a different hospice provider — there is no penalty and no waiting period after a voluntary revocation. (3) A 'live discharge' is different from revocation — it occurs when the hospice determines the patient no longer meets eligibility criteria, not a patient choice. (4) Patients can transfer between hospice providers at any time for any reason without revoking. Transfer is handled administratively and does not interrupt the benefit. Revocation is appropriate when: the family wants to pursue curative treatment, the patient has unexpectedly stabilized and the family feels hospice isn't the right fit yet, or there is a serious care failure that cannot be resolved.",
+    whatMayBeHappening: "The family may be dissatisfied with the current hospice, be reconsidering their goals of care, or have seen the patient stabilize beyond initial expectations. They may not know that leaving doesn't mean they can never come back.",
+    whatToDoNow: "Before revoking, encourage the family to: (1) Request a care conference to address any resolvable concerns — sometimes transfer to a different hospice is a better option than full revocation. (2) Understand what Medicare coverage will look like after revocation — the terminal diagnosis will likely be covered under Part A/B but with deductibles and cost-sharing. (3) If transfer (not revocation) is the right path, the current hospice must cooperate with a transfer request within one benefit period.",
+    whatToSay: "To the hospice: 'We are considering revoking the hospice election. We would like to understand the process, including what happens to coverage and our right to re-enroll in the future.' To the family: 'You have the right to revoke at any time and return to hospice later if things change. You can also transfer to a different hospice without fully revoking. Let's look at both options.'",
+    whatToWatchFor: "Hospice staff who discourage revocation without addressing the underlying concern. Pressure to stay enrolled without resolving the problem. Misrepresentation of re-enrollment rights.",
+    whatNotToAssume: "Do not assume revocation is permanent. Do not assume the hospice will cooperate smoothly — get the process in writing. Do not assume revoking means the patient has 'given up' — it can mean pursuing other treatment goals.",
+    whenToEscalate: "If the hospice obstructs a transfer request or provides false information about re-enrollment rights, contact your Medicare Quality Improvement Organization (QIO) or 1-800-MEDICARE.",
+    hardStops: [],
+    relatedIds: ["HF001", "HF003", "AV001", "DA001"],
+    sources: ["42 CFR § 418.28 (Revocation of Election)", "42 CFR § 418.30 (Transfer Between Hospices)", "CMS Medicare Benefit Policy Manual Ch. 9"],
+  },
+
+  {
+    id: "AV003",
+    domain: "documentation_advocacy",
+    title: "Building a Written Record of Unmet Care Needs",
+    tags: [
+      "document unmet needs", "written record", "promised and not delivered", "advocate in writing",
+      "care not provided", "what was promised", "not getting what was promised",
+      "family fighting hospice", "family fighting", "conflict with hospice team",
+      "hospice not following through", "how to build a case", "advocacy record",
+      "needs aren't being met", "care plan not followed", "keep a record",
+    ],
+    urgency: "moderate",
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days", "days"],
+    summary: "A written record of unmet care needs is a family's most effective advocacy tool — it creates accountability, clarifies what was promised, and builds the case for escalation if care does not improve.",
+    explanation: "An unmet needs log should include: (1) Date and time. (2) The specific need or request (e.g., 'requested aide visit for bathing — was not scheduled'). (3) What was promised and by whom (name and title of staff member). (4) What actually happened. (5) Your response and any follow-up calls. This log serves multiple purposes: it demonstrates a pattern rather than a single incident, it makes care conferences more productive, and it is the evidence base for any formal complaint. Electronic records (texts, emails) are especially powerful — follow up verbal conversations with a text or email summary so there is a timestamped written trail.",
+    whatMayBeHappening: "The family is experiencing a gap between what was promised in the plan of care and what is actually being delivered. They may feel frustrated, dismissed, or unsure how to communicate the problem effectively.",
+    whatToDoNow: "Start the log today. Write down what has happened so far from memory with approximate dates. Going forward, document each interaction in real time. After every call with hospice staff, send a brief follow-up text or email: 'Just to confirm our call today — you said [X] would happen by [Y]. Let me know if I've misunderstood.' This creates a timestamped confirmation without being confrontational.",
+    whatToSay: "In a care conference: 'I've been keeping a log of our interactions since [date]. I'd like to walk through a few items where what we were told didn't match what happened, and understand how we're going to address them going forward.' When speaking to the administrator: 'I have documentation of [specific number] dates where scheduled or promised care was not provided. I'd like to resolve this now, but I also want to formally note this in our file.'",
+    whatToWatchFor: "Staff who give verbal assurances without follow-through. Canceled visits that are never rescheduled. Phone calls where you are told 'someone will call you back' but no one does. Repeated apologies for the same problem without a change in behavior.",
+    whatNotToAssume: "Do not assume that because care has been poor, it cannot improve — a well-documented care conference often produces real change. Do not assume you need a lawyer — most unmet care needs are resolved through the hospice's internal escalation process when properly documented.",
+    whenToEscalate: "If the log shows a persistent pattern and a care conference with the administrator does not produce change, submit the log as part of a formal written complaint to your state hospice licensure office. Reference specific dates and staff names.",
+    hardStops: [],
+    relatedIds: ["DA001", "AV001", "CGAP002", "CGAP003"],
+    sources: ["NHPCO Standards of Practice", "CMS Hospice Survey Guidance Manual", "State Health Department Complaint Processes"],
+  },
+
   // ─── DOCUMENTATION AND ADVOCACY ──────────────────────────────────────────────
 
   {

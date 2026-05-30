@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -34,8 +34,15 @@ const urgencyLabels: Record<string, string> = {
 
 export default function SituationFinderScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (params.category) {
+      setSelectedCategory(params.category);
+    }
+  }, [params.category]);
 
   const searchResults = query.trim().length > 1 ? searchScenarios(query) : [];
   const isSearching = query.trim().length > 1;

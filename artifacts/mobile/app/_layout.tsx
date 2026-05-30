@@ -28,6 +28,7 @@ import { JournalProvider } from "@/context/JournalContext";
 import { RagnaLearningProvider, useRagnaLearning } from "@/context/RagnaLearningContext";
 import { RemindersProvider } from "@/context/RemindersContext";
 import { SymptomProvider } from "@/context/SymptomContext";
+import { CaregiverWellnessProvider } from "@/context/CaregiverWellnessContext";
 import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
@@ -281,38 +282,53 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  // Handle escalation notification taps — navigate to Ragna with a pre-loaded message.
+  // Handle notification taps — routes to the correct screen based on notification type.
   // Handles both: (a) foreground/background taps via the listener, and (b) cold-start
   // (app launched from terminated state) via getLastNotificationResponseAsync.
   useEffect(() => {
     if (!Notifications) return;
 
-    function routeEscalationNotification(data: Record<string, unknown> | undefined) {
-      if (!data || data.type !== "escalation") return;
-      const initialMessage = typeof data.initialMessage === "string" ? data.initialMessage : undefined;
-      if (!initialMessage) return;
-      setTimeout(() => {
-        try {
-          router.push({ pathname: "/(tabs)/help", params: { initialMessage } } as any);
-        } catch {
-          // Navigation not yet ready — skip
-        }
-      }, 300);
+    function routeNotification(data: Record<string, unknown> | undefined) {
+      if (!data) return;
+
+      if (data.type === "escalation") {
+        const initialMessage = typeof data.initialMessage === "string" ? data.initialMessage : undefined;
+        if (!initialMessage) return;
+        setTimeout(() => {
+          try {
+            router.push({ pathname: "/(tabs)/help", params: { initialMessage } } as any);
+          } catch {
+            // Navigation not yet ready — skip
+          }
+        }, 300);
+        return;
+      }
+
+      if (data.type === "wellness_reminder") {
+        setTimeout(() => {
+          try {
+            router.push("/(tabs)/" as any);
+          } catch {
+            // Navigation not yet ready — skip
+          }
+        }, 300);
+        return;
+      }
     }
 
-    // Cold-start: check if the app was opened by tapping an escalation notification
+    // Cold-start: check if the app was opened by tapping a notification
     Notifications!.getLastNotificationResponseAsync()
       .then((lastResponse) => {
         if (!lastResponse) return;
         const data = lastResponse.notification.request.content.data as Record<string, unknown> | undefined;
-        routeEscalationNotification(data);
+        routeNotification(data);
       })
       .catch(() => {});
 
     // Foreground / background tap listener
     const subscription = Notifications!.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-      routeEscalationNotification(data);
+      routeNotification(data);
     });
     return () => subscription.remove();
   }, []);
@@ -353,6 +369,7 @@ export default function RootLayout() {
               <JournalProvider>
               <RemindersProvider>
               <SymptomProvider>
+              <CaregiverWellnessProvider>
               <VeraMemoryProvider>
               <RagnaLearningProvider>
               <QueryClientProvider client={queryClient}>
@@ -374,6 +391,7 @@ export default function RootLayout() {
               </QueryClientProvider>
               </RagnaLearningProvider>
               </VeraMemoryProvider>
+              </CaregiverWellnessProvider>
               </SymptomProvider>
               </RemindersProvider>
               </JournalProvider>

@@ -166,6 +166,7 @@ export default function JourneyScreen() {
             ...(activeStage !== "before" ? [
               { label: "Understanding Your Hospice Journey", icon: "book-open", route: "/hospice-journey-context", desc: "How eligibility decisions are made" },
             ] : []),
+            { label: "Hospice & Medicare: What's Covered", icon: "file-text", route: "/benefits-guide", desc: "Plain-language financial & benefits guide" },
             { label: "Find Providers", icon: "map-pin", route: "/(tabs)/providers", desc: "Search in your area" },
             { label: "Contact Support", icon: "message-circle", route: "/support", desc: "Talk with our team" },
           ].map((item) => (

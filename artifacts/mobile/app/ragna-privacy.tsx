@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useJournal } from "@/context/JournalContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
@@ -27,10 +28,13 @@ import { RagnaPrivacySettings } from "@/types";
 
 export default function RagnaPrivacyScreen() {
   const insets = useSafeAreaInsets();
-  const { ragnaPrivacy, updateRagnaPrivacy, resetRagnaPrivacy, buildPatientContext } = useApp();
+  const { ragnaPrivacy, updateRagnaPrivacy, resetRagnaPrivacy, buildPatientContext, user } = useApp();
   const { getRecentSummary } = useSymptoms();
   const { entries: journalEntries } = useJournal();
   const { getMemorySummary, clearMemories } = useVeraMemory();
+  const { getWellnessSummary } = useCaregiverWellness();
+
+  const isCaregiverRole = user?.role === "caregiver" || user?.role === "other";
 
   const masterOn = ragnaPrivacy.personalizationEnabled;
 
@@ -112,10 +116,16 @@ export default function RagnaPrivacyScreen() {
         })()
       : "";
 
+    const wellnessContext =
+      isCaregiverRole && ragnaPrivacy.includeCaregiverWellness
+        ? getWellnessSummary(7)
+        : "";
+
     return [
       baseContext,
       symptomSummary ? `--- Recent Symptom Tracking ---\n${symptomSummary}` : "",
       journalContext,
+      wellnessContext,
       memorySummary,
       timeContext,
     ]
@@ -127,6 +137,8 @@ export default function RagnaPrivacyScreen() {
     buildPatientContext,
     getRecentSummary,
     getMemorySummary,
+    getWellnessSummary,
+    isCaregiverRole,
     journalEntries,
   ]);
 
@@ -238,6 +250,18 @@ export default function RagnaPrivacyScreen() {
             onChange={toggle("includeTimeContext")}
             disabled={!masterOn}
           />
+          {isCaregiverRole && (
+            <>
+              <View style={styles.divider} />
+              <SwitchRow
+                label="Caregiver wellness mood"
+                sublabel="Recent daily mood check-ins from your Home screen"
+                value={ragnaPrivacy.includeCaregiverWellness}
+                onChange={toggle("includeCaregiverWellness")}
+                disabled={!masterOn}
+              />
+            </>
+          )}
         </View>
       </View>
 

@@ -2,12 +2,13 @@
  * Cloud sync service — uploads local data to the server and restores it on
  * sign-in / app foreground / reconnect.
  *
- * Five data stores are synced:
- *   - symptom entries     (@hospice_roadmap_symptoms)
- *   - journal entries     (@hospice_roadmap_journal)
- *   - goals of care       (user.patientProfile.goalsOfCare in @hospice_roadmap_user)
- *   - living profile      (@vera_living_profile_v1)
- *   - reminders           (@hospice_roadmap_reminders)
+ * Six data stores are synced:
+ *   - symptom entries          (@hospice_roadmap_symptoms)
+ *   - journal entries          (@hospice_roadmap_journal)
+ *   - goals of care            (user.patientProfile.goalsOfCare in @hospice_roadmap_user)
+ *   - living profile           (@vera_living_profile_v1)
+ *   - reminders                (@hospice_roadmap_reminders)
+ *   - caregiver wellness       (@caregiver_wellness_v1)
  *
  * Per-record conflict resolution (last-write-wins):
  *   Each record now carries an `updatedAt` field stamped at create/update time
@@ -32,7 +33,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAuthToken } from "@workspace/api-client-react";
 
 import { apiBase, makeRequestTimeoutSignal, mergeJsonHeaders } from "./apiClient";
-import type { GoalsOfCare, GoalsOfCareField, JournalEntry, Reminder, SymptomEntry } from "@/types";
+import { GOC_FIELDS, mergeGoalsOfCare } from "@workspace/goc-merge";
+import type { GoalsOfCare, GoalsOfCareField } from "@workspace/goc-merge";
+import type { CaregiverWellnessEntry, JournalEntry, Reminder, SymptomEntry } from "@/types";
 
 // ─── Last-success timestamp key ───────────────────────────────────────────────
 
@@ -61,6 +64,7 @@ const MIGRATED_JOURNAL   = "@sync_migrated_journal";
 const MIGRATED_GOALS     = "@sync_migrated_goals";
 const MIGRATED_PROFILE   = "@sync_migrated_profile";
 const MIGRATED_REMINDERS = "@sync_migrated_reminders";
+const MIGRATED_WELLNESS  = "@sync_migrated_wellness";
 
 // ─── AsyncStorage source keys (must not be changed) ──────────────────────────
 
@@ -69,6 +73,7 @@ const AS_JOURNAL   = "@hospice_roadmap_journal";
 const AS_USER      = "@hospice_roadmap_user";
 const AS_PROFILE   = "@vera_living_profile_v1";
 const AS_REMINDERS = "@hospice_roadmap_reminders";
+const AS_WELLNESS  = "@caregiver_wellness_v1";
 
 // ─── Auth header helper ───────────────────────────────────────────────────────
 
@@ -165,6 +170,8 @@ export interface ServerSyncData {
    */
   livingProfile: { profile: string; updatedAt?: string } | null;
   reminders: Reminder[];
+  /** Caregiver daily wellness check-in entries. Empty array when none exist. */
+  caregiverWellness: CaregiverWellnessEntry[];
 }
 
 // ─── Per-record merge helpers ─────────────────────────────────────────────────
@@ -276,97 +283,10 @@ export function mergeReminderEntries(
 // syncs can continue to resolve at field level rather than falling back to
 // document-level comparison.
 
-const GOC_FIELDS: GoalsOfCareField[] = [
-  "whatMattersMost",
-  "goodDayLooksLike",
-  "thingsToAvoid",
-  "dnrStatus",
-  "additionalDirectives",
-];
+// GOC_FIELDS and mergeGoalsOfCare are imported from @workspace/goc-merge above.
+// That shared lib is the single source of truth — edit it there, not here.
 
-/**
- * Merge local and server GoalsOfCare at field granularity.
- *
- * For each of the five GoC fields the effective timestamp is
- * `fieldUpdatedAt[field] ?? documentUpdatedAt`. Whichever side has the newer
- * effective timestamp for a given field wins that field's value. The merged
- * result is a new GoalsOfCare with a `fieldUpdatedAt` map recording the
- * winning timestamp for each field so that future syncs remain field-precise.
- *
- * Falls back to document-level LWW when neither side has `fieldUpdatedAt`
- * (current behaviour, preserved for backward compatibility).
- *
- * Returns `null` when both sides are empty/undefined.
- */
-export function mergeGoalsOfCare(
-  local: GoalsOfCare | undefined,
-  serverContent: GoalsOfCare | undefined,
-  serverDocUpdatedAt: string | undefined,
-): GoalsOfCare | null {
-  const hasLocal = !!(
-    local?.whatMattersMost?.trim() ||
-    local?.goodDayLooksLike?.trim() ||
-    local?.thingsToAvoid?.trim() ||
-    local?.dnrStatus ||
-    local?.additionalDirectives?.trim()
-  );
-  const hasServer = !!(
-    serverContent?.whatMattersMost?.trim() ||
-    serverContent?.goodDayLooksLike?.trim() ||
-    serverContent?.thingsToAvoid?.trim() ||
-    serverContent?.dnrStatus ||
-    serverContent?.additionalDirectives?.trim()
-  );
-
-  if (!hasServer && !hasLocal) return null;
-  if (!hasServer) return local!;
-  if (!hasLocal) return serverContent!;
-
-  const localDocTs = local!.updatedAt;
-  const merged: GoalsOfCare = {};
-  const mergedFieldTs: Partial<Record<GoalsOfCareField, string>> = {};
-
-  for (const field of GOC_FIELDS) {
-    const localFieldTs = local!.fieldUpdatedAt?.[field] ?? localDocTs;
-    const serverFieldTs = serverContent!.fieldUpdatedAt?.[field] ?? serverDocUpdatedAt;
-
-    let useServer: boolean;
-    if (localFieldTs && serverFieldTs) {
-      // Both sides have a timestamp — server wins on tie (authoritative source)
-      useServer = new Date(serverFieldTs) >= new Date(localFieldTs);
-    } else if (serverFieldTs && !localFieldTs) {
-      // Server has an explicit version; local predates per-field tracking
-      useServer = true;
-    } else {
-      // Local has a timestamp but server doesn't, or neither does — keep local
-      useServer = false;
-    }
-
-    const winningValue = useServer
-      ? (serverContent as Record<string, unknown>)[field]
-      : (local as Record<string, unknown>)[field];
-    const winningTs = useServer ? serverFieldTs : localFieldTs;
-
-    if (winningValue !== undefined) {
-      (merged as Record<string, unknown>)[field] = winningValue;
-    }
-    if (winningTs) {
-      mergedFieldTs[field] = winningTs;
-    }
-  }
-
-  // Document-level updatedAt = the most recent winning field timestamp
-  const allTs = Object.values(mergedFieldTs).filter((t): t is string => !!t);
-  const docTs =
-    allTs.length > 0
-      ? allTs.reduce((a, b) => (new Date(a) > new Date(b) ? a : b))
-      : (localDocTs ?? serverDocUpdatedAt);
-
-  if (docTs) merged.updatedAt = docTs;
-  if (Object.keys(mergedFieldTs).length > 0) merged.fieldUpdatedAt = mergedFieldTs;
-
-  return merged;
-}
+export { mergeGoalsOfCare } from "@workspace/goc-merge";
 
 // ─── Full fetch from server ───────────────────────────────────────────────────
 
@@ -427,6 +347,16 @@ export async function uploadReminders(reminders: Reminder[]): Promise<boolean> {
   return syncPut("/reminders", { reminders: payload });
 }
 
+export async function uploadCaregiverWellness(
+  entries: CaregiverWellnessEntry[],
+): Promise<boolean> {
+  const payload = entries.map((e) => ({
+    ...e,
+    clientUpdatedAt: e.updatedAt ?? new Date(e.timestamp).toISOString(),
+  }));
+  return syncPut("/caregiver-wellness", { entries: payload });
+}
+
 // ─── Delete helpers (called from data-controls) ───────────────────────────────
 
 export async function deleteServerSymptoms(): Promise<boolean> {
@@ -449,8 +379,68 @@ export async function deleteServerReminders(): Promise<boolean> {
   return syncDelete("/reminders");
 }
 
+export async function deleteServerCaregiverWellness(): Promise<boolean> {
+  return syncDelete("/caregiver-wellness");
+}
+
 export async function deleteAllServerData(): Promise<boolean> {
   return syncDelete("/all");
+}
+
+// ─── Caregiver wellness merge ─────────────────────────────────────────────────
+
+/**
+ * Merge local and server caregiver wellness entries.
+ *
+ * Two-pass strategy:
+ *
+ * Pass 1 — ID-level LWW: union all entries by ID. When both sides have the
+ * same ID, the record with the newer `updatedAt` wins (server wins on tie).
+ * This handles edits to an existing check-in from two different devices.
+ *
+ * Pass 2 — Date-level deduplication: if two devices each recorded a check-in
+ * on the same calendar day they will have different IDs and both survive
+ * Pass 1. Keep only the most recent entry per date (by `updatedAt`, falling
+ * back to `timestamp`) so the Wellness screen always shows one row per day.
+ */
+export function mergeWellnessEntries(
+  local: CaregiverWellnessEntry[],
+  server: CaregiverWellnessEntry[],
+): CaregiverWellnessEntry[] {
+  // Pass 1: ID-level merge (LWW by updatedAt)
+  const byId = new Map<string, CaregiverWellnessEntry>(local.map((e) => [e.id, e]));
+
+  for (const serverEntry of server) {
+    const localEntry = byId.get(serverEntry.id);
+    if (!localEntry) {
+      byId.set(serverEntry.id, serverEntry);
+    } else {
+      const localTs = localEntry.updatedAt ?? new Date(localEntry.timestamp).toISOString();
+      const serverTs = serverEntry.updatedAt ?? new Date(serverEntry.timestamp).toISOString();
+      if (new Date(serverTs) >= new Date(localTs)) {
+        byId.set(serverEntry.id, serverEntry);
+      }
+    }
+  }
+
+  // Pass 2: Date-level deduplication — keep the most-recent entry per date
+  // (by updatedAt, falling back to timestamp). This resolves the case where
+  // two devices check in on the same day and produce entries with different IDs.
+  const byDate = new Map<string, CaregiverWellnessEntry>();
+  for (const entry of byId.values()) {
+    const existing = byDate.get(entry.date);
+    if (!existing) {
+      byDate.set(entry.date, entry);
+    } else {
+      const existingTs = existing.updatedAt ?? new Date(existing.timestamp).toISOString();
+      const entryTs = entry.updatedAt ?? new Date(entry.timestamp).toISOString();
+      if (new Date(entryTs) > new Date(existingTs)) {
+        byDate.set(entry.date, entry);
+      }
+    }
+  }
+
+  return Array.from(byDate.values());
 }
 
 // ─── One-time local-to-server migration ───────────────────────────────────────
@@ -469,6 +459,7 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
     MIGRATED_GOALS,
     MIGRATED_PROFILE,
     MIGRATED_REMINDERS,
+    MIGRATED_WELLNESS,
   ]);
   const flagMap: Record<string, boolean> = {};
   for (const [key, val] of flags) {
@@ -571,6 +562,24 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
         } else {
           const ok = await uploadReminders(local);
           if (ok) await AsyncStorage.setItem(MIGRATED_REMINDERS, "1");
+        }
+      }
+    })());
+  }
+
+  if (!flagMap[MIGRATED_WELLNESS]) {
+    migrations.push((async () => {
+      const serverWellness = serverData.caregiverWellness ?? [];
+      if (serverWellness.length > 0) {
+        await AsyncStorage.setItem(MIGRATED_WELLNESS, "1");
+      } else {
+        const raw = await AsyncStorage.getItem(AS_WELLNESS);
+        const local: CaregiverWellnessEntry[] = raw ? JSON.parse(raw) : [];
+        if (local.length === 0) {
+          await AsyncStorage.setItem(MIGRATED_WELLNESS, "1");
+        } else {
+          const ok = await uploadCaregiverWellness(local);
+          if (ok) await AsyncStorage.setItem(MIGRATED_WELLNESS, "1");
         }
       }
     })());

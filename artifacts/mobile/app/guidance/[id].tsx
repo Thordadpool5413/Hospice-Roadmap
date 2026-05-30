@@ -238,6 +238,35 @@ export default function GuidanceDetailScreen() {
         {/* Call Hospice CTA */}
         <CallHospiceCTA urgent={scenario.urgencyLevel === "immediate"} />
 
+        {/* Benefits Guide Link — shown for financial/rights-related scenarios */}
+        {["patient-wants-to-stop-hospice", "hospice-team-roles"].includes(id ?? "") && (
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/benefits-guide" as any);
+            }}
+            style={({ pressed }) => [
+              styles.benefitsGuideCta,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+            ]}
+          >
+            <View style={styles.benefitsGuideCtaLeft}>
+              <View style={styles.benefitsGuideCtaIcon}>
+                <Feather name="file-text" size={18} color={Colors.primary} />
+              </View>
+              <View style={styles.benefitsGuideCtaText}>
+                <Text style={styles.benefitsGuideCtaTitle}>
+                  Hospice & Medicare: What's Covered
+                </Text>
+                <Text style={styles.benefitsGuideCtaSub}>
+                  Plain-language guide to your financial rights and benefits
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={16} color={Colors.primary + "99"} />
+          </Pressable>
+        )}
+
         {/* Know What to Say — Call Script CTA */}
         {SCENARIO_TO_SCRIPT[id ?? ""] && (() => {
           const scriptId = SCENARIO_TO_SCRIPT[id ?? ""]!;
@@ -770,6 +799,46 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.8)",
     marginTop: 2,
+  },
+  benefitsGuideCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.primaryPale,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+  },
+  benefitsGuideCtaLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  benefitsGuideCtaIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.primary + "18",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  benefitsGuideCtaText: {
+    flex: 1,
+    gap: 2,
+  },
+  benefitsGuideCtaTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.1,
+  },
+  benefitsGuideCtaSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
+    lineHeight: 17,
   },
   disclaimer: {
     flexDirection: "row",

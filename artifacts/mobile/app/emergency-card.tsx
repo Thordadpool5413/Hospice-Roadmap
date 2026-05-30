@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   Linking,
   Platform,
@@ -77,9 +77,38 @@ function InfoRow({ label, value, icon }: { label: string; value?: string; icon: 
   );
 }
 
+const PATIENT_RIGHTS = [
+  {
+    icon: "moon",
+    title: "24/7 nurse access",
+    body: "Federal law requires your hospice to have a registered nurse available by phone around the clock, every day of the year.",
+  },
+  {
+    icon: "users",
+    title: "Care conference at any time",
+    body: "You can request a formal meeting with your hospice team whenever you want to discuss the care plan, concerns, or next steps.",
+  },
+  {
+    icon: "log-out",
+    title: "Revoke hospice at any time",
+    body: "You may leave hospice care at any time — no explanation required. Simply notify your hospice in writing. Your Medicare benefits immediately return.",
+  },
+  {
+    icon: "repeat",
+    title: "Switch hospice agencies",
+    body: "You have the right to transfer to a different Medicare-certified hospice at the start of any new benefit period without losing coverage.",
+  },
+  {
+    icon: "flag",
+    title: "File a complaint with Medicare",
+    body: "Call 1-800-MEDICARE (1-800-633-4227) or contact your state's Quality Improvement Organization (QIO) if you believe a right has been violated.",
+  },
+];
+
 export default function EmergencyCardScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useApp();
+  const [rightsExpanded, setRightsExpanded] = useState(false);
   const profile = user?.patientProfile;
 
   const hasAnyContact =
@@ -243,6 +272,28 @@ export default function EmergencyCardScreen() {
           </View>
         )}
 
+        {/* Crisis Care Guide */}
+        <Pressable
+          onPress={() => router.push("/crisis-care-guide" as any)}
+          style={({ pressed }) => [
+            styles.crisisBanner,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={styles.crisisLeft}>
+            <View style={styles.crisisIconWrap}>
+              <Feather name="alert-triangle" size={18} color="#E85040" />
+            </View>
+            <View style={styles.crisisText}>
+              <Text style={styles.crisisTitle}>Need Crisis-Level Care?</Text>
+              <Text style={styles.crisisSub}>
+                Check if you qualify for intensive nursing or inpatient hospice
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={16} color={"#E8504099"} />
+        </Pressable>
+
         {/* Call Scripts */}
         <Pressable
           onPress={() => router.push("/call-scripts" as any)}
@@ -265,6 +316,77 @@ export default function EmergencyCardScreen() {
           <Feather name="chevron-right" size={16} color={Colors.error + "99"} />
         </Pressable>
 
+        {/* Patient Rights */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Feather name="shield" size={15} color={Colors.info} />
+            <Text style={[styles.sectionTitle, { color: Colors.info }]}>Your Rights as a Hospice Patient</Text>
+          </View>
+          <View style={[styles.card, styles.rightsCard]}>
+            <Pressable
+              onPress={() => setRightsExpanded((v) => !v)}
+              style={({ pressed }) => [styles.rightsHeader, pressed && { opacity: 0.75 }]}
+              accessibilityRole="button"
+              accessibilityLabel={rightsExpanded ? "Collapse patient rights" : "Expand patient rights"}
+            >
+              <View style={styles.rightsHeaderLeft}>
+                <View style={styles.rightsIconWrap}>
+                  <Feather name="shield" size={18} color={Colors.info} />
+                </View>
+                <View style={styles.rightsHeaderText}>
+                  <Text style={styles.rightsHeaderTitle}>Medicare Hospice Patient Rights</Text>
+                  <Text style={styles.rightsHeaderSub}>
+                    {rightsExpanded ? "Tap to collapse" : "5 federally protected rights — tap to expand"}
+                  </Text>
+                </View>
+              </View>
+              <Feather
+                name={rightsExpanded ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={Colors.info}
+              />
+            </Pressable>
+
+            {rightsExpanded && (
+              <>
+                <View style={styles.rowDivider} />
+                {PATIENT_RIGHTS.map((right, i) => (
+                  <React.Fragment key={right.title}>
+                    <View style={styles.rightItem}>
+                      <View style={styles.rightItemIcon}>
+                        <Feather name={right.icon as any} size={15} color={Colors.info} />
+                      </View>
+                      <View style={styles.rightItemText}>
+                        <Text style={styles.rightItemTitle}>{right.title}</Text>
+                        <Text style={styles.rightItemBody}>{right.body}</Text>
+                      </View>
+                    </View>
+                    {i < PATIENT_RIGHTS.length - 1 && <View style={styles.rowDivider} />}
+                  </React.Fragment>
+                ))}
+                <View style={styles.rowDivider} />
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: "/situation-finder",
+                      params: { category: "advocacy" },
+                    } as any)
+                  }
+                  style={({ pressed }) => [
+                    styles.rightsFooterLink,
+                    pressed && { backgroundColor: "rgba(26,144,144,0.15)" },
+                  ]}
+                >
+                  <Text style={styles.rightsFooterLinkText}>
+                    Full guidance — Advocacy &amp; Rights
+                  </Text>
+                  <Feather name="arrow-right" size={14} color={Colors.info} />
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
+
         {/* Guidance Links */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -275,6 +397,7 @@ export default function EmergencyCardScreen() {
             {[
               { label: "Breathing changes", id: "breathing-changes" },
               { label: "Worsening pain", id: "pain-worsening" },
+              { label: "When to ask for hospital-level care", id: "crisis-care-gip" },
               { label: "Signs of dying", id: "approaching-death" },
               { label: "After death — what to do", id: "after-death-guidance" },
               { label: "Not sure what's happening", id: "not-sure-whats-happening" },
@@ -523,6 +646,44 @@ const styles = StyleSheet.create({
     color: "#3A5080",
     fontStyle: "italic",
   },
+  crisisBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(232,80,64,0.10)",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(232,80,64,0.30)",
+  },
+  crisisLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  crisisIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(232,80,64,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crisisText: {
+    flex: 1,
+    gap: 2,
+  },
+  crisisTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#EEF4FF",
+  },
+  crisisSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#5A78A8",
+  },
   callScriptsBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -584,5 +745,86 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#3A5080",
     lineHeight: 16,
+  },
+  rightsCard: {
+    borderColor: "rgba(26,144,144,0.30)",
+  },
+  rightsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+  },
+  rightsHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  rightsIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(26,144,144,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rightsHeaderText: {
+    flex: 1,
+    gap: 2,
+  },
+  rightsHeaderTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#EEF4FF",
+  },
+  rightsHeaderSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#5A78A8",
+  },
+  rightItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: 14,
+  },
+  rightItemIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: "rgba(26,144,144,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  rightItemText: {
+    flex: 1,
+    gap: 3,
+  },
+  rightItemTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#EEF4FF",
+  },
+  rightItemBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#7A90B8",
+    lineHeight: 18,
+  },
+  rightsFooterLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+    gap: 8,
+  },
+  rightsFooterLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.info,
+    flex: 1,
   },
 });

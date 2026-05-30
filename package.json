@@ -11,12 +11,14 @@
     "repo:api:typecheck": "pnpm --filter @workspace/api-server run typecheck",
     "repo:db:push": "pnpm --filter @workspace/db run push",
     "repo:clean:artifacts": "find . \\( -name .cache -o -name .local -o -name .expo -o -name dist -o -name coverage \\) -type d -prune -exec rm -rf {} +",
-    "repo:health": "pnpm run typecheck"
+    "repo:health": "pnpm run typecheck",
+    "test": "vitest run"
   },
   "private": true,
   "devDependencies": {
     "prettier": "^3.8.1",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.7"
   },
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.1",
