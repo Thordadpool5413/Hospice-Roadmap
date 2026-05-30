@@ -282,6 +282,9 @@ const GOC_FIELDS: GoalsOfCareField[] = [
   "thingsToAvoid",
   "dnrStatus",
   "additionalDirectives",
+  "fearsAndConcerns",
+  "finalDaysWishes",
+  "afterDeathWishes",
 ];
 
 /**
@@ -308,14 +311,20 @@ export function mergeGoalsOfCare(
     local?.goodDayLooksLike?.trim() ||
     local?.thingsToAvoid?.trim() ||
     local?.dnrStatus ||
-    local?.additionalDirectives?.trim()
+    local?.additionalDirectives?.trim() ||
+    local?.fearsAndConcerns?.trim() ||
+    local?.finalDaysWishes?.trim() ||
+    local?.afterDeathWishes?.trim()
   );
   const hasServer = !!(
     serverContent?.whatMattersMost?.trim() ||
     serverContent?.goodDayLooksLike?.trim() ||
     serverContent?.thingsToAvoid?.trim() ||
     serverContent?.dnrStatus ||
-    serverContent?.additionalDirectives?.trim()
+    serverContent?.additionalDirectives?.trim() ||
+    serverContent?.fearsAndConcerns?.trim() ||
+    serverContent?.finalDaysWishes?.trim() ||
+    serverContent?.afterDeathWishes?.trim()
   );
 
   if (!hasServer && !hasLocal) return null;

@@ -25,6 +25,9 @@ const GOC_FIELDS: GoalsOfCareField[] = [
   "thingsToAvoid",
   "dnrStatus",
   "additionalDirectives",
+  "fearsAndConcerns",
+  "finalDaysWishes",
+  "afterDeathWishes",
 ];
 
 /**
@@ -333,6 +336,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           lines.push(`Resuscitation preference: ${dnrLabels[g.dnrStatus] ?? g.dnrStatus}`);
         }
         if (g.additionalDirectives) lines.push(`Additional directives: ${g.additionalDirectives}`);
+        if (g.fearsAndConcerns) lines.push(`What the patient fears most: ${g.fearsAndConcerns}`);
+        if (g.finalDaysWishes) lines.push(`Wishes for the final days: ${g.finalDaysWishes}`);
+        if (g.afterDeathWishes) lines.push(`After-death wishes: ${g.afterDeathWishes}`);
       }
     }
 

@@ -22,6 +22,8 @@ import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { GoalsOfCare } from "@/types";
 import { PremiumGate } from "@/components/PremiumGate";
 
+const TOTAL_SECTIONS = 8;
+
 const DNR_OPTIONS: { value: GoalsOfCare["dnrStatus"]; label: string; desc: string; color: string }[] = [
   { value: "dnr", label: "DNR / Allow Natural Death", desc: "If the heart stops, we let it stop peacefully. No CPR.", color: "#7A5C8A" },
   { value: "full-code", label: "Full Code (CPR)", desc: "Attempt resuscitation if the heart stops.", color: Colors.amber },
@@ -86,11 +88,23 @@ export default function GoalsOfCareScreen() {
   const [thingsToAvoid, setThingsToAvoid] = useState(existing?.thingsToAvoid ?? "");
   const [dnrStatus, setDnrStatus] = useState<GoalsOfCare["dnrStatus"]>(existing?.dnrStatus ?? undefined);
   const [additionalDirectives, setAdditionalDirectives] = useState(existing?.additionalDirectives ?? "");
+  const [fearsAndConcerns, setFearsAndConcerns] = useState(existing?.fearsAndConcerns ?? "");
+  const [finalDaysWishes, setFinalDaysWishes] = useState(existing?.finalDaysWishes ?? "");
+  const [afterDeathWishes, setAfterDeathWishes] = useState(existing?.afterDeathWishes ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
-  const hasAnyContent = Boolean(
-    whatMattersMost || goodDayLooksLike || thingsToAvoid || dnrStatus || additionalDirectives,
-  );
+  const filledCount = [
+    whatMattersMost,
+    goodDayLooksLike,
+    thingsToAvoid,
+    dnrStatus,
+    additionalDirectives,
+    fearsAndConcerns,
+    finalDaysWishes,
+    afterDeathWishes,
+  ].filter(Boolean).length;
+
+  const hasAnyContent = filledCount > 0;
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -102,13 +116,20 @@ export default function GoalsOfCareScreen() {
       thingsToAvoid: thingsToAvoid.trim() || undefined,
       dnrStatus: dnrStatus || undefined,
       additionalDirectives: additionalDirectives.trim() || undefined,
+      fearsAndConcerns: fearsAndConcerns.trim() || undefined,
+      finalDaysWishes: finalDaysWishes.trim() || undefined,
+      afterDeathWishes: afterDeathWishes.trim() || undefined,
       updatedAt: new Date().toISOString(),
     };
     await updatePatientProfile({ ...user?.patientProfile, goalsOfCare: goals });
     setIsSaving(false);
 
-    // Tell Ragna about this Goals of Care update
+    // Fire observation on first-time fills of the three new deep-wish fields
     const isFirstTime = !existing?.whatMattersMost && !!goals.whatMattersMost;
+    const isFirstFears = !existing?.fearsAndConcerns && !!goals.fearsAndConcerns;
+    const isFirstFinalDays = !existing?.finalDaysWishes && !!goals.finalDaysWishes;
+    const isFirstAfterDeath = !existing?.afterDeathWishes && !!goals.afterDeathWishes;
+
     await addObservation(
       "goals_updated",
       isFirstTime
@@ -121,6 +142,33 @@ export default function GoalsOfCareScreen() {
         significant: true,
       }
     );
+
+    if (isFirstFears) {
+      await addObservation(
+        "goals_updated",
+        "Fears and concerns recorded for the first time",
+        {
+          detail: goals.fearsAndConcerns
+            ? `Fears: "${goals.fearsAndConcerns.slice(0, 100)}"`
+            : undefined,
+          significant: true,
+        }
+      );
+    }
+    if (isFirstFinalDays) {
+      await addObservation(
+        "goals_updated",
+        "Final-days wishes recorded for the first time",
+        { significant: true }
+      );
+    }
+    if (isFirstAfterDeath) {
+      await addObservation(
+        "goals_updated",
+        "After-death wishes recorded for the first time",
+        { significant: true }
+      );
+    }
 
     Alert.alert(
       "Goals Saved",
@@ -175,6 +223,21 @@ export default function GoalsOfCareScreen() {
           <Text style={styles.introTitle}>Help Ragna know your loved one</Text>
           <Text style={styles.introBody}>
             These answers are stored on your device and can be used to personalize Ragna. If you chat with Ragna, relevant goals of care details may be included with your request. Answer as much or as little as you want.
+          </Text>
+        </View>
+
+        {/* Completion indicator */}
+        <View style={styles.completionRow}>
+          <View style={styles.completionBarTrack}>
+            <View
+              style={[
+                styles.completionBarFill,
+                { width: `${Math.round((filledCount / TOTAL_SECTIONS) * 100)}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.completionLabel}>
+            {filledCount} of {TOTAL_SECTIONS} sections filled
           </Text>
         </View>
 
@@ -268,6 +331,51 @@ export default function GoalsOfCareScreen() {
           onChange={setAdditionalDirectives}
           placeholder="e.g. POLST on file with hospice. Patient has living will. Family agreed on comfort measures only."
           why="Ragna can reference this in conversations about what the patient has already decided."
+        />
+
+        {/* ─── Deeper Wishes ─────────────────────────────────────────────── */}
+        <View style={styles.sectionDivider}>
+          <View style={styles.sectionDividerLine} />
+          <Text style={styles.sectionDividerLabel}>Deeper Wishes</Text>
+          <View style={styles.sectionDividerLine} />
+        </View>
+
+        <QuestionField
+          label="What does your loved one fear most?"
+          hint="Their deepest worries about how this journey unfolds"
+          icon="alert-circle"
+          value={fearsAndConcerns}
+          onChange={setFearsAndConcerns}
+          placeholder="e.g. Being alone at the end. Being in pain. Losing dignity. Not recognizing family."
+          why="When Ragna knows what your loved one fears most, she can proactively address those concerns rather than waiting for you to bring them up. She can also help you prepare for those moments before they arrive."
+        />
+
+        <QuestionField
+          label="Wishes for the final days"
+          hint="Who should be present, environment, sensory preferences, spiritual rites"
+          icon="moon"
+          value={finalDaysWishes}
+          onChange={setFinalDaysWishes}
+          placeholder={
+            "e.g. Immediate family only. Soft music — Bach or nature sounds. " +
+            "Room dim and quiet. Wants to be held. Priest for last rites. " +
+            "No TV. Favorite blanket nearby."
+          }
+          why="The final days often unfold faster than families expect. Ragna can help you prepare the environment, guide conversations with the hospice team, and gently remind you of your loved one's wishes when it's hardest to think clearly."
+        />
+
+        <QuestionField
+          label="After-death wishes"
+          hint="Arrangements, notifications, and memorial preferences"
+          icon="feather"
+          value={afterDeathWishes}
+          onChange={setAfterDeathWishes}
+          placeholder={
+            "e.g. Cremation. Scatter ashes at the lake. " +
+            "Call sister first. No funeral home — home funeral preferred. " +
+            "Memorial service at the church. Organ donor card on file."
+          }
+          why="Ragna can help you start conversations about what comes next — at the pace and time that feels right for your family. Having this recorded means you won't have to rely on memory in the most difficult moments."
         />
 
         {/* Vera context preview */}
@@ -369,6 +477,24 @@ const styles = StyleSheet.create({
   introTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#C8D8FF", letterSpacing: -0.4, textAlign: "center" },
   introBody: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#7A90B8", textAlign: "center", lineHeight: 21 },
 
+  completionRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 2,
+  },
+  completionBarTrack: {
+    flex: 1, height: 4, borderRadius: 2,
+    backgroundColor: "rgba(55, 85, 170, 0.22)",
+    overflow: "hidden",
+  },
+  completionBarFill: {
+    height: "100%", borderRadius: 2,
+    backgroundColor: Colors.primary,
+  },
+  completionLabel: {
+    fontSize: 11, fontFamily: "Inter_500Medium",
+    color: "#5A78A8", flexShrink: 0,
+  },
+
   questionCard: {
     backgroundColor: "rgba(12, 20, 55, 0.90)", borderRadius: 16,
     borderWidth: 1, borderColor: "rgba(55, 85, 170, 0.22)",
@@ -430,6 +556,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(55, 85, 170, 0.22)",
   },
   dnrNoteText: { flex: 1, fontSize: 11, fontFamily: "Inter_400Regular", color: "#4A6090", lineHeight: 16 },
+
+  sectionDivider: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginTop: 4,
+  },
+  sectionDividerLine: {
+    flex: 1, height: 1,
+    backgroundColor: "rgba(55, 85, 170, 0.22)",
+  },
+  sectionDividerLabel: {
+    fontSize: 11, fontFamily: "Inter_600SemiBold",
+    color: "#5A78A8", letterSpacing: 0.8, textTransform: "uppercase",
+  },
 
   previewCard: {
     backgroundColor: "rgba(18, 30, 90, 0.85)", borderRadius: 15, padding: 15, gap: 9,

@@ -8,6 +8,9 @@ export interface GoalsOfCareContent {
   thingsToAvoid?: string;
   dnrStatus?: "dnr" | "full-code" | "unknown" | "not-discussed";
   additionalDirectives?: string;
+  fearsAndConcerns?: string;
+  finalDaysWishes?: string;
+  afterDeathWishes?: string;
   updatedAt?: string;
 }
 

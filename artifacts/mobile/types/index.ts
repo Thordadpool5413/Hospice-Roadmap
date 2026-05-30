@@ -5,13 +5,16 @@ export type UserRole =
   | "caregiver"
   | "other";
 
-/** The five editable scalar fields on a GoalsOfCare document. */
+/** The eight editable scalar fields on a GoalsOfCare document. */
 export type GoalsOfCareField =
   | "whatMattersMost"
   | "goodDayLooksLike"
   | "thingsToAvoid"
   | "dnrStatus"
-  | "additionalDirectives";
+  | "additionalDirectives"
+  | "fearsAndConcerns"
+  | "finalDaysWishes"
+  | "afterDeathWishes";
 
 export interface GoalsOfCare {
   whatMattersMost?: string;
@@ -19,6 +22,12 @@ export interface GoalsOfCare {
   thingsToAvoid?: string;
   dnrStatus?: "dnr" | "full-code" | "unknown" | "not-discussed";
   additionalDirectives?: string;
+  /** What the patient fears most (e.g. being alone, being in pain, losing dignity). */
+  fearsAndConcerns?: string;
+  /** Specific wishes for the final days — who to have present, environment, sensory preferences, spiritual rites. */
+  finalDaysWishes?: string;
+  /** After-death wishes — organ donation, burial vs cremation, who to notify, memorial preferences. */
+  afterDeathWishes?: string;
   /** Document-level ISO timestamp — the last time any field was saved locally. */
   updatedAt?: string;
   /**
