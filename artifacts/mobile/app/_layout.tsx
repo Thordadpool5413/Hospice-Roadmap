@@ -5,7 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
+import { ClerkProvider, ClerkLoaded, ClerkLoading } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
@@ -368,6 +368,11 @@ export default function RootLayout() {
       tokenCache={tokenCache}
       proxyUrl={proxyUrl}
     >
+      {/* Show the app background while Clerk initialises so the screen is
+          never blank. ClerkLoaded renders null until isLoaded is true. */}
+      <ClerkLoading>
+        <View style={{ flex: 1, backgroundColor: "#091734" }} />
+      </ClerkLoading>
       <ClerkLoaded>
         <SafeAreaProvider>
           <ErrorBoundary>
