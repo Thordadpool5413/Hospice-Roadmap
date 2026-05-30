@@ -72,26 +72,18 @@ export function mergeGoalsOfCare(
   serverContent: GoalsOfCare | undefined,
   serverDocUpdatedAt: string | undefined,
 ): GoalsOfCare | null {
-  const hasLocal = !!(
-    local?.whatMattersMost?.trim() ||
-    local?.goodDayLooksLike?.trim() ||
-    local?.thingsToAvoid?.trim() ||
-    local?.dnrStatus ||
-    local?.additionalDirectives?.trim() ||
-    local?.fearsAndConcerns?.trim() ||
-    local?.finalDaysWishes?.trim() ||
-    local?.afterDeathWishes?.trim()
-  );
-  const hasServer = !!(
-    serverContent?.whatMattersMost?.trim() ||
-    serverContent?.goodDayLooksLike?.trim() ||
-    serverContent?.thingsToAvoid?.trim() ||
-    serverContent?.dnrStatus ||
-    serverContent?.additionalDirectives?.trim() ||
-    serverContent?.fearsAndConcerns?.trim() ||
-    serverContent?.finalDaysWishes?.trim() ||
-    serverContent?.afterDeathWishes?.trim()
-  );
+  const hasLocal = local
+    ? GOC_FIELDS.some((f) => {
+        const v = (local as Record<string, unknown>)[f];
+        return typeof v === "string" ? v.trim().length > 0 : v !== undefined;
+      })
+    : false;
+  const hasServer = serverContent
+    ? GOC_FIELDS.some((f) => {
+        const v = (serverContent as Record<string, unknown>)[f];
+        return typeof v === "string" ? v.trim().length > 0 : v !== undefined;
+      })
+    : false;
 
   if (!hasServer && !hasLocal) return null;
   if (!hasServer) return local!;
