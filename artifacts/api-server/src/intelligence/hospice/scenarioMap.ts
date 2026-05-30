@@ -212,6 +212,53 @@ export const SCENARIO_MAP: ScenarioMatch[] = [
     ],
   },
 
+  // ─── ADVOCACY ─────────────────────────────────────────────────────────────────
+
+  {
+    scenarioId: "SCN-VISIT-RIGHTS",
+    label: "Family not receiving enough visits — advocacy for entitlements",
+    domains: ["documentation_advocacy", "care_gap"],
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days"],
+    urgency: "moderate",
+    keywords: [
+      "not enough visits", "only comes once a week", "aide won't come", "aide not coming",
+      "want more visits", "entitled to more", "not getting enough help", "how many visits",
+      "nurse only once", "nurse only comes once", "social worker never visits",
+      "chaplain never called", "what are we owed", "what are we entitled to",
+      "visit too infrequent", "they never come", "we never see anyone",
+    ],
+  },
+  {
+    scenarioId: "SCN-REVOCATION",
+    label: "Family considering hospice revocation or switching providers",
+    domains: ["care_gap", "documentation_advocacy"],
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days"],
+    urgency: "moderate",
+    keywords: [
+      "want to revoke", "thinking about leaving hospice", "can I leave hospice",
+      "want to switch hospice", "change hospice", "thinking about stopping hospice",
+      "leave hospice", "revoke hospice", "discharge from hospice",
+      "hospice isn't working", "want to try treatment again", "can we come back",
+      "leave and re-enroll", "switch providers", "transfer to another hospice",
+      "live discharge", "revocation",
+    ],
+  },
+  {
+    scenarioId: "SCN-UNMET-NEEDS",
+    label: "Family in conflict with hospice — unmet needs and advocacy record",
+    domains: ["documentation_advocacy", "care_gap"],
+    journeyStages: ["newly_enrolled", "stable", "weeks_to_days", "days"],
+    urgency: "moderate",
+    keywords: [
+      "needs aren't being met", "care not provided", "what was promised",
+      "not getting what was promised", "family fighting hospice", "family fighting",
+      "conflict with hospice team", "hospice not following through",
+      "they promised and didn't", "how to build a case", "keep a record",
+      "document unmet needs", "care plan not followed", "promised and not delivered",
+      "advocate in writing", "hospice keeps letting us down",
+    ],
+  },
+
   // ─── CAREGIVER ────────────────────────────────────────────────────────────────
 
   {

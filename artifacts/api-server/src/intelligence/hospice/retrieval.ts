@@ -110,6 +110,18 @@ export function retrieveKnowledgeBlocks(
     }
   }
 
+  // Force-include AV002 (Revocation and Re-Enrollment) when SCN-REVOCATION matches,
+  // because AV002 sits late in care_gap catalog order and is crowded out by the
+  // per-domain slice before it can be selected.
+  const hasRevocationScenario = scenarios.some((s) => s.scenarioId === "SCN-REVOCATION");
+  if (hasRevocationScenario) {
+    const av002 = HOSPICE_KNOWLEDGE_CATALOG.find((b) => b.id === "AV002");
+    if (av002) {
+      selectedBlocks.push(av002);
+      usedIds.add(av002.id);
+    }
+  }
+
   // First: add any blocks that match by urgency + journey stage
   for (const domain of matchedDomains) {
     const domainBlocks = HOSPICE_KNOWLEDGE_CATALOG.filter((b) => {
