@@ -171,6 +171,24 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="wellness"
+        options={{
+          title: "Wellness",
+          tabBarIcon: ({ color, focused }) =>
+            isIOS ? (
+              <SymbolView name={focused ? "heart.fill" : "heart"} tintColor={color} size={22} />
+            ) : (
+              <View style={{
+                width: 28, height: 28, alignItems: "center", justifyContent: "center",
+                backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
+                borderRadius: 8,
+              }}>
+                <Feather name="heart" size={20} color={color} />
+              </View>
+            ),
+        }}
+      />
+      <Tabs.Screen
         name="providers"
         options={{ href: null }}
       />
