@@ -16,6 +16,14 @@ import Constants from "expo-constants";
 
 import { ENTITLEMENT_IDENTIFIER } from "@/constants/subscriptionProducts";
 
+/**
+ * Beta override — set EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM=true in the EAS
+ * build profile (e.g. "preview") to give all TestFlight testers full premium
+ * access without a real subscription. NEVER set this in the "production"
+ * profile — it would bypass the paywall for all App Store users.
+ */
+const BETA_OVERRIDE = process.env.EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM === "true";
+
 const REVENUECAT_TEST_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY ?? "";
 const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? "";
 const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? "";
@@ -30,6 +38,9 @@ function getRevenueCatApiKey(): string {
 }
 
 export function initializeRevenueCat(): void {
+  // Skip RevenueCat entirely during beta testing — no purchases will occur.
+  if (BETA_OVERRIDE) return;
+
   const apiKey = getRevenueCatApiKey();
   if (!apiKey) throw new Error("RevenueCat API key is not configured");
   Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
@@ -39,6 +50,8 @@ export function initializeRevenueCat(): void {
 interface SubscriptionContextValue {
   isPremium: boolean;
   isLoading: boolean;
+  /** True when the beta override env var is active (TestFlight builds only). */
+  isBetaOverride: boolean;
   customerInfo: CustomerInfo | null;
   offerings: PurchasesOfferings | null;
   purchase: (pkg: PurchasesPackage) => Promise<CustomerInfo>;
@@ -55,12 +68,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!BETA_OVERRIDE);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
-  // Load initial customer info and offerings
+  // Load initial customer info and offerings — skipped for beta builds.
   useEffect(() => {
+    if (BETA_OVERRIDE) return;
+
     let cancelled = false;
     async function load() {
       try {
@@ -82,8 +97,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return () => { cancelled = true; };
   }, []);
 
-  // Identify user with RevenueCat when Clerk userId becomes available
+  // Identify user with RevenueCat when Clerk userId becomes available — skipped for beta.
   useEffect(() => {
+    if (BETA_OVERRIDE) return;
     if (!userId) return;
     Purchases.logIn(userId).catch(() => {
       // Non-fatal: subscription state still works per device
@@ -91,6 +107,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [userId]);
 
   const refreshCustomerInfo = useCallback(async () => {
+    if (BETA_OVERRIDE) return;
     try {
       const info = await Purchases.getCustomerInfo();
       setCustomerInfo(info);
@@ -121,14 +138,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const isPremium =
-    customerInfo?.entitlements.active?.[ENTITLEMENT_IDENTIFIER] !== undefined;
+  const isPremium = BETA_OVERRIDE
+    ? true
+    : customerInfo?.entitlements.active?.[ENTITLEMENT_IDENTIFIER] !== undefined;
 
   return (
     <SubscriptionContext.Provider
       value={{
         isPremium,
         isLoading,
+        isBetaOverride: BETA_OVERRIDE,
         customerInfo,
         offerings,
         purchase,

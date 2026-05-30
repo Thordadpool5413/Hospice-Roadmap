@@ -70,6 +70,7 @@ const PLAN_DESCRIPTIONS: Record<string, string> = {
     "Full access to symptom tracking, the caregiver journal, goals of care, and Ragna AI.",
   Companion:
     "Complete access to all Hospice Roadmap features, including Ragna AI and priority support.",
+  Beta: "You have full access to every feature as a TestFlight beta tester. Thank you for helping us improve Hospice Roadmap.",
 };
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ export default function AccountScreen() {
   const {
     isPremium,
     isLoading,
+    isBetaOverride,
     customerInfo,
     restorePurchases,
     isRestoring,
@@ -89,7 +91,8 @@ export default function AccountScreen() {
 
   const productId =
     customerInfo?.entitlements.active?.[ENTITLEMENT_IDENTIFIER]?.productIdentifier;
-  const planName = getPlanName(isPremium, productId);
+  // Beta testers get a "Beta" label; real subscribers get their actual plan name.
+  const planName = isBetaOverride ? "Beta" : getPlanName(isPremium, productId);
   const email = clerkUser?.primaryEmailAddress?.emailAddress ?? null;
   const fullName = clerkUser?.fullName ?? null;
   const initials = getInitials(fullName, email);
@@ -189,7 +192,12 @@ export default function AccountScreen() {
 
             <View style={styles.divider} />
 
-            {isPremium ? (
+            {isBetaOverride ? (
+              <View style={styles.betaAccessRow}>
+                <Feather name="check-circle" size={15} color="#59D0D5" />
+                <Text style={styles.betaAccessText}>All features unlocked for beta testing</Text>
+              </View>
+            ) : isPremium ? (
               <>
                 <Pressable
                   onPress={() => {
@@ -240,36 +248,38 @@ export default function AccountScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>ACCOUNT ACTIONS</Text>
           <View style={styles.card}>
-            {/* Restore Purchases */}
-            <Pressable
-              onPress={() => {
-                void handleRestorePurchases();
-              }}
-              disabled={isRestoring || isLoading}
-              style={({ pressed }) => [
-                styles.actionRow,
-                styles.actionRowBorder,
-                pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
-              ]}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
-                <Feather name="refresh-cw" size={16} color={Colors.primary} />
-              </View>
-              <View style={styles.actionTextWrap}>
-                <Text
-                  style={[
-                    styles.actionLabel,
-                    (isRestoring || isLoading) && { color: Colors.textMuted },
-                  ]}
-                >
-                  {isRestoring ? "Restoring…" : "Restore Purchases"}
-                </Text>
-                <Text style={styles.actionHint}>
-                  Reinstalled? Recover your subscription here
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
-            </Pressable>
+            {/* Restore Purchases — hidden for beta testers (no real subscription to restore) */}
+            {!isBetaOverride && (
+              <Pressable
+                onPress={() => {
+                  void handleRestorePurchases();
+                }}
+                disabled={isRestoring || isLoading}
+                style={({ pressed }) => [
+                  styles.actionRow,
+                  styles.actionRowBorder,
+                  pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
+                ]}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
+                  <Feather name="refresh-cw" size={16} color={Colors.primary} />
+                </View>
+                <View style={styles.actionTextWrap}>
+                  <Text
+                    style={[
+                      styles.actionLabel,
+                      (isRestoring || isLoading) && { color: Colors.textMuted },
+                    ]}
+                  >
+                    {isRestoring ? "Restoring…" : "Restore Purchases"}
+                  </Text>
+                  <Text style={styles.actionHint}>
+                    Reinstalled? Recover your subscription here
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
+              </Pressable>
+            )}
 
             {/* Data Controls */}
             <Pressable
@@ -488,6 +498,22 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: "#fff",
     letterSpacing: -0.2,
+  },
+
+  // Beta access informational row (shown instead of manage/upgrade for beta builds)
+  betaAccessRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  betaAccessText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "#59D0D5",
+    letterSpacing: -0.1,
   },
 
   // Upgrade to Companion row (shown for Caregiver subscribers)

@@ -8,11 +8,17 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "true"
+      }
     },
     "production": {
       "distribution": "store",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "false"
+      }
     }
   },
   "submit": {
