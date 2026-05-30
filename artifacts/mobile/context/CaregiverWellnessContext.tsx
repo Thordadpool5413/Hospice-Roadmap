@@ -9,6 +9,11 @@ import React, {
 
 import { CaregiverMood, CaregiverWellnessEntry } from "@/types";
 import { uploadCaregiverWellness } from "@/services/syncService";
+import {
+  cancelWellnessReminder,
+  scheduleForwardReminder,
+  syncWellnessReminder,
+} from "@/services/wellnessReminderNotifier";
 
 export const WELLNESS_STORAGE_KEY = "@caregiver_wellness_v1";
 const MAX_ENTRIES = 90;
@@ -53,7 +58,9 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
   const loadEntries = async () => {
     try {
       const stored = await AsyncStorage.getItem(WELLNESS_STORAGE_KEY);
-      if (stored) setEntries(JSON.parse(stored));
+      const parsed: CaregiverWellnessEntry[] = stored ? JSON.parse(stored) : [];
+      if (parsed.length > 0) setEntries(parsed);
+      syncWellnessReminder(parsed).catch(() => {});
     } catch (e) {
       console.error("Error loading caregiver wellness entries:", e);
     } finally {
@@ -90,6 +97,10 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
       };
       const saved = await saveEntries([...entries, newEntry]);
       uploadCaregiverWellness(saved).catch(() => {});
+      // Forward-schedule the next reminder at 7 PM on (today + 3 days) so it
+      // fires even if the app is never reopened before the threshold is hit.
+      // scheduleForwardReminder cancels any existing notification internally.
+      scheduleForwardReminder(newEntry.date).catch(() => {});
     },
     [entries],
   );
@@ -152,6 +163,7 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
       await AsyncStorage.setItem(WELLNESS_STORAGE_KEY, JSON.stringify([]));
       setEntries([]);
       uploadCaregiverWellness([]).catch(() => {});
+      cancelWellnessReminder().catch(() => {});
     } catch (e) {
       console.error("Error clearing caregiver wellness entries:", e);
     }
@@ -165,6 +177,7 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
           .slice(0, MAX_ENTRIES);
         await AsyncStorage.setItem(WELLNESS_STORAGE_KEY, JSON.stringify(trimmed));
         setEntries(trimmed);
+        syncWellnessReminder(trimmed).catch(() => {});
       } catch (e) {
         console.error("Error hydrating caregiver wellness from server:", e);
       }
