@@ -14,11 +14,11 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "**/*.tsx"
   ],
   "references": [
-    { "path": "../../lib/api-client-react" }
+    {
+      "path": "../../lib/api-client-react"
+    }
   ]
 }
