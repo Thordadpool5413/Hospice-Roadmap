@@ -67,7 +67,7 @@ const withAndroidAutoMedia: ConfigPlugin = (config) => {
 
 const config: ExpoConfig = {
   name: "Hospice Roadmap",
-  slug: "workspacemobile",
+  slug: "mobile",
   owner: "thordadpool",
   version: "1.0.0",
   orientation: "portrait",
@@ -130,7 +130,7 @@ const config: ExpoConfig = {
     apiUrl: explicitApiUrl || undefined,
     domain: devDomain || undefined,
     eas: {
-      projectId: "3923a54d-c245-40f4-b71f-d94a4205b49c",
+      projectId: "e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc",
     },
   },
 };
