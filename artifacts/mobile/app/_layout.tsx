@@ -5,7 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { ClerkProvider, ClerkLoaded, ClerkLoading } from "@clerk/expo";
+import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
@@ -33,10 +33,6 @@ import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
 
-// Must be called before ANY other module-scope setup so the splash screen
-// never auto-hides before fonts are loaded and the component tree is ready.
-SplashScreen.preventAutoHideAsync().catch(() => {});
-
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -52,9 +48,10 @@ try {
   initializeRevenueCat();
 } catch (err: unknown) {
   const e = err as { message?: string };
-  // Log to Metro console so the error is visible when debugging with Expo Go.
-  console.warn("[RevenueCat] Initialization skipped:", e?.message ?? "unknown error");
+  Alert.alert("RevenueCat Unavailable", e?.message ?? "Subscription features may not be available.");
 }
+
+SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
@@ -356,11 +353,7 @@ export default function RootLayout() {
     document.head.appendChild(el);
   }, []);
 
-  // Render an opaque background instead of null so there is never a black
-  // frame if the splash screen dismisses before fonts have finished loading.
-  if (!fontsLoaded && !fontError) {
-    return <View style={{ flex: 1, backgroundColor: "#091734" }} />;
-  }
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <ClerkProvider
@@ -368,11 +361,6 @@ export default function RootLayout() {
       tokenCache={tokenCache}
       proxyUrl={proxyUrl}
     >
-      {/* Show the app background while Clerk initialises so the screen is
-          never blank. ClerkLoaded renders null until isLoaded is true. */}
-      <ClerkLoading>
-        <View style={{ flex: 1, backgroundColor: "#091734" }} />
-      </ClerkLoading>
       <ClerkLoaded>
         <SafeAreaProvider>
           <ErrorBoundary>
