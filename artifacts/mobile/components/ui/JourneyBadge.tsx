@@ -40,7 +40,8 @@ export function JourneyBadge({ stage, size = "sm" }: JourneyBadgeProps) {
         styles.badge,
         {
           backgroundColor: config.bg,
-          paddingHorizontal: isSmall ? 8 : 12,
+          borderColor: config.color + "35",
+          paddingHorizontal: isSmall ? 7 : 11,
           paddingVertical: isSmall ? 3 : 5,
           borderRadius: isSmall ? 6 : 8,
         },
@@ -51,7 +52,7 @@ export function JourneyBadge({ stage, size = "sm" }: JourneyBadgeProps) {
           styles.label,
           {
             color: config.color,
-            fontSize: isSmall ? 11 : 13,
+            fontSize: isSmall ? 10 : 12,
           },
         ]}
       >
@@ -64,9 +65,10 @@ export function JourneyBadge({ stage, size = "sm" }: JourneyBadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: "flex-start",
+    borderWidth: 1,
   },
   label: {
     fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.2,
+    letterSpacing: 0.15,
   },
 });
