@@ -28,6 +28,7 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
   const [needsMfa, setNeedsMfa] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   if (isSignedIn) {
     return <Redirect href="/" />;
@@ -37,10 +38,18 @@ export default function SignInScreen() {
 
   const handleSignIn = async () => {
     if (!signIn) return;
-    const { error } = await signIn.password({ identifier: email, password });
-    if (error) return;
+    setLocalError(null);
+    const { error } = await signIn.create({ identifier: email, password });
+    if (error) {
+      setLocalError((error as any)?.longMessage ?? (error as any)?.message ?? "Incorrect email or password.");
+      return;
+    }
     if (signIn.status === "complete") {
-      await signIn.finalize();
+      const { error: finalizeError } = await signIn.finalize();
+      if (finalizeError) {
+        setLocalError((finalizeError as any)?.longMessage ?? (finalizeError as any)?.message ?? "Sign in failed. Please try again.");
+        return;
+      }
       router.replace("/");
     } else if (signIn.status === "needs_second_factor") {
       await (signIn as any).mfa?.sendEmailCode?.();
@@ -50,10 +59,18 @@ export default function SignInScreen() {
 
   const handleVerifyMfa = async () => {
     if (!signIn) return;
+    setLocalError(null);
     const result = await (signIn as any).mfa?.verifyEmailCode?.({ code: mfaCode });
-    if (result?.error) return;
+    if (result?.error) {
+      setLocalError((result.error as any)?.longMessage ?? (result.error as any)?.message ?? "Invalid code. Please try again.");
+      return;
+    }
     if (signIn.status === "complete") {
-      await signIn.finalize();
+      const { error: finalizeError } = await signIn.finalize();
+      if (finalizeError) {
+        setLocalError((finalizeError as any)?.longMessage ?? (finalizeError as any)?.message ?? "Sign in failed. Please try again.");
+        return;
+      }
       router.replace("/");
     }
   };
@@ -93,6 +110,9 @@ export default function SignInScreen() {
           )}
           {!errors?.fields?.code && errors?.global?.[0] && (
             <Text style={styles.errorText}>{errors.global[0].message}</Text>
+          )}
+          {!errors?.fields?.code && !errors?.global?.[0] && localError && (
+            <Text style={styles.errorText}>{localError}</Text>
           )}
         </View>
 
@@ -184,6 +204,9 @@ export default function SignInScreen() {
 
         {!errors?.fields?.identifier && !errors?.fields?.password && errors?.global?.[0] && (
           <Text style={styles.errorText}>{errors.global[0].message}</Text>
+        )}
+        {!errors?.fields?.identifier && !errors?.fields?.password && !errors?.global?.[0] && localError && (
+          <Text style={styles.errorText}>{localError}</Text>
         )}
 
         <Pressable
