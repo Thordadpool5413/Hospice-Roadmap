@@ -73,6 +73,7 @@ import {
   uploadJournal,
   uploadLivingProfile,
   uploadProfile,
+  uploadRagnaMemory,
   uploadReminders,
   uploadSymptoms,
 } from "@/services/syncService";
@@ -131,10 +132,14 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { entries: journal, isLoading: jrnLoading, hydrateFromServer: hydrateJournal } = useJournal();
   const { reminders, isLoading: remLoading, hydrateFromServer: hydrateReminders } = useReminders();
   const {
+    memories: ragnaMemories,
     livingProfile,
     livingProfileUpdatedAt,
+    ragnaMemoryUpdatedAt,
+    recentTiles: ragnaTiles,
     isLoading: veraLoading,
     updateLivingProfile,
+    hydrateFromServer: hydrateRagnaMemory,
   } = useVeraMemory();
   const {
     entries: wellnessEntries,
@@ -269,6 +274,45 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           // Pass the server's own updatedAt so the local copy stores the correct
           // LWW version and doesn't immediately re-upload as "newer on next sync"
           await updateLivingProfile(serverData.livingProfile.profile, serverTs ?? undefined);
+        }
+      }
+
+      // ── Ragna AI memory (true LWW by ragnaMemoryUpdatedAt) ───────────────
+      //
+      // Memories and tile history are stored as a single document per user.
+      // The version key is `ragnaMemoryUpdatedAt` — a dedicated timestamp
+      // stamped and persisted on every addMemory / recordTile write.  It is
+      // independent of `livingProfileUpdatedAt` so the two stores can advance
+      // independently without one clobbering the other.
+      //
+      // LWW: the server row wins when the server timestamp is newer than the
+      // local version, or when local has no content yet (new device / reinstall).
+      //
+      // Captured resolved values let Step 3 push the correct data even though
+      // React state from the hydrate call won't be visible in the closure until
+      // the next render.
+      let resolvedRagnaMemories = ragnaMemories;
+      let resolvedRagnaTiles = ragnaTiles;
+      let resolvedRagnaUpdatedAt = ragnaMemoryUpdatedAt;
+
+      if (serverData.ragnaMemory) {
+        const serverTs = serverData.ragnaMemory.updatedAt ?? null;
+        const serverIsNewer = serverTs && (
+          !ragnaMemoryUpdatedAt ||
+          new Date(serverTs) > new Date(ragnaMemoryUpdatedAt)
+        );
+        const ragnaIsEmpty = ragnaMemories.length === 0 && ragnaTiles.length === 0;
+
+        if (ragnaIsEmpty || serverIsNewer) {
+          const serverMemories = serverData.ragnaMemory.memories as import("@/types").VeraMemory[];
+          const serverTiles = serverData.ragnaMemory.tiles as string[];
+          const effectiveTs = serverTs ?? new Date().toISOString();
+          // Pass the server's own updatedAt so local LWW is set correctly and
+          // the next sync doesn't immediately re-upload this as "newer".
+          await hydrateRagnaMemory(serverMemories, serverTiles, effectiveTs);
+          resolvedRagnaMemories = serverMemories;
+          resolvedRagnaTiles = serverTiles;
+          resolvedRagnaUpdatedAt = effectiveTs;
         }
       }
 
@@ -429,6 +473,18 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushOps.push(uploadLivingProfile(livingProfile, livingProfileUpdatedAt));
       }
 
+      // Push Ragna memory when we have anything to save.
+      // Use `resolvedRagna*` (captured during Step 2) rather than the React
+      // closure values, which may not yet reflect a hydration that just ran.
+      // Only push when there is something meaningful (at least one memory or
+      // tile) — an empty upload would create a server row with no content.
+      if (
+        (resolvedRagnaMemories.length > 0 || resolvedRagnaTiles.length > 0) &&
+        resolvedRagnaUpdatedAt
+      ) {
+        pushOps.push(uploadRagnaMemory(resolvedRagnaMemories, resolvedRagnaTiles, resolvedRagnaUpdatedAt));
+      }
+
       if (mergedReminders.length > 0) pushOps.push(uploadReminders(mergedReminders));
 
       // Always push when there are pending wellness deletes so that an empty
@@ -550,6 +606,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     user,
     livingProfile,
     livingProfileUpdatedAt,
+    ragnaMemories,
+    ragnaTiles,
+    ragnaMemoryUpdatedAt,
     hydrateSymptoms,
     hydrateJournal,
     hydrateReminders,
@@ -558,6 +617,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     hydrateProfileFromServer,
     hydrateSavedListsFromSync,
     updateLivingProfile,
+    hydrateRagnaMemory,
     markWellnessSynced,
   ]);
 

@@ -24,6 +24,7 @@ import {
   getHideReplyPreview,
   setHideReplyPreview,
 } from "@/services/ragnaPreviewPreference";
+import { deleteServerRagnaMemory } from "@/services/syncService";
 import { RagnaPrivacySettings } from "@/types";
 
 export default function RagnaPrivacyScreen() {
@@ -65,13 +66,17 @@ export default function RagnaPrivacyScreen() {
   const handleClearMemory = () => {
     Alert.alert(
       "Clear Ragna Memory",
-      "This clears Ragna's saved local memory and living profile on this device. It does not automatically delete a conversation that is currently open.",
+      "This clears Ragna's saved local memory and living profile on this device and removes it from your account so it won't be restored on other devices. It does not automatically delete a conversation that is currently open.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Clear Memory",
           style: "destructive",
-          onPress: () => clearMemories(),
+          onPress: () => {
+            void clearMemories();
+            // Delete from server so the next sync doesn't rehydrate cleared data.
+            void deleteServerRagnaMemory();
+          },
         },
       ]
     );

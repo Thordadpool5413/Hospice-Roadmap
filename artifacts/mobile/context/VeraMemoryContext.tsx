@@ -6,17 +6,23 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
 // Legacy compatibility name retained for now. This type powers Ragna memory and can be renamed in a later migration pass.
 import { VeraMemory } from "@/types";
+import { uploadRagnaMemory } from "@/services/syncService";
 
 // AsyncStorage keys are frozen — renaming would lose existing user data.
 const STORAGE_KEY = "@vera_memories_v1";
 const PROFILE_KEY = "@vera_living_profile_v1";
 const PROFILE_UPDATED_AT_KEY = "@vera_living_profile_updated_at_v1";
 const TILES_KEY = "@vera_tile_history_v1";
+// Dedicated LWW version key for the ragna_memory server document (memories + tiles).
+// Separate from livingProfileUpdatedAt because memory writes and profile writes
+// are independent operations; mixing them would break LWW on both paths.
+const RAGNA_MEMORY_UPDATED_AT_KEY = "@ragna_memory_updated_at_v1";
 const MAX_MEMORIES = 5;
 const MAX_TILES = 20;
 
@@ -26,6 +32,8 @@ interface VeraMemoryContextType {
   livingProfile: string;
   /** ISO timestamp of the last local write to livingProfile — used as LWW version key for sync. */
   livingProfileUpdatedAt: string;
+  /** ISO timestamp of the last local write to memories or tiles — LWW version key for the ragna_memory server document. */
+  ragnaMemoryUpdatedAt: string;
   recentTiles: string[];
   /** True while the initial AsyncStorage load is still in flight. */
   isLoading: boolean;
@@ -35,6 +43,18 @@ interface VeraMemoryContextType {
   recordTile: (label: string) => void;
   getMemorySummary: () => string;
   memoryCount: number;
+  /**
+   * Restore memories and tiles from a server sync response (LWW already
+   * resolved by CloudSyncManager). Writes through to AsyncStorage without
+   * triggering a write-through upload (the data just came from the server).
+   * @param serverUpdatedAt  The server row's updatedAt — stored as the local
+   *   LWW version so the next sync doesn't immediately re-upload as "newer".
+   */
+  hydrateFromServer: (
+    serverMemories: VeraMemory[],
+    serverTiles: string[],
+    serverUpdatedAt: string,
+  ) => Promise<void>;
 }
 
 // Legacy compatibility name retained for now. Powers Ragna memory context.
@@ -52,8 +72,15 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
   const [memories, setMemories] = useState<VeraMemory[]>([]);
   const [livingProfile, setLivingProfile] = useState<string>("");
   const [livingProfileUpdatedAt, setLivingProfileUpdatedAt] = useState<string>("");
+  const [ragnaMemoryUpdatedAt, setRagnaMemoryUpdatedAt] = useState<string>("");
   const [recentTiles, setRecentTiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Refs so upload callbacks always see the current value without being listed
+  // in every useCallback dependency array.
+  const memoriesRef = useRef<VeraMemory[]>([]);
+  const tilesRef = useRef<string[]>([]);
+  const ragnaMemoryUpdatedAtRef = useRef<string>("");
 
   useEffect(() => {
     Promise.all([
@@ -61,12 +88,25 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
       AsyncStorage.getItem(PROFILE_KEY),
       AsyncStorage.getItem(PROFILE_UPDATED_AT_KEY),
       AsyncStorage.getItem(TILES_KEY),
+      AsyncStorage.getItem(RAGNA_MEMORY_UPDATED_AT_KEY),
     ])
-      .then(([memoriesRaw, profileRaw, profileUpdatedAtRaw, tilesRaw]) => {
-        if (memoriesRaw) setMemories(JSON.parse(memoriesRaw) as VeraMemory[]);
+      .then(([memoriesRaw, profileRaw, profileUpdatedAtRaw, tilesRaw, ragnaUpdatedAtRaw]) => {
+        if (memoriesRaw) {
+          const parsed = JSON.parse(memoriesRaw) as VeraMemory[];
+          setMemories(parsed);
+          memoriesRef.current = parsed;
+        }
         if (profileRaw) setLivingProfile(profileRaw);
         if (profileUpdatedAtRaw) setLivingProfileUpdatedAt(profileUpdatedAtRaw);
-        if (tilesRaw) setRecentTiles(JSON.parse(tilesRaw) as string[]);
+        if (tilesRaw) {
+          const parsed = JSON.parse(tilesRaw) as string[];
+          setRecentTiles(parsed);
+          tilesRef.current = parsed;
+        }
+        if (ragnaUpdatedAtRaw) {
+          setRagnaMemoryUpdatedAt(ragnaUpdatedAtRaw);
+          ragnaMemoryUpdatedAtRef.current = ragnaUpdatedAtRaw;
+        }
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -74,16 +114,35 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
 
   const persistMemories = useCallback(async (updated: VeraMemory[]) => {
     setMemories(updated);
+    memoriesRef.current = updated;
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  }, []);
+
+  /**
+   * Stamp a new ragnaMemoryUpdatedAt, persist it, and return the new ISO string.
+   * Called on every write that should advance the LWW version key.
+   */
+  const stampRagnaUpdatedAt = useCallback(async (): Promise<string> => {
+    const ts = new Date().toISOString();
+    setRagnaMemoryUpdatedAt(ts);
+    ragnaMemoryUpdatedAtRef.current = ts;
+    await AsyncStorage.setItem(RAGNA_MEMORY_UPDATED_AT_KEY, ts);
+    return ts;
   }, []);
 
   const addMemory = useCallback(
     async (memory: VeraMemory) => {
-      const deduped = memories.filter((m) => m.conversationId !== memory.conversationId);
+      const deduped = memoriesRef.current.filter(
+        (m) => m.conversationId !== memory.conversationId,
+      );
       const updated = [memory, ...deduped].slice(0, MAX_MEMORIES);
       await persistMemories(updated);
+
+      // Stamp a new LWW version key and fire a write-through upload (fire-and-forget).
+      const ts = await stampRagnaUpdatedAt();
+      uploadRagnaMemory(updated, tilesRef.current, ts).catch(() => {});
     },
-    [memories, persistMemories]
+    [persistMemories, stampRagnaUpdatedAt]
   );
 
   // Clears all local Ragna memory: saved conversation memories, the living
@@ -93,8 +152,16 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
     await persistMemories([]);
     setLivingProfile("");
     setLivingProfileUpdatedAt("");
+    setRagnaMemoryUpdatedAt("");
+    ragnaMemoryUpdatedAtRef.current = "";
+    tilesRef.current = [];
     setRecentTiles([]);
-    await AsyncStorage.multiRemove([PROFILE_KEY, PROFILE_UPDATED_AT_KEY, TILES_KEY]);
+    await AsyncStorage.multiRemove([
+      PROFILE_KEY,
+      PROFILE_UPDATED_AT_KEY,
+      TILES_KEY,
+      RAGNA_MEMORY_UPDATED_AT_KEY,
+    ]);
   }, [persistMemories]);
 
   /**
@@ -115,10 +182,43 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
   const recordTile = useCallback((label: string) => {
     setRecentTiles((prev) => {
       const updated = [label, ...prev].slice(0, MAX_TILES);
+      tilesRef.current = updated;
       AsyncStorage.setItem(TILES_KEY, JSON.stringify(updated)).catch(() => {});
+
+      // Stamp a new LWW version key and fire a write-through upload (fire-and-forget).
+      // We persist the timestamp first, then upload, to ensure durability even
+      // if the upload fails — the stamped ts will be used on the next full sync.
+      stampRagnaUpdatedAt()
+        .then((ts) => uploadRagnaMemory(memoriesRef.current, updated, ts))
+        .catch(() => {});
+
       return updated;
     });
-  }, []);
+  }, [stampRagnaUpdatedAt]);
+
+  /**
+   * Restore memories and tile history from the server after CloudSyncManager
+   * has already resolved the LWW conflict and determined the server data wins.
+   * Writes through to AsyncStorage and stores the server's updatedAt as the
+   * new local LWW key so the next sync doesn't re-upload this data as "newer".
+   * Does NOT fire a write-through upload — the data came from the server.
+   */
+  const hydrateFromServer = useCallback(
+    async (serverMemories: VeraMemory[], serverTiles: string[], serverUpdatedAt: string) => {
+      setMemories(serverMemories);
+      memoriesRef.current = serverMemories;
+      setRecentTiles(serverTiles);
+      tilesRef.current = serverTiles;
+      setRagnaMemoryUpdatedAt(serverUpdatedAt);
+      ragnaMemoryUpdatedAtRef.current = serverUpdatedAt;
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(serverMemories)),
+        AsyncStorage.setItem(TILES_KEY, JSON.stringify(serverTiles)),
+        AsyncStorage.setItem(RAGNA_MEMORY_UPDATED_AT_KEY, serverUpdatedAt),
+      ]);
+    },
+    []
+  );
 
   const getMemorySummary = useCallback((): string => {
     if (livingProfile) {
@@ -173,6 +273,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
         memories,
         livingProfile,
         livingProfileUpdatedAt,
+        ragnaMemoryUpdatedAt,
         recentTiles,
         isLoading,
         addMemory,
@@ -181,6 +282,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
         recordTile,
         getMemorySummary,
         memoryCount: memories.length,
+        hydrateFromServer,
       }}
     >
       {children}

@@ -2,7 +2,7 @@
  * Cloud sync service — uploads local data to the server and restores it on
  * sign-in / app foreground / reconnect.
  *
- * Seven data stores are synced:
+ * Eight data stores are synced:
  *   - symptom entries          (@hospice_roadmap_symptoms)
  *   - journal entries          (@hospice_roadmap_journal)
  *   - goals of care            (user.patientProfile.goalsOfCare in @hospice_roadmap_user)
@@ -10,6 +10,7 @@
  *   - reminders                (@hospice_roadmap_reminders)
  *   - caregiver wellness       (@caregiver_wellness_v1)
  *   - user profile             (@hospice_roadmap_user — role/stage/settings, NOT goalsOfCare)
+ *   - Ragna AI memory          (@vera_memories_v1 + @vera_tile_history_v1)
  *
  * Per-record conflict resolution (last-write-wins):
  *   Each record now carries an `updatedAt` field stamped at create/update time
@@ -36,7 +37,7 @@ import { getAuthToken } from "@workspace/api-client-react";
 import { apiBase, makeRequestTimeoutSignal, mergeJsonHeaders } from "./apiClient";
 import { GOC_FIELDS, mergeGoalsOfCare } from "@workspace/goc-merge";
 import type { GoalsOfCare, GoalsOfCareField } from "@workspace/goc-merge";
-import type { CaregiverWellnessEntry, JournalEntry, Reminder, SymptomEntry } from "@/types";
+import type { CaregiverWellnessEntry, JournalEntry, Reminder, SymptomEntry, VeraMemory } from "@/types";
 
 // ─── Last-success timestamp key ───────────────────────────────────────────────
 
@@ -67,15 +68,18 @@ const MIGRATED_PROFILE       = "@sync_migrated_profile";
 const MIGRATED_REMINDERS     = "@sync_migrated_reminders";
 const MIGRATED_WELLNESS      = "@sync_migrated_wellness";
 const MIGRATED_USER_PROFILE  = "@sync_migrated_user_profile";
+const MIGRATED_RAGNA_MEMORY  = "@sync_migrated_ragna_memory";
 
 // ─── AsyncStorage source keys (must not be changed) ──────────────────────────
 
-const AS_SYMPTOMS  = "@hospice_roadmap_symptoms";
-const AS_JOURNAL   = "@hospice_roadmap_journal";
-const AS_USER      = "@hospice_roadmap_user";
-const AS_PROFILE   = "@vera_living_profile_v1";
-const AS_REMINDERS = "@hospice_roadmap_reminders";
-const AS_WELLNESS  = "@caregiver_wellness_v1";
+const AS_SYMPTOMS       = "@hospice_roadmap_symptoms";
+const AS_JOURNAL        = "@hospice_roadmap_journal";
+const AS_USER           = "@hospice_roadmap_user";
+const AS_PROFILE        = "@vera_living_profile_v1";
+const AS_REMINDERS      = "@hospice_roadmap_reminders";
+const AS_WELLNESS       = "@caregiver_wellness_v1";
+const AS_RAGNA_MEMORIES = "@vera_memories_v1";
+const AS_RAGNA_TILES    = "@vera_tile_history_v1";
 
 // ─── Auth header helper ───────────────────────────────────────────────────────
 
@@ -179,6 +183,12 @@ export interface ServerSyncData {
    * alongside `data` (the User object without patientProfile.goalsOfCare).
    */
   userProfile: { data: Record<string, unknown>; updatedAt?: string } | null;
+  /**
+   * The full DB row for Ragna AI memory — includes `updatedAt` (ISO string)
+   * alongside `memories` (VeraMemory[]) and `tiles` (string[]).
+   * Null when the user has no synced memory yet.
+   */
+  ragnaMemory: { memories: unknown[]; tiles: unknown[]; updatedAt?: string } | null;
 }
 
 // ─── Per-record merge helpers ─────────────────────────────────────────────────
@@ -394,6 +404,28 @@ export async function deleteAllServerData(): Promise<boolean> {
   return syncDelete("/all");
 }
 
+// ─── Ragna AI memory upload/delete ────────────────────────────────────────────
+
+/**
+ * Upload Ragna's full memory state (memories array + tile history) to the server.
+ * @param memories      The current VeraMemory[] array (capped at MAX_MEMORIES).
+ * @param tiles         The current recent tile/topic labels (capped at MAX_TILES).
+ * @param updatedAt     The ISO timestamp of the most recent local write —
+ *                      used as the LWW version key so a stale device cannot
+ *                      overwrite fresher data from another device.
+ */
+export async function uploadRagnaMemory(
+  memories: VeraMemory[],
+  tiles: string[],
+  updatedAt: string,
+): Promise<boolean> {
+  return syncPut("/ragna-memory", { memories, tiles, clientUpdatedAt: updatedAt });
+}
+
+export async function deleteServerRagnaMemory(): Promise<boolean> {
+  return syncDelete("/ragna-memory");
+}
+
 // ─── User profile upload/delete ───────────────────────────────────────────────
 
 /**
@@ -499,6 +531,7 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
     MIGRATED_REMINDERS,
     MIGRATED_WELLNESS,
     MIGRATED_USER_PROFILE,
+    MIGRATED_RAGNA_MEMORY,
   ]);
   const flagMap: Record<string, boolean> = {};
   for (const [key, val] of flags) {
@@ -643,6 +676,31 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
             const ok = await uploadProfile(localUser);
             if (ok) await AsyncStorage.setItem(MIGRATED_USER_PROFILE, "1");
           }
+        }
+      }
+    })());
+  }
+
+  if (!flagMap[MIGRATED_RAGNA_MEMORY]) {
+    migrations.push((async () => {
+      if (serverData.ragnaMemory) {
+        // Server already has Ragna memory — mark done without re-uploading.
+        await AsyncStorage.setItem(MIGRATED_RAGNA_MEMORY, "1");
+      } else {
+        const [memoriesRaw, tilesRaw] = await Promise.all([
+          AsyncStorage.getItem(AS_RAGNA_MEMORIES),
+          AsyncStorage.getItem(AS_RAGNA_TILES),
+        ]);
+        const localMemories: VeraMemory[] = memoriesRaw ? JSON.parse(memoriesRaw) : [];
+        const localTiles: string[] = tilesRaw ? JSON.parse(tilesRaw) : [];
+        if (localMemories.length === 0 && localTiles.length === 0) {
+          // Nothing to migrate
+          await AsyncStorage.setItem(MIGRATED_RAGNA_MEMORY, "1");
+        } else {
+          // Use now as the migration timestamp — server is empty so any value wins.
+          const ok = await uploadRagnaMemory(localMemories, localTiles, new Date().toISOString());
+          if (ok) await AsyncStorage.setItem(MIGRATED_RAGNA_MEMORY, "1");
+          // If upload failed: flag NOT set, will retry next sync
         }
       }
     })());

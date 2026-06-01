@@ -27,6 +27,7 @@ import {
   deleteServerGoals,
   deleteServerJournal,
   deleteServerLivingProfile,
+  deleteServerRagnaMemory,
   deleteServerReminders,
   deleteServerSymptoms,
   readSyncLastSuccess,
@@ -287,7 +288,12 @@ export default function DataControlsScreen() {
           async () => {
             await clearMemories();
             await clearObservations();
-            await deleteServerLivingProfile();
+            // Delete both the living profile and the ragna memory document from
+            // the server so the next sync doesn't rehydrate cleared data.
+            await Promise.all([
+              deleteServerLivingProfile(),
+              deleteServerRagnaMemory(),
+            ]);
           }
         ),
     },
