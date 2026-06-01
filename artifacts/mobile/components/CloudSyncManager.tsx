@@ -120,7 +120,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { isOnline } = useAppNetwork();
 
   // isLoading from AppContext is true until AsyncStorage hydration is done
-  const { user, isLoading: appLoading, updatePatientProfile, hydrateProfileFromServer } = useApp();
+  const { user, isLoading: appLoading, hydrateGoalsFromSync, hydrateProfileFromServer } = useApp();
   const { entries: symptoms, isLoading: sympLoading, hydrateFromServer: hydrateSymptoms } = useSymptoms();
   const { entries: journal, isLoading: jrnLoading, hydrateFromServer: hydrateJournal } = useJournal();
   const { reminders, isLoading: remLoading, hydrateFromServer: hydrateReminders } = useReminders();
@@ -240,9 +240,13 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       //   1. Local was empty → restore from server.
       //   2. Server had fields the local device never set → merge them in.
       //   3. Local already matches → no-op (idempotent).
+      //
+      // We use `hydrateGoalsFromSync` instead of `updatePatientProfile` here.
+      // `updatePatientProfile` calls `saveUser` which now stamps `updatedAt` and
+      // fires `uploadProfile` — using it during sync would overwrite the server
+      // profile with a stale React closure value carrying a brand-new timestamp.
       if (resolvedGoals && resolvedGoals !== localGoals) {
-        const currentProfile = user?.patientProfile ?? {};
-        updatePatientProfile({ ...currentProfile, goalsOfCare: resolvedGoals });
+        await hydrateGoalsFromSync(resolvedGoals);
       }
 
       // ── Living profile (true LWW by updatedAt) ───────────────────────────
@@ -432,8 +436,8 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     hydrateJournal,
     hydrateReminders,
     hydrateWellness,
+    hydrateGoalsFromSync,
     hydrateProfileFromServer,
-    updatePatientProfile,
     updateLivingProfile,
     markWellnessSynced,
   ]);

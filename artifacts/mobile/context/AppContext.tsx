@@ -126,6 +126,18 @@ interface AppContextValue {
    * is managed by a separate sync path and must not be overwritten here.
    */
   hydrateProfileFromServer: (data: Record<string, unknown>) => Promise<void>;
+  /**
+   * Apply a merged GoalsOfCare object received from the server sync merge.
+   *
+   * Updates storage + state WITHOUT stamping `updatedAt` on the User record and
+   * WITHOUT triggering a write-through `uploadProfile` call.
+   *
+   * This is the correct path for sync-driven GoC writes. Using the user-facing
+   * `updatePatientProfile` for sync merges would stamp a fresh `updatedAt`, making
+   * the stale React-closure profile appear newer than the server and causing it to
+   * overwrite a genuinely newer server profile via LWW.
+   */
+  hydrateGoalsFromSync: (goals: GoalsOfCare) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -181,11 +193,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Restore user profile data from the server WITHOUT triggering an upload
-   * back (avoids a redundant round-trip and prevents stomping a newer server
-   * value with stale local data). Preserves the local GoC value because that
-   * field is managed by the separate /sync/goals endpoint.
+   * Sync-only GoC write: merges `goals` into the persisted user WITHOUT
+   * stamping a new `updatedAt` and WITHOUT calling `uploadProfile`.
+   *
+   * Reads directly from AsyncStorage (not the React closure) so it is safe
+   * to call from CloudSyncManager even before the preceding `setUser` has
+   * flushed to the render cycle.
    */
+  const hydrateGoalsFromSync = useCallback(
+    async (goals: GoalsOfCare): Promise<void> => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!stored) return;
+        const currentUser = normalizeUser(JSON.parse(stored) as User);
+        const merged: User = {
+          ...currentUser,
+          patientProfile: {
+            ...(currentUser.patientProfile ?? {}),
+            goalsOfCare: goals,
+          },
+          // Intentionally do NOT update updatedAt here. This is a sync-driven
+          // write; stamping a new time would make the stale closure profile look
+          // newer on the next upload and overwrite a genuinely newer server record.
+        };
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        setUser(merged);
+      } catch (e) {
+        console.error("Error hydrating goals from sync:", e);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   const hydrateProfileFromServer = useCallback(
     async (data: Record<string, unknown>): Promise<void> => {
       try {
@@ -450,6 +490,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateRagnaPrivacy,
         resetRagnaPrivacy,
         hydrateProfileFromServer,
+        hydrateGoalsFromSync,
       }}
     >
       {children}
