@@ -361,63 +361,6 @@ export default function RootLayout() {
     document.head.appendChild(el);
   }, []);
 
-  // Render an opaque background instead of null so there is never a black
-  // frame if the splash screen dismisses before fonts have finished loading.
-  if (!fontsLoaded && !fontError) {
-    return <View style={{ flex: 1, backgroundColor: "#091734" }} />;
-  }
-
-  return (
-    <ClerkProvider
-      publishableKey={publishableKey}
-      tokenCache={tokenCache}
-      proxyUrl={proxyUrl}
-    >
-      {/* Show the app background while Clerk initialises so the screen is
-          never blank. ClerkLoaded renders null until isLoaded is true. */}
-      <ClerkLoading>
-        <View style={{ flex: 1, backgroundColor: "#091734" }} />
-      </ClerkLoading>
-      <ClerkLoaded>
-        <SafeAreaProvider>
-          <ErrorBoundary>
-            <AccessibilityProvider>
-            <AppProvider>
-              <JournalProvider>
-              <RemindersProvider>
-              <SymptomProvider>
-              <CaregiverWellnessProvider>
-              <VeraMemoryProvider>
-              <RagnaLearningProvider>
-              <QueryClientProvider client={queryClient}>
-                <SubscriptionProvider>
-                <AppLockProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <CloudSyncProvider>
-                    <View style={{ flex: 1 }}>
-                      <LearningSync />
-                      <RootLayoutNav />
-                      <OfflineBanner />
-                      <SyncSuccessToast />
-                      <LockOverlay />
-                    </View>
-                  </CloudSyncProvider>
-                </GestureHandlerRootView>
-                </AppLockProvider>
-                </SubscriptionProvider>
-              </QueryClientProvider>
-              </RagnaLearningProvider>
-              </VeraMemoryProvider>
-              </CaregiverWellnessProvider>
-              </SymptomProvider>
-              </RemindersProvider>
-              </JournalProvider>
-            </AppProvider>
-            </AccessibilityProvider>
-          </ErrorBoundary>
-        </SafeAreaProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
   // Safe loading state — dark view keeps the splash color while fonts load.
   // Never return null: on iOS a null root causes a brief blank flash before
   // the React tree has a chance to paint.
