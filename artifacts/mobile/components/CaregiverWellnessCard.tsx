@@ -166,7 +166,7 @@ const spk = StyleSheet.create({
   axisLabel: {
     fontSize: 9,
     fontFamily: "Inter_400Regular",
-    color: "#2A3A60",
+    color: Colors.textSubtle,
   },
 });
 
@@ -431,21 +431,21 @@ export function CaregiverWellnessCard() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────��───────────────────────────
 
 const cw = StyleSheet.create({
   card: {
-    backgroundColor: "rgba(12, 20, 58, 0.88)",
-    borderRadius: 18,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 15,
+    padding: 16,
     gap: 12,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: "#000820",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.22,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 4,
   },
   header: {
     flexDirection: "row",
@@ -455,7 +455,7 @@ const cw = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 11,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -467,13 +467,13 @@ const cw = StyleSheet.create({
   title: {
     fontSize: 15,
     fontFamily: "Inter_700Bold",
-    color: "#E8F0FF",
-    letterSpacing: -0.25,
+    color: Colors.text,
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: "#5A78A8",
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
     lineHeight: 17,
   },
   selectedEmoji: {
@@ -485,7 +485,7 @@ const cw = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: Colors.surfaceLight,
   },
 
   moodRow: {
@@ -496,12 +496,12 @@ const cw = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: 4,
-    paddingVertical: 8,
+    paddingVertical: 9,
     paddingHorizontal: 2,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: Colors.surfaceLight,
     borderWidth: 1,
-    borderColor: "rgba(80,120,200,0.18)",
+    borderColor: Colors.cardBorder,
   },
   moodEmoji: {
     fontSize: 22,
@@ -509,7 +509,7 @@ const cw = StyleSheet.create({
   moodLabel: {
     fontSize: 9,
     fontFamily: "Inter_600SemiBold",
-    letterSpacing: -0.1,
+    letterSpacing: -0.05,
     textAlign: "center",
   },
 
@@ -521,50 +521,51 @@ const cw = StyleSheet.create({
   moodBtnSmall: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: Colors.surfaceLight,
     borderWidth: 1,
-    borderColor: "rgba(80,120,200,0.18)",
+    borderColor: Colors.cardBorder,
   },
   moodEmojiSmall: {
     fontSize: 20,
   },
 
   noteInput: {
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: Colors.surfaceLight,
     borderWidth: 1,
-    borderColor: "rgba(80,120,200,0.22)",
+    borderColor: Colors.cardBorder,
     borderRadius: 12,
     paddingHorizontal: 13,
-    paddingVertical: 10,
+    paddingVertical: 11,
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: "#E8F0FF",
+    color: Colors.text,
+    letterSpacing: -0.1,
   },
 
   submitBtn: {
     borderRadius: 12,
     borderWidth: 1,
-    paddingVertical: 11,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   submitText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    letterSpacing: -0.2,
+    letterSpacing: -0.25,
   },
 
   ragnaCta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: Colors.primary + "12",
+    backgroundColor: Colors.primaryPale,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.primary + "35",
+    borderColor: Colors.primary + "30",
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -584,7 +585,7 @@ const cw = StyleSheet.create({
   dismissText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: "#3A5080",
+    color: Colors.textSubtle,
   },
 
   sparkWrap: {
@@ -603,12 +604,12 @@ const cw = StyleSheet.create({
     flexShrink: 0,
   },
   collapsedText: {
-    gap: 1,
+    gap: 2,
   },
   collapsedTitle: {
     fontSize: 13,
     fontFamily: "Inter_700Bold",
-    color: "#E8F0FF",
+    color: Colors.text,
     letterSpacing: -0.2,
   },
   collapsedCheck: {
@@ -616,9 +617,9 @@ const cw = StyleSheet.create({
     fontSize: 12,
   },
   collapsedSub: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: "#3A5080",
+    color: Colors.textSubtle,
   },
   collapsedSparkWrap: {
     flex: 1,

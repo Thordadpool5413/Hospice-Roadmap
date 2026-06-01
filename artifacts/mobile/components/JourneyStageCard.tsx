@@ -21,7 +21,7 @@ const stageConfigs: Record<JourneyStage, StageConfig> = {
     icon: "search",
     color: Colors.journeyBefore,
     bg: Colors.journeyBeforePale,
-    borderColor: "#C5D8EF",
+    borderColor: Colors.journeyBefore + "40",
   },
   during: {
     title: "During Hospice",
@@ -29,7 +29,7 @@ const stageConfigs: Record<JourneyStage, StageConfig> = {
     icon: "heart",
     color: Colors.journeyDuring,
     bg: Colors.journeyDuringPale,
-    borderColor: "#B8D9CF",
+    borderColor: Colors.journeyDuring + "40",
   },
   after: {
     title: "After Hospice",
@@ -37,7 +37,7 @@ const stageConfigs: Record<JourneyStage, StageConfig> = {
     icon: "sun",
     color: Colors.journeyAfter,
     bg: Colors.journeyAfterPale,
-    borderColor: "#CEBFDA",
+    borderColor: Colors.journeyAfter + "40",
   },
 };
 
@@ -86,13 +86,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 16,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 14,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -101,17 +101,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_700Bold",
-    letterSpacing: -0.2,
+    letterSpacing: -0.25,
   },
   subtitle: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
+    lineHeight: 17,
   },
   pressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.99 }],
+    opacity: 0.86,
+    transform: [{ scale: 0.985 }],
   },
 });

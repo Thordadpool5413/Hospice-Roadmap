@@ -33,33 +33,37 @@ export function SectionHeader({ title, onSeeAll, subtitle }: SectionHeaderProps)
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
   },
   textContainer: {
     flex: 1,
+    gap: 2,
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
-    marginTop: 2,
+    lineHeight: 17,
   },
   seeAll: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
+    paddingVertical: 4,
+    paddingLeft: 8,
   },
   seeAllText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.primary,
+    letterSpacing: -0.1,
   },
 });
