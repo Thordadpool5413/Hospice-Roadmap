@@ -6,6 +6,14 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { uploadProfile } from "@/services/syncService";
+import {
+  dequeuePendingDelete,
+  enqueuePendingDelete,
+  enqueuePendingDeletes,
+  getPendingDeletes,
+} from "@/services/pendingDeletes";
+import { computeSavedListToggle } from "@/services/savedListToggle";
 
 import { GOC_FIELDS } from "@workspace/goc-merge";
 
@@ -101,6 +109,14 @@ interface AppContextValue {
   isOnboarded: boolean;
   isLoading: boolean;
   ragnaPrivacy: RagnaPrivacySettings;
+  /**
+   * True when savedResources or savedProviders have pending deletes queued
+   * (i.e. the user un-saved bookmarks while offline). Clears to false after a
+   * successful sync when CloudSyncManager calls markBookmarksSynced().
+   */
+  hasPendingBookmarkSync: boolean;
+  /** Called by CloudSyncManager after a fully successful push to clear the badge. */
+  markBookmarksSynced: () => void;
   updateJourneyStage: (stage: JourneyStage) => void;
   updateRole: (role: UserRole) => void;
   completeOnboarding: (role: UserRole, stage: JourneyStage) => void;
@@ -116,6 +132,37 @@ interface AppContextValue {
   buildPatientContext: () => string;
   updateRagnaPrivacy: (updates: Partial<RagnaPrivacySettings>) => void;
   resetRagnaPrivacy: () => void;
+  /**
+   * Restore user profile data received from the server during cloud sync.
+   *
+   * Writes the merged profile to AsyncStorage + state WITHOUT triggering an
+   * upload back to the server (which would be redundant — we just received it).
+   * Crucially, it preserves the local `patientProfile.goalsOfCare` value, which
+   * is managed by a separate sync path and must not be overwritten here.
+   */
+  hydrateProfileFromServer: (data: Record<string, unknown>) => Promise<void>;
+  /**
+   * Apply a merged GoalsOfCare object received from the server sync merge.
+   *
+   * Updates storage + state WITHOUT stamping `updatedAt` on the User record and
+   * WITHOUT triggering a write-through `uploadProfile` call.
+   *
+   * This is the correct path for sync-driven GoC writes. Using the user-facing
+   * `updatePatientProfile` for sync merges would stamp a fresh `updatedAt`, making
+   * the stale React-closure profile appear newer than the server and causing it to
+   * overwrite a genuinely newer server profile via LWW.
+   */
+  hydrateGoalsFromSync: (goals: GoalsOfCare) => Promise<void>;
+  /**
+   * Apply union-merged savedResources and savedProviders arrays received from the
+   * server sync merge.
+   *
+   * Updates storage + state WITHOUT stamping `updatedAt` on the User record and
+   * WITHOUT triggering a write-through `uploadProfile` call. This is the correct
+   * path for sync-driven saved-list writes when the local profile is not being
+   * replaced wholesale by `hydrateProfileFromServer`.
+   */
+  hydrateSavedListsFromSync: (savedResources: string[], savedProviders: string[]) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -138,6 +185,7 @@ function createDefaultUser(role: UserRole, stage: JourneyStage): User {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPendingBookmarkSync, setHasPendingBookmarkSync] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -150,6 +198,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(stored) as User;
         setUser(normalizeUser(parsed));
       }
+      // Initialize the bookmark pending-sync badge: set it if either saved list
+      // has queued pending deletes (i.e. the user un-saved items while offline).
+      const pending = await getPendingDeletes();
+      if (pending.savedResources.length > 0 || pending.savedProviders.length > 0) {
+        setHasPendingBookmarkSync(true);
+      }
     } catch (e) {
       console.error("Error loading user:", e);
     } finally {
@@ -157,14 +211,128 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const markBookmarksSynced = useCallback(() => {
+    setHasPendingBookmarkSync(false);
+  }, []);
+
   const saveUser = async (updatedUser: User) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      // Stamp a fresh updatedAt on every save so the LWW sync key is current.
+      const stamped: User = { ...updatedUser, updatedAt: new Date().toISOString() };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
+      setUser(stamped);
+      // Fire-and-forget: push to server. Non-fatal if offline.
+      uploadProfile(stamped).catch(() => {});
     } catch (e) {
       console.error("Error saving user:", e);
     }
   };
+
+  /**
+   * Sync-only GoC write: merges `goals` into the persisted user WITHOUT
+   * stamping a new `updatedAt` and WITHOUT calling `uploadProfile`.
+   *
+   * Reads directly from AsyncStorage (not the React closure) so it is safe
+   * to call from CloudSyncManager even before the preceding `setUser` has
+   * flushed to the render cycle.
+   */
+  const hydrateGoalsFromSync = useCallback(
+    async (goals: GoalsOfCare): Promise<void> => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!stored) return;
+        const currentUser = normalizeUser(JSON.parse(stored) as User);
+        const merged: User = {
+          ...currentUser,
+          patientProfile: {
+            ...(currentUser.patientProfile ?? {}),
+            goalsOfCare: goals,
+          },
+          // Intentionally do NOT update updatedAt here. This is a sync-driven
+          // write; stamping a new time would make the stale closure profile look
+          // newer on the next upload and overwrite a genuinely newer server record.
+        };
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        setUser(merged);
+      } catch (e) {
+        console.error("Error hydrating goals from sync:", e);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  /**
+   * Sync-only saved-list write: merges `savedResources` and `savedProviders` into
+   * the persisted user WITHOUT stamping a new `updatedAt` and WITHOUT calling
+   * `uploadProfile`.
+   *
+   * Reads directly from AsyncStorage (not the React closure) so it is safe to
+   * call from CloudSyncManager even before the preceding `setUser` has flushed to
+   * the render cycle. Used when the local user profile wins the LWW comparison
+   * but the server side of the union merge contributed additional saved IDs.
+   */
+  const hydrateSavedListsFromSync = useCallback(
+    async (savedResources: string[], savedProviders: string[]): Promise<void> => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!stored) return;
+        const currentUser = normalizeUser(JSON.parse(stored) as User);
+        const merged: User = {
+          ...currentUser,
+          savedResources,
+          savedProviders,
+          // Intentionally do NOT update updatedAt here. This is a sync-driven
+          // write; stamping a new time would make the stale closure profile look
+          // newer on the next upload and overwrite a genuinely newer server record.
+        };
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        setUser(merged);
+      } catch (e) {
+        console.error("Error hydrating saved lists from sync:", e);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const hydrateProfileFromServer = useCallback(
+    async (data: Record<string, unknown>): Promise<void> => {
+      try {
+        const serverUser = data as Partial<User>;
+
+        // Read the most-recent persisted state (not the React closure value,
+        // which may be stale if called before a state update settles).
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const currentUser: User | null = stored
+          ? normalizeUser(JSON.parse(stored) as User)
+          : null;
+
+        // Preserve the local GoC — it's authoritative here; the GoC sync path
+        // owns that field and will merge it separately.
+        const existingGoC = currentUser?.patientProfile?.goalsOfCare;
+
+        const merged: User = normalizeUser({
+          // Sensible fallback fields (device-local, never overwritten from server)
+          id: currentUser?.id ?? Date.now().toString(),
+          createdAt: currentUser?.createdAt ?? new Date().toISOString(),
+          // Apply all server fields
+          ...serverUser,
+          // Always keep the local GoC
+          patientProfile: serverUser.patientProfile
+            ? { ...(serverUser.patientProfile as PatientProfile), goalsOfCare: existingGoC }
+            : currentUser?.patientProfile,
+        } as User);
+
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        setUser(merged);
+      } catch (e) {
+        console.error("Error hydrating profile from server:", e);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const completeOnboarding = useCallback(
     (role: UserRole, stage: JourneyStage) => {
@@ -256,11 +424,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const clearSavedResources = useCallback(async (): Promise<void> => {
     if (!user) return;
+    // Track all removed IDs so the next sync's union-merge filter excludes them
+    // and doesn't rehydrate them from the server.
+    await enqueuePendingDeletes("savedResources", user.savedResources).catch(() => {});
+    if (user.savedResources.length > 0) setHasPendingBookmarkSync(true);
     await saveUser({ ...user, savedResources: [] });
   }, [user]);
 
   const clearSavedProviders = useCallback(async (): Promise<void> => {
     if (!user) return;
+    // Track all removed IDs so the next sync's union-merge filter excludes them
+    // and doesn't rehydrate them from the server.
+    await enqueuePendingDeletes("savedProviders", user.savedProviders).catch(() => {});
+    if (user.savedProviders.length > 0) setHasPendingBookmarkSync(true);
     await saveUser({ ...user, savedProviders: [] });
   }, [user]);
 
@@ -338,10 +514,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleSavedResource = useCallback(
     (resourceId: string) => {
       if (!user) return;
-      const saved = user.savedResources.includes(resourceId)
-        ? user.savedResources.filter((id) => id !== resourceId)
-        : [...user.savedResources, resourceId];
-      saveUser({ ...user, savedResources: saved });
+      const { nextList, pendingDeleteOp } = computeSavedListToggle(
+        user.savedResources,
+        resourceId,
+      );
+      if (pendingDeleteOp === "enqueue") {
+        // Un-saving: record the deletion so the next sync doesn't restore it
+        // from the server via the union merge.
+        enqueuePendingDelete("savedResources", resourceId).catch(() => {});
+        setHasPendingBookmarkSync(true);
+      } else {
+        // Re-saving: remove any pending delete for this ID so the union-merge
+        // filter doesn't cancel the re-save on the next sync.
+        dequeuePendingDelete("savedResources", resourceId).catch(() => {});
+      }
+      saveUser({ ...user, savedResources: nextList });
     },
     [user]
   );
@@ -349,10 +536,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleSavedProvider = useCallback(
     (providerId: string) => {
       if (!user) return;
-      const saved = user.savedProviders.includes(providerId)
-        ? user.savedProviders.filter((id) => id !== providerId)
-        : [...user.savedProviders, providerId];
-      saveUser({ ...user, savedProviders: saved });
+      const { nextList, pendingDeleteOp } = computeSavedListToggle(
+        user.savedProviders,
+        providerId,
+      );
+      if (pendingDeleteOp === "enqueue") {
+        // Un-saving: record the deletion so the next sync doesn't restore it
+        // from the server via the union merge.
+        enqueuePendingDelete("savedProviders", providerId).catch(() => {});
+        setHasPendingBookmarkSync(true);
+      } else {
+        // Re-saving: remove any pending delete for this ID so the union-merge
+        // filter doesn't cancel the re-save on the next sync.
+        dequeuePendingDelete("savedProviders", providerId).catch(() => {});
+      }
+      saveUser({ ...user, savedProviders: nextList });
     },
     [user]
   );
@@ -376,6 +574,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isOnboarded: !!user?.onboardingComplete,
         isLoading,
         ragnaPrivacy,
+        hasPendingBookmarkSync,
+        markBookmarksSynced,
         updateJourneyStage,
         updateRole,
         completeOnboarding,
@@ -391,6 +591,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         buildPatientContext,
         updateRagnaPrivacy,
         resetRagnaPrivacy,
+        hydrateProfileFromServer,
+        hydrateGoalsFromSync,
+        hydrateSavedListsFromSync,
       }}
     >
       {children}

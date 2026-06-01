@@ -5,7 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { ClerkProvider, ClerkLoaded, ClerkLoading } from "@clerk/expo";
+import { ClerkProvider, ClerkLoaded, ClerkLoading, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { CloudSyncProvider } from "@/components/CloudSyncManager";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LockScreen } from "@/components/LockScreen";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -50,6 +51,8 @@ try {
   initializeRevenueCat();
 } catch (err: unknown) {
   const e = err as { message?: string };
+  // Log to Metro console so the error is visible when debugging with Expo Go.
+  console.warn("[RevenueCat] Initialization skipped:", e?.message ?? "unknown error");
   console.warn("[RevenueCat] Initialization failed:", e?.message ?? "Subscription features may not be available.");
 }
 
@@ -61,6 +64,27 @@ const queryClient = new QueryClient();
 // can detect a missing key before attempting to render ClerkProvider.
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+
+/**
+ * AuthTokenBridge — registers the Clerk token getter BEFORE CloudSyncProvider
+ * fires its initial sync.
+ *
+ * Placement: inside ClerkLoaded (so useAuth() is available) but as a sibling
+ * rendered before CloudSyncProvider in the tree. This guarantees that
+ * getAuthToken() returns a valid token when the first runSync() call executes,
+ * preventing an unauthenticated initial sync that would skip data restore and
+ * consume the `initialized.current` flag permanently.
+ *
+ * The same setter is also called in (tabs)/_layout.tsx for redundancy, but
+ * having it here ensures the critical first-sync path is always authenticated.
+ */
+function AuthTokenBridge() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+  }, [getToken]);
+  return null;
+}
 
 // LearningSync bridges RagnaLearningContext and VeraMemoryContext.
 // It silently synthesizes the living profile from app-activity observations
@@ -412,6 +436,7 @@ export default function RootLayout() {
                   <SubscriptionProvider>
                   <AppLockProvider>
                   <GestureHandlerRootView style={{ flex: 1 }}>
+                    <AuthTokenBridge />
                     <CloudSyncProvider>
                       <View style={{ flex: 1 }}>
                         <LearningSync />

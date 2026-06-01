@@ -88,6 +88,8 @@ export interface User {
   savedResources: string[];
   savedProviders: string[];
   createdAt: string;
+  /** ISO timestamp of last local modification — used as LWW version key for sync. */
+  updatedAt?: string;
   patientProfile?: PatientProfile;
   ragnaPrivacy?: RagnaPrivacySettings;
 }

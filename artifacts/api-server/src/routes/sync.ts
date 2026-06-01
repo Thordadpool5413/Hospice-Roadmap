@@ -9,6 +9,8 @@ import {
   livingProfiles,
   syncReminders,
   caregiverWellness,
+  userProfiles,
+  ragnaMemory,
   gocContentSchema,
 } from "@workspace/db/schema";
 
@@ -24,13 +26,15 @@ router.get("/", async (req, res) => {
   }
 
   try {
-    const [symptoms, journal, goals, profile, reminders, wellness] = await Promise.all([
+    const [symptoms, journal, goals, profile, reminders, wellness, userProfile, ragnaRow] = await Promise.all([
       db.select().from(symptomEntries).where(eq(symptomEntries.userId, userId)),
       db.select().from(journalEntries).where(eq(journalEntries.userId, userId)),
       db.select().from(goalsOfCare).where(eq(goalsOfCare.userId, userId)),
       db.select().from(livingProfiles).where(eq(livingProfiles.userId, userId)),
       db.select().from(syncReminders).where(eq(syncReminders.userId, userId)),
       db.select().from(caregiverWellness).where(eq(caregiverWellness.userId, userId)),
+      db.select().from(userProfiles).where(eq(userProfiles.userId, userId)),
+      db.select().from(ragnaMemory).where(eq(ragnaMemory.userId, userId)),
     ]);
 
     res.json({
@@ -40,6 +44,8 @@ router.get("/", async (req, res) => {
       livingProfile: profile[0] ?? null,
       reminders,
       caregiverWellness: wellness,
+      userProfile: userProfile[0] ?? null,
+      ragnaMemory: ragnaRow[0] ?? null,
     });
   } catch (err) {
     req.log.error({ err }, "sync GET failed");
@@ -495,6 +501,126 @@ router.delete("/caregiver-wellness", async (req, res) => {
   }
 });
 
+// ─── PUT /api/sync/profile — upsert user profile (one row per user, LWW) ─────
+//
+// Client sends `clientUpdatedAt` from user.updatedAt.
+// Profile data is stored as JSONB and should NOT include patientProfile.goalsOfCare
+// since that field is managed by the dedicated /sync/goals endpoint.
+
+router.put("/profile", async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const body = req.body as { data?: unknown; clientUpdatedAt?: unknown };
+  if (!body.data || typeof body.data !== "object" || Array.isArray(body.data)) {
+    res.status(400).json({ error: "data object required" });
+    return;
+  }
+
+  try {
+    const clientUpdatedAt = parseClientTs(body.clientUpdatedAt);
+
+    await db
+      .insert(userProfiles)
+      .values({ userId, data: body.data as Record<string, unknown>, updatedAt: clientUpdatedAt })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: {
+          data: sql`excluded.data`,
+          updatedAt: sql`excluded.updated_at`,
+        },
+        setWhere: sql`excluded.updated_at >= ${userProfiles.updatedAt}`,
+      });
+
+    res.json({ upserted: true });
+  } catch (err) {
+    req.log.error({ err }, "sync PUT profile failed");
+    res.status(500).json({ error: "Failed to sync profile" });
+  }
+});
+
+// ─── DELETE /api/sync/profile ─────────────────────────────────────────────────
+
+router.delete("/profile", async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    await db.delete(userProfiles).where(eq(userProfiles.userId, userId));
+    res.json({ deleted: true });
+  } catch (err) {
+    req.log.error({ err }, "sync DELETE profile failed");
+    res.status(500).json({ error: "Failed to delete profile" });
+  }
+});
+
+// ─── PUT /api/sync/ragna-memory — upsert Ragna AI memory (one row per user, LWW)
+//
+// Stores the full VeraMemory array and tile history as JSONB. Conflict
+// resolution is true LWW: the stored row is only overwritten when the
+// incoming clientUpdatedAt is ≥ the stored updatedAt.
+
+router.put("/ragna-memory", async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const body = req.body as { memories?: unknown; tiles?: unknown; clientUpdatedAt?: unknown };
+  if (!Array.isArray(body.memories)) {
+    res.status(400).json({ error: "memories array required" });
+    return;
+  }
+
+  try {
+    const clientUpdatedAt = parseClientTs(body.clientUpdatedAt);
+    const tiles = Array.isArray(body.tiles) ? body.tiles : [];
+
+    await db
+      .insert(ragnaMemory)
+      .values({ userId, memories: body.memories, tiles, updatedAt: clientUpdatedAt })
+      .onConflictDoUpdate({
+        target: ragnaMemory.userId,
+        set: {
+          memories: sql`excluded.memories`,
+          tiles: sql`excluded.tiles`,
+          updatedAt: sql`excluded.updated_at`,
+        },
+        setWhere: sql`excluded.updated_at >= ${ragnaMemory.updatedAt}`,
+      });
+
+    res.json({ upserted: true });
+  } catch (err) {
+    req.log.error({ err }, "sync PUT ragna-memory failed");
+    res.status(500).json({ error: "Failed to sync Ragna memory" });
+  }
+});
+
+// ─── DELETE /api/sync/ragna-memory ───────────────────────────────────────────
+
+router.delete("/ragna-memory", async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    await db.delete(ragnaMemory).where(eq(ragnaMemory.userId, userId));
+    res.json({ deleted: true });
+  } catch (err) {
+    req.log.error({ err }, "sync DELETE ragna-memory failed");
+    res.status(500).json({ error: "Failed to delete Ragna memory" });
+  }
+});
+
 // ─── DELETE /api/sync/all — wipe all sync data for user ──────────────────────
 
 router.delete("/all", async (req, res) => {
@@ -512,6 +638,8 @@ router.delete("/all", async (req, res) => {
       db.delete(livingProfiles).where(eq(livingProfiles.userId, userId)),
       db.delete(syncReminders).where(eq(syncReminders.userId, userId)),
       db.delete(caregiverWellness).where(eq(caregiverWellness.userId, userId)),
+      db.delete(userProfiles).where(eq(userProfiles.userId, userId)),
+      db.delete(ragnaMemory).where(eq(ragnaMemory.userId, userId)),
     ]);
 
     res.json({ deleted: true });

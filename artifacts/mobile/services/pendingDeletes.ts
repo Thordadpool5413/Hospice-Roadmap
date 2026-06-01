@@ -22,7 +22,7 @@
  *      post-delete snapshot to the server.
  *
  * Storage key: @pending_deletes_v1
- * Structure: { symptoms: string[], journal: string[], reminders: string[], wellness: string[] }
+ * Structure: { symptoms: string[], journal: string[], reminders: string[], wellness: string[], savedResources: string[], savedProviders: string[] }
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -33,13 +33,17 @@ const PENDING_DELETES_KEY = "@pending_deletes_v1";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DeleteStoreType = "symptoms" | "journal" | "reminders" | "wellness";
+export type DeleteStoreType = "symptoms" | "journal" | "reminders" | "wellness" | "savedResources" | "savedProviders";
 
 export interface PendingDeletesStore {
   symptoms: string[];
   journal: string[];
   reminders: string[];
   wellness: string[];
+  /** IDs un-saved by the user while offline — excluded from the union merge on next sync. */
+  savedResources: string[];
+  /** IDs un-saved by the user while offline — excluded from the union merge on next sync. */
+  savedProviders: string[];
 }
 
 const EMPTY_STORE: PendingDeletesStore = {
@@ -47,6 +51,8 @@ const EMPTY_STORE: PendingDeletesStore = {
   journal: [],
   reminders: [],
   wellness: [],
+  savedResources: [],
+  savedProviders: [],
 };
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -61,6 +67,8 @@ async function readStore(): Promise<PendingDeletesStore> {
       journal: Array.isArray(parsed.journal) ? parsed.journal : [],
       reminders: Array.isArray(parsed.reminders) ? parsed.reminders : [],
       wellness: Array.isArray(parsed.wellness) ? parsed.wellness : [],
+      savedResources: Array.isArray(parsed.savedResources) ? parsed.savedResources : [],
+      savedProviders: Array.isArray(parsed.savedProviders) ? parsed.savedProviders : [],
     };
   } catch {
     return { ...EMPTY_STORE };
@@ -91,6 +99,44 @@ export async function enqueuePendingDelete(
   const existing = store[storeType];
   if (!existing.includes(id)) {
     store[storeType] = [...existing, id];
+    await writeStore(store);
+  }
+}
+
+/**
+ * Bulk-enqueue multiple IDs as pending deletes for a single store.
+ * Existing IDs are deduplicated. No-ops when `ids` is empty.
+ *
+ * Preferred over multiple `enqueuePendingDelete` calls to avoid repeated
+ * AsyncStorage round-trips (e.g. when clearing an entire saved list offline).
+ */
+export async function enqueuePendingDeletes(
+  storeType: DeleteStoreType,
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  const store = await readStore();
+  const existing = new Set(store[storeType]);
+  for (const id of ids) existing.add(id);
+  store[storeType] = Array.from(existing);
+  await writeStore(store);
+}
+
+/**
+ * Remove a specific ID from the pending-deletes queue for a store.
+ *
+ * Call this when a user re-saves an item that was previously un-saved while
+ * offline so that the pending delete no longer cancels the re-save during
+ * the next sync's union-merge filter step.
+ */
+export async function dequeuePendingDelete(
+  storeType: DeleteStoreType,
+  id: string,
+): Promise<void> {
+  const store = await readStore();
+  const existing = store[storeType];
+  if (existing.includes(id)) {
+    store[storeType] = existing.filter((existingId) => existingId !== id);
     await writeStore(store);
   }
 }

@@ -23,10 +23,12 @@ import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
+import { clearPendingDeletesForStore } from "@/services/pendingDeletes";
 import {
   deleteServerGoals,
   deleteServerJournal,
   deleteServerLivingProfile,
+  deleteServerRagnaMemory,
   deleteServerReminders,
   deleteServerSymptoms,
   readSyncLastSuccess,
@@ -106,7 +108,7 @@ export default function DataControlsScreen() {
   const { memories, livingProfile, recentTiles, clearMemories } = useVeraMemory();
   const { observations, clearObservations } = useRagnaLearning();
 
-  const { triggerSync, isSyncing } = useCloudSync();
+  const { triggerSync, isSyncing, syncSucceededAt, syncError } = useCloudSync();
 
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [syncLoaded, setSyncLoaded] = useState(false);
@@ -117,6 +119,15 @@ export default function DataControlsScreen() {
       setSyncLoaded(true);
     });
   }, []);
+
+  // Auto-refresh the displayed timestamp whenever a background or manual sync
+  // completes successfully (syncSucceededAt is updated by CloudSyncManager).
+  useEffect(() => {
+    if (!syncSucceededAt) return;
+    readSyncLastSuccess().then((ts) => {
+      if (ts) setLastSynced(ts);
+    });
+  }, [syncSucceededAt]);
 
   const handleSyncNow = async () => {
     await triggerSync();
@@ -204,7 +215,10 @@ export default function DataControlsScreen() {
         confirm(
           "Clear Saved Providers",
           "Remove all saved provider bookmarks from this device?",
-          clearSavedProviders
+          async () => {
+            await clearSavedProviders();
+            await clearPendingDeletesForStore("savedProviders");
+          }
         ),
     },
     {
@@ -216,7 +230,10 @@ export default function DataControlsScreen() {
         confirm(
           "Clear Saved Resources",
           "Remove all saved resource bookmarks from this device?",
-          clearSavedResources
+          async () => {
+            await clearSavedResources();
+            await clearPendingDeletesForStore("savedResources");
+          }
         ),
     },
     {
@@ -287,7 +304,12 @@ export default function DataControlsScreen() {
           async () => {
             await clearMemories();
             await clearObservations();
-            await deleteServerLivingProfile();
+            // Delete both the living profile and the ragna memory document from
+            // the server so the next sync doesn't rehydrate cleared data.
+            await Promise.all([
+              deleteServerLivingProfile(),
+              deleteServerRagnaMemory(),
+            ]);
           }
         ),
     },
@@ -324,66 +346,116 @@ export default function DataControlsScreen() {
           </Text>
         </View>
 
-        {/* Cloud backup status — only shown to signed-in users once we've read AsyncStorage */}
-        {isSignedIn && syncLoaded && (() => {
-          const synced = !!lastSynced;
-          const pending = !isOnline;
-
-          let icon: React.ComponentProps<typeof Feather>["name"];
-          let dotColor: string;
-          let label: string;
-          let sublabel: string;
-
-          if (synced && !pending) {
-            icon = "check-circle";
-            dotColor = Colors.success;
-            label = "Last backed up";
-            sublabel = formatSyncTime(lastSynced!);
-          } else if (synced && pending) {
-            icon = "cloud-off";
-            dotColor = Colors.warning;
-            label = "Offline — sync pending";
-            sublabel = `Last backed up ${formatSyncTime(lastSynced!)}`;
-          } else if (!synced && pending) {
-            icon = "cloud-off";
-            dotColor = Colors.textSubtle;
-            label = "Offline";
-            sublabel = "Not yet backed up to the cloud";
-          } else {
-            icon = "cloud";
-            dotColor = Colors.textSubtle;
-            label = "Not yet backed up";
-            sublabel = "Data will sync automatically when online";
-          }
-
-          return (
-            <View style={[styles.syncBanner, { borderColor: dotColor + "30" }]}>
-              <View style={[styles.syncDot, { backgroundColor: dotColor }]} />
-              <Feather name={icon} size={15} color={dotColor} style={styles.syncIcon} />
-              <View style={styles.syncText}>
-                <Text style={[styles.syncLabel, { color: dotColor }]}>{label}</Text>
-                <Text style={styles.syncSublabel}>{sublabel}</Text>
+        {/* ── Data & Sync section ── */}
+        {isSignedIn && (
+          <View style={styles.dataSyncSection}>
+            <View style={styles.dataSyncHeader}>
+              <View style={[styles.dataSyncIcon, { backgroundColor: Colors.primary + "20" }]}>
+                <Feather name="cloud" size={14} color={Colors.primary} />
               </View>
-              {isOnline && (
-                <Pressable
-                  onPress={isSyncing ? undefined : handleSyncNow}
-                  disabled={isSyncing}
-                  style={({ pressed }) => [
-                    styles.syncNowBtn,
-                    isSyncing && styles.syncNowBtnLoading,
-                    !isSyncing && pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  {isSyncing ? (
-                    <Feather name="refresh-cw" size={12} color={Colors.primary} />
-                  ) : (
-                    <Text style={styles.syncNowBtnText}>Sync now</Text>
-                  )}
-                </Pressable>
-              )}
+              <Text style={styles.dataSyncTitle}>Data & Sync</Text>
             </View>
-          );
-        })()}
+
+            {/* Sync status banner — only rendered once AsyncStorage has been read */}
+            {syncLoaded && (() => {
+              const synced = !!lastSynced;
+              const pending = !isOnline;
+
+              let icon: React.ComponentProps<typeof Feather>["name"];
+              let dotColor: string;
+              let label: string;
+              let sublabel: string;
+
+              if (syncError) {
+                icon = "alert-circle";
+                dotColor = Colors.error;
+                label = syncError;
+                sublabel = synced
+                  ? `Last backed up ${formatSyncTime(lastSynced!)}`
+                  : "No successful sync recorded on this device";
+              } else if (synced && !pending) {
+                icon = "check-circle";
+                dotColor = Colors.success;
+                label = "Backed up";
+                sublabel = `Last synced ${formatSyncTime(lastSynced!)}`;
+              } else if (synced && pending) {
+                icon = "cloud-off";
+                dotColor = Colors.warning;
+                label = "Offline — sync pending";
+                sublabel = `Last backed up ${formatSyncTime(lastSynced!)}`;
+              } else if (!synced && pending) {
+                icon = "cloud-off";
+                dotColor = Colors.textSubtle;
+                label = "Offline";
+                sublabel = "Not yet backed up to the cloud";
+              } else {
+                icon = "cloud";
+                dotColor = Colors.textSubtle;
+                label = "Not yet backed up";
+                sublabel = "Data will sync automatically when online";
+              }
+
+              return (
+                <View style={[styles.syncBanner, { borderColor: dotColor + "30" }]}>
+                  <View style={[styles.syncDot, { backgroundColor: dotColor }]} />
+                  <Feather name={icon} size={15} color={dotColor} style={styles.syncIcon} />
+                  <View style={styles.syncText}>
+                    <Text style={[styles.syncLabel, { color: dotColor }]}>{label}</Text>
+                    <Text style={styles.syncSublabel}>{sublabel}</Text>
+                  </View>
+                  {isOnline && (
+                    <Pressable
+                      onPress={isSyncing ? undefined : handleSyncNow}
+                      disabled={isSyncing}
+                      style={({ pressed }) => [
+                        styles.syncNowBtn,
+                        isSyncing && styles.syncNowBtnLoading,
+                        !isSyncing && pressed && { opacity: 0.7 },
+                      ]}
+                    >
+                      {isSyncing ? (
+                        <Feather name="refresh-cw" size={12} color={Colors.primary} />
+                      ) : (
+                        <Text style={styles.syncNowBtnText}>Sync now</Text>
+                      )}
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })()}
+
+            {/* Per-store sync status grid */}
+            <View style={styles.storeGrid}>
+              {[
+                { label: "Patient Profile", icon: "user" as const, filled: !isEmpty.profile },
+                { label: "Goals of Care", icon: "heart" as const, filled: !isEmpty.goals },
+                { label: "Journal", icon: "edit-3" as const, filled: !isEmpty.journal },
+                { label: "Symptoms", icon: "activity" as const, filled: !isEmpty.symptoms },
+                { label: "Reminders", icon: "bell" as const, filled: !isEmpty.reminders },
+                { label: "Ragna Memory", icon: "cpu" as const, filled: !isEmpty.ragna },
+                { label: "Saved Providers", icon: "map-pin" as const, filled: !isEmpty.providers },
+                { label: "Saved Resources", icon: "bookmark" as const, filled: !isEmpty.resources },
+              ].map((store) => (
+                <View key={store.label} style={styles.storeChip}>
+                  <Feather
+                    name={store.filled ? "check-circle" : "circle"}
+                    size={12}
+                    color={store.filled ? Colors.success : Colors.textSubtle}
+                  />
+                  <Text
+                    style={[
+                      styles.storeChipLabel,
+                      !store.filled && styles.storeChipLabelEmpty,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {store.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Category list */}
         <View style={styles.categoryList}>
@@ -664,5 +736,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_500Medium",
     color: Colors.textMuted,
+  },
+  dataSyncSection: {
+    gap: 10,
+  },
+  dataSyncHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dataSyncIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dataSyncTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.2,
+  },
+  storeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  storeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+  },
+  storeChipLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  storeChipLabelEmpty: {
+    color: Colors.textSubtle,
   },
 });

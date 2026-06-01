@@ -46,11 +46,11 @@ export function Button({
   };
 
   const variantStyles: Record<ButtonVariant, { bg: string; textColor: string; borderColor?: string }> = {
-    primary: { bg: Colors.accent, textColor: "#FFFFFF" },
-    secondary: { bg: Colors.surfaceMid, textColor: Colors.text },
-    outline: { bg: "transparent", textColor: Colors.text, borderColor: Colors.divider },
+    primary: { bg: Colors.primary, textColor: "#FFFFFF" },
+    secondary: { bg: Colors.surfaceMid, textColor: Colors.text, borderColor: Colors.divider },
+    outline: { bg: "transparent", textColor: Colors.primary, borderColor: Colors.cardBorder },
     ghost: { bg: "transparent", textColor: Colors.textSecondary },
-    danger: { bg: Colors.errorPale, textColor: Colors.error },
+    danger: { bg: Colors.errorPale, textColor: Colors.error, borderColor: Colors.errorMid + "60" },
   };
 
   const sz = sizeStyles[size];
@@ -70,7 +70,8 @@ export function Button({
           paddingVertical: sz.paddingVertical,
           paddingHorizontal: sz.paddingHorizontal,
           borderRadius: sz.borderRadius,
-          opacity: isDisabled ? 0.5 : pressed ? 0.88 : 1,
+          opacity: isDisabled ? 0.42 : 1,
+          transform: [{ scale: isDisabled ? 1 : pressed ? 0.97 : 1 }],
           alignSelf: fullWidth ? undefined : "flex-start",
           width: fullWidth ? "100%" : undefined,
         },
@@ -106,6 +107,6 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: "Inter_600SemiBold",
     textAlign: "center",
-    letterSpacing: -0.2,
+    letterSpacing: -0.25,
   },
 });

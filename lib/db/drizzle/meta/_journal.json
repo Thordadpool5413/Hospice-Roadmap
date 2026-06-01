@@ -36,6 +36,13 @@
       "when": 1748476800000,
       "tag": "0004_add_sms_opt_outs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780297413365,
+      "tag": "0005_slow_shotgun",
+      "breakpoints": true
     }
   ]
 }

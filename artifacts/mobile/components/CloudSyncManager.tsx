@@ -72,9 +72,12 @@ import {
   uploadGoals,
   uploadJournal,
   uploadLivingProfile,
+  uploadProfile,
+  uploadRagnaMemory,
   uploadReminders,
   uploadSymptoms,
 } from "@/services/syncService";
+import { mergeSavedList } from "@/services/savedListsMerge";
 import type { GoalsOfCare } from "@/types";
 
 // ─── Toast threshold ───────────────────────────────────────────────────────────
@@ -96,12 +99,19 @@ interface CloudSyncContextValue {
    * this value to decide when to show a confirmation.
    */
   syncSucceededAt: Date | null;
+  /**
+   * Set to a human-readable error message when the most recent sync attempt
+   * failed (e.g. network error or partial upload failure). Cleared to null
+   * at the start of every new sync attempt and after a successful sync.
+   */
+  syncError: string | null;
 }
 
 const CloudSyncContext = createContext<CloudSyncContextValue>({
   triggerSync: async () => {},
   isSyncing: false,
   syncSucceededAt: null,
+  syncError: null,
 });
 
 export function useCloudSync(): CloudSyncContextValue {
@@ -119,15 +129,26 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { isOnline } = useAppNetwork();
 
   // isLoading from AppContext is true until AsyncStorage hydration is done
-  const { user, isLoading: appLoading, updatePatientProfile } = useApp();
+  const {
+    user,
+    isLoading: appLoading,
+    hydrateGoalsFromSync,
+    hydrateProfileFromServer,
+    hydrateSavedListsFromSync,
+    markBookmarksSynced,
+  } = useApp();
   const { entries: symptoms, isLoading: sympLoading, hydrateFromServer: hydrateSymptoms } = useSymptoms();
   const { entries: journal, isLoading: jrnLoading, hydrateFromServer: hydrateJournal } = useJournal();
   const { reminders, isLoading: remLoading, hydrateFromServer: hydrateReminders } = useReminders();
   const {
+    memories: ragnaMemories,
     livingProfile,
     livingProfileUpdatedAt,
+    ragnaMemoryUpdatedAt,
+    recentTiles: ragnaTiles,
     isLoading: veraLoading,
     updateLivingProfile,
+    hydrateFromServer: hydrateRagnaMemory,
   } = useVeraMemory();
   const {
     entries: wellnessEntries,
@@ -147,6 +168,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   // "Qualifying" = app is active + previous sync was > SYNC_TOAST_THRESHOLD_MS ago.
   const [syncSucceededAt, setSyncSucceededAt] = useState<Date | null>(null);
 
+  // Set to a human-readable message when a sync attempt fails; cleared on the
+  // next sync start and cleared again on success.
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   // All six local stores must have finished loading from AsyncStorage before
   // we attempt any sync or hydration. This prevents pushing stale empty-state
   // or missing a restore because any context was still null at sync time.
@@ -156,6 +181,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     if (!isSignedIn || isSyncingRef.current) return;
     isSyncingRef.current = true;
     setIsSyncing(true);
+    setSyncError(null);
 
     try {
       const serverData = await fetchServerData();
@@ -239,9 +265,13 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       //   1. Local was empty → restore from server.
       //   2. Server had fields the local device never set → merge them in.
       //   3. Local already matches → no-op (idempotent).
+      //
+      // We use `hydrateGoalsFromSync` instead of `updatePatientProfile` here.
+      // `updatePatientProfile` calls `saveUser` which now stamps `updatedAt` and
+      // fires `uploadProfile` — using it during sync would overwrite the server
+      // profile with a stale React closure value carrying a brand-new timestamp.
       if (resolvedGoals && resolvedGoals !== localGoals) {
-        const currentProfile = user?.patientProfile ?? {};
-        updatePatientProfile({ ...currentProfile, goalsOfCare: resolvedGoals });
+        await hydrateGoalsFromSync(resolvedGoals);
       }
 
       // ── Living profile (true LWW by updatedAt) ───────────────────────────
@@ -258,6 +288,45 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           // Pass the server's own updatedAt so the local copy stores the correct
           // LWW version and doesn't immediately re-upload as "newer on next sync"
           await updateLivingProfile(serverData.livingProfile.profile, serverTs ?? undefined);
+        }
+      }
+
+      // ── Ragna AI memory (true LWW by ragnaMemoryUpdatedAt) ───────────────
+      //
+      // Memories and tile history are stored as a single document per user.
+      // The version key is `ragnaMemoryUpdatedAt` — a dedicated timestamp
+      // stamped and persisted on every addMemory / recordTile write.  It is
+      // independent of `livingProfileUpdatedAt` so the two stores can advance
+      // independently without one clobbering the other.
+      //
+      // LWW: the server row wins when the server timestamp is newer than the
+      // local version, or when local has no content yet (new device / reinstall).
+      //
+      // Captured resolved values let Step 3 push the correct data even though
+      // React state from the hydrate call won't be visible in the closure until
+      // the next render.
+      let resolvedRagnaMemories = ragnaMemories;
+      let resolvedRagnaTiles = ragnaTiles;
+      let resolvedRagnaUpdatedAt = ragnaMemoryUpdatedAt;
+
+      if (serverData.ragnaMemory) {
+        const serverTs = serverData.ragnaMemory.updatedAt ?? null;
+        const serverIsNewer = serverTs && (
+          !ragnaMemoryUpdatedAt ||
+          new Date(serverTs) > new Date(ragnaMemoryUpdatedAt)
+        );
+        const ragnaIsEmpty = ragnaMemories.length === 0 && ragnaTiles.length === 0;
+
+        if (ragnaIsEmpty || serverIsNewer) {
+          const serverMemories = serverData.ragnaMemory.memories as import("@/types").VeraMemory[];
+          const serverTiles = serverData.ragnaMemory.tiles as string[];
+          const effectiveTs = serverTs ?? new Date().toISOString();
+          // Pass the server's own updatedAt so local LWW is set correctly and
+          // the next sync doesn't immediately re-upload this as "newer".
+          await hydrateRagnaMemory(serverMemories, serverTiles, effectiveTs);
+          resolvedRagnaMemories = serverMemories;
+          resolvedRagnaTiles = serverTiles;
+          resolvedRagnaUpdatedAt = effectiveTs;
         }
       }
 
@@ -283,6 +352,108 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         : (serverData.caregiverWellness ?? []);
       const mergedWellness = mergeWellnessEntries(wellnessEntries, filteredServerWellness);
       await hydrateWellness(mergedWellness);
+
+      // ── Saved resources & providers (set union merge) ─────────────────────
+      //
+      // These two arrays are part of the user profile object but use a union
+      // merge strategy (like symptoms/journal) rather than true LWW.  This
+      // ensures a resource bookmarked on Device A while offline is never wiped
+      // by a newer profile saved on Device B.
+      //
+      // IDs the user explicitly un-saved while offline are tracked in the
+      // pending-deletes queue (savedResources / savedProviders stores) and
+      // filtered out of the union so the deletion survives a sync.
+      const serverSavedResources: string[] =
+        Array.isArray(serverData.userProfile?.data?.savedResources)
+          ? (serverData.userProfile!.data.savedResources as string[])
+          : [];
+      const serverSavedProviders: string[] =
+        Array.isArray(serverData.userProfile?.data?.savedProviders)
+          ? (serverData.userProfile!.data.savedProviders as string[])
+          : [];
+      const localSavedResources: string[] = user?.savedResources ?? [];
+      const localSavedProviders: string[] = user?.savedProviders ?? [];
+
+      const mergedSavedResources = mergeSavedList(
+        localSavedResources,
+        serverSavedResources,
+        pendingDeletes.savedResources,
+      );
+
+      const mergedSavedProviders = mergeSavedList(
+        localSavedProviders,
+        serverSavedProviders,
+        pendingDeletes.savedProviders,
+      );
+
+      // ── User profile (LWW for scalar fields, union for saved lists) ────────
+      // The server stores role, journeyStage, name, onboardingComplete,
+      // savedResources/Providers, ragnaPrivacy, and patientProfile WITHOUT
+      // goalsOfCare (that field is owned by the /sync/goals path above).
+      //
+      // Scalar fields (role, journeyStage, ragnaPrivacy …) use true LWW keyed
+      // on user.updatedAt. The saved-list fields always use the union computed
+      // above and are injected into whichever profile data wins the LWW so
+      // `hydrateProfileFromServer` persists the correct union.
+      //
+      // `hydrateProfileFromServer` always preserves the local goalsOfCare value
+      // so the two sync paths don't interfere with each other.
+      //
+      // IMPORTANT: `appliedServerProfile` drives the Step 3 push decision.
+      // When we hydrate from server the `user` React closure still holds the
+      // pre-hydration (stale) value. We must NOT push the closure in that case
+      // or we'd immediately overwrite the correct server data with stale local
+      // data (doubly dangerous for legacy profiles that lack `updatedAt`).
+      let appliedServerProfile = false;
+      if (serverData.userProfile?.data) {
+        const serverProfileTs  = serverData.userProfile.updatedAt;
+        const localProfileTs   = user?.updatedAt;
+        const serverIsNewer    = serverProfileTs && (
+          !localProfileTs || new Date(serverProfileTs) > new Date(localProfileTs)
+        );
+        const isNewDevice = !user?.onboardingComplete;
+
+        if (serverIsNewer || isNewDevice) {
+          // Inject the union-merged saved lists so hydrateProfileFromServer
+          // persists them rather than restoring the server's raw (possibly
+          // smaller) snapshot.
+          const dataWithMergedLists: Record<string, unknown> = {
+            ...serverData.userProfile.data,
+            savedResources: mergedSavedResources,
+            savedProviders: mergedSavedProviders,
+          };
+          await hydrateProfileFromServer(dataWithMergedLists);
+          appliedServerProfile = true;
+        } else {
+          // Local profile wins the LWW comparison, but we still union-merge the
+          // saved lists in case the server contributed bookmarks from another
+          // device. Only write if the merged result actually differs from local.
+          const savedListsChanged =
+            mergedSavedResources.length !== localSavedResources.length ||
+            mergedSavedProviders.length !== localSavedProviders.length ||
+            mergedSavedResources.some((id) => !localSavedResources.includes(id)) ||
+            mergedSavedProviders.some((id) => !localSavedProviders.includes(id));
+
+          if (savedListsChanged) {
+            await hydrateSavedListsFromSync(mergedSavedResources, mergedSavedProviders);
+          }
+        }
+      } else if (user?.onboardingComplete) {
+        // No server profile yet — still apply local pending-deletes filtering
+        // so un-saved IDs don't linger after the queue is cleared.
+        const filteredResources = localSavedResources.filter(
+          (id) => !pendingDeletes.savedResources.includes(id),
+        );
+        const filteredProviders = localSavedProviders.filter(
+          (id) => !pendingDeletes.savedProviders.includes(id),
+        );
+        const savedListsChanged =
+          filteredResources.length !== localSavedResources.length ||
+          filteredProviders.length !== localSavedProviders.length;
+        if (savedListsChanged) {
+          await hydrateSavedListsFromSync(filteredResources, filteredProviders);
+        }
+      }
 
       // Step 3: push current local state to server with stored LWW timestamps.
       //
@@ -320,6 +491,18 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushOps.push(uploadLivingProfile(livingProfile, livingProfileUpdatedAt));
       }
 
+      // Push Ragna memory when we have anything to save.
+      // Use `resolvedRagna*` (captured during Step 2) rather than the React
+      // closure values, which may not yet reflect a hydration that just ran.
+      // Only push when there is something meaningful (at least one memory or
+      // tile) — an empty upload would create a server row with no content.
+      if (
+        (resolvedRagnaMemories.length > 0 || resolvedRagnaTiles.length > 0) &&
+        resolvedRagnaUpdatedAt
+      ) {
+        pushOps.push(uploadRagnaMemory(resolvedRagnaMemories, resolvedRagnaTiles, resolvedRagnaUpdatedAt));
+      }
+
       if (mergedReminders.length > 0) pushOps.push(uploadReminders(mergedReminders));
 
       // Always push when there are pending wellness deletes so that an empty
@@ -329,6 +512,66 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // the next sync would restore the deleted entry.
       if (mergedWellness.length > 0 || pendingDeletes.wellness.length > 0) {
         pushOps.push(uploadCaregiverWellness(mergedWellness));
+      }
+
+      // Push user profile:
+      //
+      // Case A — local profile wins LWW (appliedServerProfile=false):
+      //   Push the local `user` closure with merged saved lists injected. We use
+      //   the captured `mergedSavedResources`/`mergedSavedProviders` rather than
+      //   `user.savedResources`/`user.savedProviders` because the hydrate call
+      //   above (hydrateSavedListsFromSync) is batched and the closure hasn't
+      //   updated yet. Guards: onboardingComplete + updatedAt (same as before).
+      //
+      // Case B — server profile wins LWW (appliedServerProfile=true):
+      //   The `user` closure is stale — we must NOT push it wholesale. But if
+      //   the merged saved lists differ from the server's snapshot, we still need
+      //   to push so that the union survives on the server. In this case we
+      //   construct a synthetic profile from the server's own data (already the
+      //   "winning" value for scalar fields) + merged lists + a fresh updatedAt
+      //   so the server's LWW accepts the update.
+      if (!appliedServerProfile && user?.onboardingComplete && user.updatedAt) {
+        // Case A: push closure with merged saved lists
+        const profileWithMergedLists = {
+          ...user,
+          savedResources: mergedSavedResources,
+          savedProviders: mergedSavedProviders,
+        };
+        pushOps.push(uploadProfile(profileWithMergedLists));
+      } else if (appliedServerProfile && serverData.userProfile?.data && user?.onboardingComplete) {
+        // Case B: push only when merged lists contain bookmarks the server lacked.
+        // Compare merged result against what the server originally sent — if the
+        // union added any IDs (or pending deletes removed any), push the update.
+        const serverHadAllResources = mergedSavedResources.every((id) =>
+          serverSavedResources.includes(id),
+        );
+        const serverHadAllProviders = mergedSavedProviders.every((id) =>
+          serverSavedProviders.includes(id),
+        );
+        const serverHadExtraResources = serverSavedResources.some(
+          (id) => pendingDeletes.savedResources.includes(id),
+        );
+        const serverHadExtraProviders = serverSavedProviders.some(
+          (id) => pendingDeletes.savedProviders.includes(id),
+        );
+        const needsListPush =
+          !serverHadAllResources ||
+          !serverHadAllProviders ||
+          serverHadExtraResources ||
+          serverHadExtraProviders;
+
+        if (needsListPush) {
+          // Use the server's profile data as the base so we don't push stale
+          // scalar fields from the closure. Override saved lists with the union
+          // and stamp a fresh updatedAt so the server accepts the update.
+          const syntheticProfile = {
+            ...(serverData.userProfile.data as unknown as import("@/types").User),
+            savedResources: mergedSavedResources,
+            savedProviders: mergedSavedProviders,
+            updatedAt: new Date().toISOString(),
+          };
+          pushOps.push(uploadProfile(syntheticProfile));
+        }
       }
 
       const pushResults = await Promise.allSettled(pushOps);
@@ -349,10 +592,15 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         // Dismiss the wellness pending-sync badge now that all entries have
         // been confirmed uploaded to the server.
         markWellnessSynced();
+        // Dismiss the bookmark pending-sync badge now that the saved-lists
+        // snapshot has been delivered to the server.
+        markBookmarksSynced();
         // A successful full sync pushed the current state of every store, so
         // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
         await clearAllPendingDeletes();
+        // Clear any previous error now that sync succeeded.
+        setSyncError(null);
 
         // ── Toast eligibility ────────────────────────────────────────────
         // Show the "Synced" confirmation only when:
@@ -365,9 +613,15 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         if (isForegrounded && thresholdElapsed) {
           setSyncSucceededAt(new Date());
         }
+      } else {
+        // One or more push operations failed — let the UI know so it can
+        // surface a useful error message to the user.
+        setSyncError("Last sync failed — reconnect to sync");
       }
     } catch {
-      // Sync failures are silent — app continues to work offline
+      // Sync failures are silent at the system level — app continues offline.
+      // Surface the failure to the UI via syncError.
+      setSyncError("Last sync failed — reconnect to sync");
     } finally {
       isSyncingRef.current = false;
       setIsSyncing(false);
@@ -381,13 +635,20 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     user,
     livingProfile,
     livingProfileUpdatedAt,
+    ragnaMemories,
+    ragnaTiles,
+    ragnaMemoryUpdatedAt,
     hydrateSymptoms,
     hydrateJournal,
     hydrateReminders,
     hydrateWellness,
-    updatePatientProfile,
+    hydrateGoalsFromSync,
+    hydrateProfileFromServer,
+    hydrateSavedListsFromSync,
     updateLivingProfile,
+    hydrateRagnaMemory,
     markWellnessSynced,
+    markBookmarksSynced,
   ]);
 
   // Initial sync — runs once per sign-in, but only after ALL contexts have
@@ -443,7 +704,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   }, [isSignedIn, isOnline, runSync]);
 
   return (
-    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt }}>
+    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt, syncError }}>
       {children}
     </CloudSyncContext.Provider>
   );

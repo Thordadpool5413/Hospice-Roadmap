@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
+import { useApp } from "@/context/AppContext";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 const ragnaIcon = require("@/assets/images/ragna-icon.png");
@@ -105,10 +106,54 @@ function WellnessTabIcon({
   );
 }
 
+// ─── Tools tab icon ───────────────────────────────────────────────────────────
+
+function ToolsTabIcon({
+  color,
+  focused,
+  isIOS,
+  hasPendingBookmarkSync,
+}: {
+  color: string;
+  focused: boolean;
+  isIOS: boolean;
+  hasPendingBookmarkSync: boolean;
+}) {
+  return (
+    <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
+      {isIOS ? (
+        <SymbolView name="square.grid.2x2" tintColor={color} size={22} />
+      ) : (
+        <View style={{
+          width: 28, height: 28, alignItems: "center", justifyContent: "center",
+          backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
+          borderRadius: 8,
+        }}>
+          <Feather name="grid" size={20} color={color} />
+        </View>
+      )}
+      {hasPendingBookmarkSync && (
+        <View style={{
+          position: "absolute",
+          top: isIOS ? -1 : 0,
+          right: isIOS ? -1 : 0,
+          width: 7,
+          height: 7,
+          borderRadius: 4,
+          backgroundColor: Colors.amber,
+          borderWidth: 1.5,
+          borderColor: "#040C1C",
+        }} />
+      )}
+    </View>
+  );
+}
+
 export default function TabLayout() {
   const { isSignedIn, getToken } = useAuth();
   const { isPremium } = useSubscription();
   const { hasPendingSync: wellnessPendingSync } = useCaregiverWellness();
+  const { hasPendingBookmarkSync } = useApp();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
@@ -183,18 +228,14 @@ export default function TabLayout() {
         name="more"
         options={{
           title: "Tools",
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView name="square.grid.2x2" tintColor={color} size={22} />
-            ) : (
-              <View style={{
-                width: 28, height: 28, alignItems: "center", justifyContent: "center",
-                backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
-                borderRadius: 8,
-              }}>
-                <Feather name="grid" size={20} color={color} />
-              </View>
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <ToolsTabIcon
+              color={color}
+              focused={focused}
+              isIOS={isIOS}
+              hasPendingBookmarkSync={hasPendingBookmarkSync}
+            />
+          ),
         }}
       />
       <Tabs.Screen
