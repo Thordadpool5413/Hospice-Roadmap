@@ -28,6 +28,7 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   if (isSignedIn) {
     return <Redirect href="/" />;
@@ -37,17 +38,29 @@ export default function SignUpScreen() {
 
   const handleSignUp = async () => {
     if (!signUp) return;
+    setLocalError(null);
     const { error } = await signUp.password({ emailAddress: email, password });
-    if (error) return;
+    if (error) {
+      setLocalError((error as any)?.longMessage ?? (error as any)?.message ?? "Could not create account. Please try again.");
+      return;
+    }
     setPendingVerification(true);
   };
 
   const handleVerify = async () => {
     if (!signUp) return;
+    setLocalError(null);
     const { error } = await signUp.verifications.verifyEmailCode({ code: verificationCode });
-    if (error) return;
+    if (error) {
+      setLocalError((error as any)?.longMessage ?? (error as any)?.message ?? "Invalid code. Please try again.");
+      return;
+    }
     if (signUp.status === "complete") {
-      await signUp.finalize();
+      const { error: finalizeError } = await signUp.finalize();
+      if (finalizeError) {
+        setLocalError((finalizeError as any)?.longMessage ?? (finalizeError as any)?.message ?? "Account created but sign-in failed. Please sign in manually.");
+        return;
+      }
       router.replace("/");
     }
   };
@@ -84,6 +97,9 @@ export default function SignUpScreen() {
           )}
           {!errors?.fields?.code && errors?.global?.[0] && (
             <Text style={styles.errorText}>{errors.global[0].message}</Text>
+          )}
+          {!errors?.fields?.code && !errors?.global?.[0] && localError && (
+            <Text style={styles.errorText}>{localError}</Text>
           )}
         </View>
 
@@ -180,6 +196,9 @@ export default function SignUpScreen() {
 
         {!errors?.fields?.emailAddress && !errors?.fields?.password && errors?.global?.[0] && (
           <Text style={styles.errorText}>{errors.global[0].message}</Text>
+        )}
+        {!errors?.fields?.emailAddress && !errors?.fields?.password && !errors?.global?.[0] && localError && (
+          <Text style={styles.errorText}>{localError}</Text>
         )}
 
         <Pressable
