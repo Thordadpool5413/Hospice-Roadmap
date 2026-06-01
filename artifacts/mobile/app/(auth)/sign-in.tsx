@@ -1,6 +1,6 @@
 import { useSignIn, useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
+import { Link, Redirect, router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -30,40 +30,43 @@ export default function SignInScreen() {
   const [needsMfa, setNeedsMfa] = useState(false);
 
   if (isSignedIn) {
-    router.replace("/");
-    return null;
+    return <Redirect href="/" />;
   }
 
-  const handleSignIn = async () => {
-    const { error } = await signIn.password({ emailAddress: email, password });
-    if (error) return;
+  const isLoading = fetchStatus === "fetching";
 
+  const handleSignIn = async () => {
+    if (!signIn) return;
+    const { error } = await signIn.password({ identifier: email, password });
+    if (error) return;
     if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          router.replace(url.startsWith("http") ? "/" : (url as any));
-        },
-      });
-    } else if (signIn.status === "needs_client_trust") {
-      await signIn.mfa.sendEmailCode();
+      await signIn.finalize();
+      router.replace("/");
+    } else if (signIn.status === "needs_second_factor") {
+      await (signIn as any).mfa?.sendEmailCode?.();
       setNeedsMfa(true);
     }
   };
 
   const handleVerifyMfa = async () => {
-    await signIn.mfa.verifyEmailCode({ code: mfaCode });
+    if (!signIn) return;
+    const result = await (signIn as any).mfa?.verifyEmailCode?.({ code: mfaCode });
+    if (result?.error) return;
     if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          router.replace(url.startsWith("http") ? "/" : (url as any));
-        },
-      });
+      await signIn.finalize();
+      router.replace("/");
     }
   };
 
-  const isLoading = fetchStatus === "fetching";
+  const handleResendCode = async () => {
+    if (!signIn) return;
+    await (signIn as any).mfa?.sendEmailCode?.();
+  };
+
+  const handleReset = () => {
+    setNeedsMfa(false);
+    setMfaCode("");
+  };
 
   if (needsMfa) {
     return (
@@ -85,8 +88,11 @@ export default function SignInScreen() {
             keyboardType="numeric"
             autoFocus
           />
-          {errors.fields.code && (
+          {errors?.fields?.code && (
             <Text style={styles.errorText}>{errors.fields.code.message}</Text>
+          )}
+          {!errors?.fields?.code && errors?.global?.[0] && (
+            <Text style={styles.errorText}>{errors.global[0].message}</Text>
           )}
         </View>
 
@@ -102,14 +108,11 @@ export default function SignInScreen() {
           )}
         </Pressable>
 
-        <Pressable
-          style={styles.secondaryBtn}
-          onPress={() => signIn.mfa.sendEmailCode()}
-        >
+        <Pressable style={styles.secondaryBtn} onPress={handleResendCode}>
           <Text style={styles.secondaryBtnText}>Resend code</Text>
         </Pressable>
 
-        <Pressable style={styles.secondaryBtn} onPress={() => { signIn.reset(); setNeedsMfa(false); }}>
+        <Pressable style={styles.secondaryBtn} onPress={handleReset}>
           <Text style={styles.secondaryBtnText}>Start over</Text>
         </Pressable>
       </View>
@@ -149,7 +152,7 @@ export default function SignInScreen() {
             autoComplete="email"
             textContentType="emailAddress"
           />
-          {errors.fields.identifier && (
+          {errors?.fields?.identifier && (
             <Text style={styles.errorText}>{errors.fields.identifier.message}</Text>
           )}
         </View>
@@ -174,10 +177,14 @@ export default function SignInScreen() {
               <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={Colors.textMuted} />
             </Pressable>
           </View>
-          {errors.fields.password && (
+          {errors?.fields?.password && (
             <Text style={styles.errorText}>{errors.fields.password.message}</Text>
           )}
         </View>
+
+        {!errors?.fields?.identifier && !errors?.fields?.password && errors?.global?.[0] && (
+          <Text style={styles.errorText}>{errors.global[0].message}</Text>
+        )}
 
         <Pressable
           style={({ pressed }) => [
