@@ -33,6 +33,10 @@ import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
 
+// Must be called before ANY other module-scope setup so the splash screen
+// never auto-hides before fonts are loaded and the component tree is ready.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -50,10 +54,10 @@ try {
   initializeRevenueCat();
 } catch (err: unknown) {
   const e = err as { message?: string };
+  // Log to Metro console so the error is visible when debugging with Expo Go.
+  console.warn("[RevenueCat] Initialization skipped:", e?.message ?? "unknown error");
   console.warn("[RevenueCat] Initialization failed:", e?.message ?? "Subscription features may not be available.");
 }
-
-SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
@@ -357,6 +361,63 @@ export default function RootLayout() {
     document.head.appendChild(el);
   }, []);
 
+  // Render an opaque background instead of null so there is never a black
+  // frame if the splash screen dismisses before fonts have finished loading.
+  if (!fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: "#091734" }} />;
+  }
+
+  return (
+    <ClerkProvider
+      publishableKey={publishableKey}
+      tokenCache={tokenCache}
+      proxyUrl={proxyUrl}
+    >
+      {/* Show the app background while Clerk initialises so the screen is
+          never blank. ClerkLoaded renders null until isLoaded is true. */}
+      <ClerkLoading>
+        <View style={{ flex: 1, backgroundColor: "#091734" }} />
+      </ClerkLoading>
+      <ClerkLoaded>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <AccessibilityProvider>
+            <AppProvider>
+              <JournalProvider>
+              <RemindersProvider>
+              <SymptomProvider>
+              <CaregiverWellnessProvider>
+              <VeraMemoryProvider>
+              <RagnaLearningProvider>
+              <QueryClientProvider client={queryClient}>
+                <SubscriptionProvider>
+                <AppLockProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <CloudSyncProvider>
+                    <View style={{ flex: 1 }}>
+                      <LearningSync />
+                      <RootLayoutNav />
+                      <OfflineBanner />
+                      <SyncSuccessToast />
+                      <LockOverlay />
+                    </View>
+                  </CloudSyncProvider>
+                </GestureHandlerRootView>
+                </AppLockProvider>
+                </SubscriptionProvider>
+              </QueryClientProvider>
+              </RagnaLearningProvider>
+              </VeraMemoryProvider>
+              </CaregiverWellnessProvider>
+              </SymptomProvider>
+              </RemindersProvider>
+              </JournalProvider>
+            </AppProvider>
+            </AccessibilityProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   // Safe loading state — dark view keeps the splash color while fonts load.
   // Never return null: on iOS a null root causes a brief blank flash before
   // the React tree has a chance to paint.
