@@ -77,6 +77,7 @@ import {
   uploadReminders,
   uploadSymptoms,
 } from "@/services/syncService";
+import { mergeSavedList } from "@/services/savedListsMerge";
 import type { GoalsOfCare } from "@/types";
 
 // ─── Toast threshold ───────────────────────────────────────────────────────────
@@ -373,13 +374,17 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const localSavedResources: string[] = user?.savedResources ?? [];
       const localSavedProviders: string[] = user?.savedProviders ?? [];
 
-      const mergedSavedResources = Array.from(
-        new Set([...localSavedResources, ...serverSavedResources]),
-      ).filter((id) => !pendingDeletes.savedResources.includes(id));
+      const mergedSavedResources = mergeSavedList(
+        localSavedResources,
+        serverSavedResources,
+        pendingDeletes.savedResources,
+      );
 
-      const mergedSavedProviders = Array.from(
-        new Set([...localSavedProviders, ...serverSavedProviders]),
-      ).filter((id) => !pendingDeletes.savedProviders.includes(id));
+      const mergedSavedProviders = mergeSavedList(
+        localSavedProviders,
+        serverSavedProviders,
+        pendingDeletes.savedProviders,
+      );
 
       // ── User profile (LWW for scalar fields, union for saved lists) ────────
       // The server stores role, journeyStage, name, onboardingComplete,

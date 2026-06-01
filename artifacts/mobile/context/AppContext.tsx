@@ -13,6 +13,7 @@ import {
   enqueuePendingDeletes,
   getPendingDeletes,
 } from "@/services/pendingDeletes";
+import { computeSavedListToggle } from "@/services/savedListToggle";
 
 import { GOC_FIELDS } from "@workspace/goc-merge";
 
@@ -513,18 +514,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleSavedResource = useCallback(
     (resourceId: string) => {
       if (!user) return;
-      if (user.savedResources.includes(resourceId)) {
+      const { nextList, pendingDeleteOp } = computeSavedListToggle(
+        user.savedResources,
+        resourceId,
+      );
+      if (pendingDeleteOp === "enqueue") {
         // Un-saving: record the deletion so the next sync doesn't restore it
         // from the server via the union merge.
         enqueuePendingDelete("savedResources", resourceId).catch(() => {});
         setHasPendingBookmarkSync(true);
-        saveUser({ ...user, savedResources: user.savedResources.filter((id) => id !== resourceId) });
       } else {
         // Re-saving: remove any pending delete for this ID so the union-merge
         // filter doesn't cancel the re-save on the next sync.
         dequeuePendingDelete("savedResources", resourceId).catch(() => {});
-        saveUser({ ...user, savedResources: [...user.savedResources, resourceId] });
       }
+      saveUser({ ...user, savedResources: nextList });
     },
     [user]
   );
@@ -532,18 +536,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleSavedProvider = useCallback(
     (providerId: string) => {
       if (!user) return;
-      if (user.savedProviders.includes(providerId)) {
+      const { nextList, pendingDeleteOp } = computeSavedListToggle(
+        user.savedProviders,
+        providerId,
+      );
+      if (pendingDeleteOp === "enqueue") {
         // Un-saving: record the deletion so the next sync doesn't restore it
         // from the server via the union merge.
         enqueuePendingDelete("savedProviders", providerId).catch(() => {});
         setHasPendingBookmarkSync(true);
-        saveUser({ ...user, savedProviders: user.savedProviders.filter((id) => id !== providerId) });
       } else {
         // Re-saving: remove any pending delete for this ID so the union-merge
         // filter doesn't cancel the re-save on the next sync.
         dequeuePendingDelete("savedProviders", providerId).catch(() => {});
-        saveUser({ ...user, savedProviders: [...user.savedProviders, providerId] });
       }
+      saveUser({ ...user, savedProviders: nextList });
     },
     [user]
   );
