@@ -34,10 +34,6 @@ import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
 
-// Must be called before ANY other module-scope setup so the splash screen
-// never auto-hides before fonts are loaded and the component tree is ready.
-SplashScreen.preventAutoHideAsync().catch(() => {});
-
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
 let Notifications: typeof import("expo-notifications") | null = null;
@@ -59,6 +55,8 @@ try {
   console.warn("[RevenueCat] Initialization skipped:", e?.message ?? "unknown error");
   console.warn("[RevenueCat] Initialization failed:", e?.message ?? "Subscription features may not be available.");
 }
+
+SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 

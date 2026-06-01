@@ -1,6 +1,6 @@
 import { useSignUp, useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
-import { Link, router } from "expo-router";
+import { Link, Redirect, router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -28,32 +28,47 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   if (isSignedIn) {
-    router.replace("/");
-    return null;
+    return <Redirect href="/" />;
   }
 
+  const isLoading = fetchStatus === "fetching";
+
   const handleSignUp = async () => {
+    if (!signUp) return;
+    setLocalError(null);
     const { error } = await signUp.password({ emailAddress: email, password });
-    if (error) return;
-    await signUp.verifications.sendEmailCode();
+    if (error) {
+      setLocalError((error as any)?.longMessage ?? (error as any)?.message ?? "Could not create account. Please try again.");
+      return;
+    }
     setPendingVerification(true);
   };
 
   const handleVerify = async () => {
-    await signUp.verifications.verifyEmailCode({ code: verificationCode });
+    if (!signUp) return;
+    setLocalError(null);
+    const { error } = await signUp.verifications.verifyEmailCode({ code: verificationCode });
+    if (error) {
+      setLocalError((error as any)?.longMessage ?? (error as any)?.message ?? "Invalid code. Please try again.");
+      return;
+    }
     if (signUp.status === "complete") {
-      await signUp.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          router.replace(url.startsWith("http") ? "/" : (url as any));
-        },
-      });
+      const { error: finalizeError } = await signUp.finalize();
+      if (finalizeError) {
+        setLocalError((finalizeError as any)?.longMessage ?? (finalizeError as any)?.message ?? "Account created but sign-in failed. Please sign in manually.");
+        return;
+      }
+      router.replace("/");
     }
   };
 
-  const isLoading = fetchStatus === "fetching";
+  const handleResendCode = async () => {
+    if (!signUp) return;
+    await (signUp.verifications as any).sendEmailCode?.();
+  };
 
   if (pendingVerification) {
     return (
@@ -77,8 +92,14 @@ export default function SignUpScreen() {
             keyboardType="numeric"
             autoFocus
           />
-          {errors.fields.code && (
+          {errors?.fields?.code && (
             <Text style={styles.errorText}>{errors.fields.code.message}</Text>
+          )}
+          {!errors?.fields?.code && errors?.global?.[0] && (
+            <Text style={styles.errorText}>{errors.global[0].message}</Text>
+          )}
+          {!errors?.fields?.code && !errors?.global?.[0] && localError && (
+            <Text style={styles.errorText}>{localError}</Text>
           )}
         </View>
 
@@ -100,7 +121,7 @@ export default function SignUpScreen() {
 
         <Pressable
           style={styles.secondaryBtn}
-          onPress={() => signUp.verifications.sendEmailCode()}
+          onPress={handleResendCode}
         >
           <Text style={styles.secondaryBtnText}>Resend code</Text>
         </Pressable>
@@ -143,7 +164,7 @@ export default function SignUpScreen() {
             autoComplete="email"
             textContentType="emailAddress"
           />
-          {errors.fields.emailAddress && (
+          {errors?.fields?.emailAddress && (
             <Text style={styles.errorText}>{errors.fields.emailAddress.message}</Text>
           )}
         </View>
@@ -168,10 +189,17 @@ export default function SignUpScreen() {
               <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={Colors.textMuted} />
             </Pressable>
           </View>
-          {errors.fields.password && (
+          {errors?.fields?.password && (
             <Text style={styles.errorText}>{errors.fields.password.message}</Text>
           )}
         </View>
+
+        {!errors?.fields?.emailAddress && !errors?.fields?.password && errors?.global?.[0] && (
+          <Text style={styles.errorText}>{errors.global[0].message}</Text>
+        )}
+        {!errors?.fields?.emailAddress && !errors?.fields?.password && !errors?.global?.[0] && localError && (
+          <Text style={styles.errorText}>{localError}</Text>
+        )}
 
         <Pressable
           style={({ pressed }) => [
