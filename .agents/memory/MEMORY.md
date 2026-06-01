@@ -1,1 +1,2 @@
 - [express-rate-limit setup](express-rate-limit-setup.md) — must set `app.set('trust proxy', N)` behind a reverse proxy, key with `ipKeyGenerator`, and never trust client headers as keys without strict format validation composed with IP.
+- [iOS startup crash lessons](ios-startup-crash-lessons.md) — Alert.alert() at module scope, ClerkProvider outside ErrorBoundary, missing publishableKey guard, and SDK version mismatches all crash iOS on launch.
