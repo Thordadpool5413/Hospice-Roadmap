@@ -11,6 +11,7 @@ import {
   dequeuePendingDelete,
   enqueuePendingDelete,
   enqueuePendingDeletes,
+  getPendingDeletes,
 } from "@/services/pendingDeletes";
 
 import { GOC_FIELDS } from "@workspace/goc-merge";
@@ -107,6 +108,14 @@ interface AppContextValue {
   isOnboarded: boolean;
   isLoading: boolean;
   ragnaPrivacy: RagnaPrivacySettings;
+  /**
+   * True when savedResources or savedProviders have pending deletes queued
+   * (i.e. the user un-saved bookmarks while offline). Clears to false after a
+   * successful sync when CloudSyncManager calls markBookmarksSynced().
+   */
+  hasPendingBookmarkSync: boolean;
+  /** Called by CloudSyncManager after a fully successful push to clear the badge. */
+  markBookmarksSynced: () => void;
   updateJourneyStage: (stage: JourneyStage) => void;
   updateRole: (role: UserRole) => void;
   completeOnboarding: (role: UserRole, stage: JourneyStage) => void;
@@ -175,6 +184,7 @@ function createDefaultUser(role: UserRole, stage: JourneyStage): User {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPendingBookmarkSync, setHasPendingBookmarkSync] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -187,12 +197,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(stored) as User;
         setUser(normalizeUser(parsed));
       }
+      // Initialize the bookmark pending-sync badge: set it if either saved list
+      // has queued pending deletes (i.e. the user un-saved items while offline).
+      const pending = await getPendingDeletes();
+      if (pending.savedResources.length > 0 || pending.savedProviders.length > 0) {
+        setHasPendingBookmarkSync(true);
+      }
     } catch (e) {
       console.error("Error loading user:", e);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const markBookmarksSynced = useCallback(() => {
+    setHasPendingBookmarkSync(false);
+  }, []);
 
   const saveUser = async (updatedUser: User) => {
     try {
@@ -406,6 +426,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Track all removed IDs so the next sync's union-merge filter excludes them
     // and doesn't rehydrate them from the server.
     await enqueuePendingDeletes("savedResources", user.savedResources).catch(() => {});
+    if (user.savedResources.length > 0) setHasPendingBookmarkSync(true);
     await saveUser({ ...user, savedResources: [] });
   }, [user]);
 
@@ -414,6 +435,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Track all removed IDs so the next sync's union-merge filter excludes them
     // and doesn't rehydrate them from the server.
     await enqueuePendingDeletes("savedProviders", user.savedProviders).catch(() => {});
+    if (user.savedProviders.length > 0) setHasPendingBookmarkSync(true);
     await saveUser({ ...user, savedProviders: [] });
   }, [user]);
 
@@ -495,6 +517,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Un-saving: record the deletion so the next sync doesn't restore it
         // from the server via the union merge.
         enqueuePendingDelete("savedResources", resourceId).catch(() => {});
+        setHasPendingBookmarkSync(true);
         saveUser({ ...user, savedResources: user.savedResources.filter((id) => id !== resourceId) });
       } else {
         // Re-saving: remove any pending delete for this ID so the union-merge
@@ -513,6 +536,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Un-saving: record the deletion so the next sync doesn't restore it
         // from the server via the union merge.
         enqueuePendingDelete("savedProviders", providerId).catch(() => {});
+        setHasPendingBookmarkSync(true);
         saveUser({ ...user, savedProviders: user.savedProviders.filter((id) => id !== providerId) });
       } else {
         // Re-saving: remove any pending delete for this ID so the union-merge
@@ -543,6 +567,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isOnboarded: !!user?.onboardingComplete,
         isLoading,
         ragnaPrivacy,
+        hasPendingBookmarkSync,
+        markBookmarksSynced,
         updateJourneyStage,
         updateRole,
         completeOnboarding,

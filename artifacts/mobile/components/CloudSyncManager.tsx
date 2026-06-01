@@ -134,6 +134,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     hydrateGoalsFromSync,
     hydrateProfileFromServer,
     hydrateSavedListsFromSync,
+    markBookmarksSynced,
   } = useApp();
   const { entries: symptoms, isLoading: sympLoading, hydrateFromServer: hydrateSymptoms } = useSymptoms();
   const { entries: journal, isLoading: jrnLoading, hydrateFromServer: hydrateJournal } = useJournal();
@@ -586,6 +587,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         // Dismiss the wellness pending-sync badge now that all entries have
         // been confirmed uploaded to the server.
         markWellnessSynced();
+        // Dismiss the bookmark pending-sync badge now that the saved-lists
+        // snapshot has been delivered to the server.
+        markBookmarksSynced();
         // A successful full sync pushed the current state of every store, so
         // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
@@ -639,6 +643,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     updateLivingProfile,
     hydrateRagnaMemory,
     markWellnessSynced,
+    markBookmarksSynced,
   ]);
 
   // Initial sync — runs once per sign-in, but only after ALL contexts have
