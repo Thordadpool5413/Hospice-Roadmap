@@ -8,7 +8,13 @@ import React, {
 } from "react";
 
 import { CaregiverMood, CaregiverWellnessEntry } from "@/types";
-import { uploadCaregiverWellness } from "@/services/syncService";
+import { uploadCaregiverWellness, SYNC_LAST_SUCCESS_KEY } from "@/services/syncService";
+import { enqueuePendingDelete } from "@/services/pendingDeletes";
+import {
+  cancelWellnessReminder,
+  scheduleForwardReminder,
+  syncWellnessReminder,
+} from "@/services/wellnessReminderNotifier";
 
 export const WELLNESS_STORAGE_KEY = "@caregiver_wellness_v1";
 const MAX_ENTRIES = 90;
@@ -32,12 +38,26 @@ export const MOOD_SCORES: Record<CaregiverMood, number> = {
 interface CaregiverWellnessContextValue {
   entries: CaregiverWellnessEntry[];
   isLoading: boolean;
+  /**
+   * True when at least one wellness entry was added locally after the last
+   * confirmed cloud sync. Clears to false once CloudSyncManager calls
+   * markSynced() upon a fully successful push.
+   */
+  hasPendingSync: boolean;
   addEntry: (mood: CaregiverMood, note?: string) => Promise<void>;
+  /**
+   * Delete a single wellness entry by ID. If the upload fails (offline),
+   * the ID is added to the pending-deletes queue so the next sync does not
+   * restore the entry from the server side of the union merge.
+   */
+  deleteEntry: (id: string) => Promise<void>;
   getTodayEntry: () => CaregiverWellnessEntry | null;
   getRecentEntries: (days: number) => CaregiverWellnessEntry[];
   getWellnessSummary: (days?: number) => string;
   clearEntries: () => Promise<void>;
   hydrateFromServer: (serverEntries: CaregiverWellnessEntry[]) => Promise<void>;
+  /** Called by CloudSyncManager after a fully successful push to clear the badge. */
+  markSynced: () => void;
 }
 
 const CaregiverWellnessContext = createContext<CaregiverWellnessContextValue | null>(null);
@@ -45,6 +65,7 @@ const CaregiverWellnessContext = createContext<CaregiverWellnessContextValue | n
 export function CaregiverWellnessProvider({ children }: { children: React.ReactNode }) {
   const [entries, setEntries] = useState<CaregiverWellnessEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPendingSync, setHasPendingSync] = useState(false);
 
   useEffect(() => {
     loadEntries();
@@ -52,8 +73,27 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
 
   const loadEntries = async () => {
     try {
-      const stored = await AsyncStorage.getItem(WELLNESS_STORAGE_KEY);
-      if (stored) setEntries(JSON.parse(stored));
+      const [storedRaw, lastSyncRaw] = await Promise.all([
+        AsyncStorage.getItem(WELLNESS_STORAGE_KEY),
+        AsyncStorage.getItem(SYNC_LAST_SUCCESS_KEY),
+      ]);
+      const parsed: CaregiverWellnessEntry[] = storedRaw ? JSON.parse(storedRaw) : [];
+      if (parsed.length > 0) setEntries(parsed);
+      syncWellnessReminder(parsed).catch(() => {});
+
+      // Initialize the pending-sync indicator: if any local entry has a
+      // timestamp newer than the last successful sync, entries are pending.
+      if (parsed.length > 0) {
+        const lastSyncMs = lastSyncRaw ? new Date(lastSyncRaw).getTime() : 0;
+        const newestEntryMs = Math.max(
+          ...parsed.map((e) =>
+            e.updatedAt ? new Date(e.updatedAt).getTime() : e.timestamp,
+          ),
+        );
+        if (newestEntryMs > lastSyncMs) {
+          setHasPendingSync(true);
+        }
+      }
     } catch (e) {
       console.error("Error loading caregiver wellness entries:", e);
     } finally {
@@ -89,7 +129,14 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
         updatedAt: now.toISOString(),
       };
       const saved = await saveEntries([...entries, newEntry]);
+      // Mark as pending sync — a new entry was added locally and hasn't been
+      // confirmed uploaded yet. CloudSyncManager will clear this on success.
+      setHasPendingSync(true);
       uploadCaregiverWellness(saved).catch(() => {});
+      // Forward-schedule the next reminder at 7 PM on (today + 3 days) so it
+      // fires even if the app is never reopened before the threshold is hit.
+      // scheduleForwardReminder cancels any existing notification internally.
+      scheduleForwardReminder(newEntry.date).catch(() => {});
     },
     [entries],
   );
@@ -147,11 +194,30 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
     [getRecentEntries],
   );
 
+  const deleteEntry = useCallback(
+    async (id: string) => {
+      const updated = entries.filter((e) => e.id !== id);
+      await saveEntries(updated);
+      uploadCaregiverWellness(updated)
+        .then((ok) => {
+          if (!ok) {
+            enqueuePendingDelete("wellness", id);
+          }
+        })
+        .catch(() => {
+          enqueuePendingDelete("wellness", id);
+        });
+    },
+    [entries],
+  );
+
   const clearEntries = useCallback(async () => {
     try {
       await AsyncStorage.setItem(WELLNESS_STORAGE_KEY, JSON.stringify([]));
       setEntries([]);
+      setHasPendingSync(false);
       uploadCaregiverWellness([]).catch(() => {});
+      cancelWellnessReminder().catch(() => {});
     } catch (e) {
       console.error("Error clearing caregiver wellness entries:", e);
     }
@@ -165,6 +231,7 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
           .slice(0, MAX_ENTRIES);
         await AsyncStorage.setItem(WELLNESS_STORAGE_KEY, JSON.stringify(trimmed));
         setEntries(trimmed);
+        syncWellnessReminder(trimmed).catch(() => {});
       } catch (e) {
         console.error("Error hydrating caregiver wellness from server:", e);
       }
@@ -172,17 +239,29 @@ export function CaregiverWellnessProvider({ children }: { children: React.ReactN
     [],
   );
 
+  /**
+   * Called by CloudSyncManager after all pushes succeed to dismiss the
+   * pending-sync badge. Uses a stable reference (no closure deps) so
+   * it is safe to include in CloudSyncManager's runSync useCallback.
+   */
+  const markSynced = useCallback(() => {
+    setHasPendingSync(false);
+  }, []);
+
   return (
     <CaregiverWellnessContext.Provider
       value={{
         entries,
         isLoading,
+        hasPendingSync,
         addEntry,
+        deleteEntry,
         getTodayEntry,
         getRecentEntries,
         getWellnessSummary,
         clearEntries,
         hydrateFromServer,
+        markSynced,
       }}
     >
       {children}

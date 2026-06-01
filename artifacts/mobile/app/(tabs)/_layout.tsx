@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 const ragnaIcon = require("@/assets/images/ragna-icon.png");
@@ -61,9 +62,53 @@ function ChatTabIcon({ focused, isPremium }: { focused: boolean; isPremium: bool
   );
 }
 
+// ─── Wellness tab icon ────────────────────────────────────────────────────────
+
+function WellnessTabIcon({
+  color,
+  focused,
+  isIOS,
+  hasPendingSync,
+}: {
+  color: string;
+  focused: boolean;
+  isIOS: boolean;
+  hasPendingSync: boolean;
+}) {
+  return (
+    <View style={{ width: 28, height: 28, alignItems: "center", justifyContent: "center" }}>
+      {isIOS ? (
+        <SymbolView name={focused ? "heart.fill" : "heart"} tintColor={color} size={22} />
+      ) : (
+        <View style={{
+          width: 28, height: 28, alignItems: "center", justifyContent: "center",
+          backgroundColor: focused ? Colors.tabIconSelected + "18" : "transparent",
+          borderRadius: 8,
+        }}>
+          <Feather name="heart" size={20} color={color} />
+        </View>
+      )}
+      {hasPendingSync && (
+        <View style={{
+          position: "absolute",
+          top: isIOS ? -1 : 0,
+          right: isIOS ? -1 : 0,
+          width: 7,
+          height: 7,
+          borderRadius: 4,
+          backgroundColor: Colors.amber,
+          borderWidth: 1.5,
+          borderColor: "#040C1C",
+        }} />
+      )}
+    </View>
+  );
+}
+
 export default function TabLayout() {
   const { isSignedIn, getToken } = useAuth();
   const { isPremium } = useSubscription();
+  const { hasPendingSync: wellnessPendingSync } = useCaregiverWellness();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
@@ -168,6 +213,20 @@ export default function TabLayout() {
                 <Feather name="book-open" size={20} color={color} />
               </View>
             ),
+        }}
+      />
+      <Tabs.Screen
+        name="wellness"
+        options={{
+          title: "Wellness",
+          tabBarIcon: ({ color, focused }) => (
+            <WellnessTabIcon
+              color={color}
+              focused={focused}
+              isIOS={isIOS}
+              hasPendingSync={wellnessPendingSync}
+            />
+          ),
         }}
       />
       <Tabs.Screen

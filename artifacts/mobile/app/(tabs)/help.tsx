@@ -512,6 +512,20 @@ export default function HelpScreen() {
     }, delay);
   }, []);
 
+  /**
+   * Assembles the full patient context string sent to Ragna on every message.
+   *
+   * GoalsOfCare injection path (confirmed):
+   *   buildPatientContext() (AppContext) → includes the "--- Goals of Care ---" block
+   *   when privacy.includeGoalsOfCare is true and the user has saved GoC data.
+   *   This context is appended to the system prompt server-side in
+   *   artifacts/api-server/src/routes/anthropic/index.ts.
+   *
+   * Deep-link conversations (e.g. "Ask Ragna" from Goals of Care screen):
+   *   The initialMessage param carries a short field excerpt for conversational
+   *   framing, but Ragna already receives the FULL saved GoalsOfCare via this
+   *   function — no extra wiring is needed for those entry points.
+   */
   const buildRagnaPatientContext = useCallback(() => {
     if (!ragnaPrivacy.personalizationEnabled) return "";
 

@@ -165,6 +165,28 @@ export default function JourneyStageScreen() {
         ))}
       </View>
 
+      {/* Why Hospice? myth-busting tile (Before stage) */}
+      {stage === "before" && (
+        <Pressable
+          onPress={() => router.push("/hospice-myths" as any)}
+          style={({ pressed }) => [
+            styles.mythsBanner,
+            pressed && { opacity: 0.9 },
+          ]}
+        >
+          <View style={styles.mythsBannerIcon}>
+            <Feather name="shield" size={20} color={Colors.journeyBefore} />
+          </View>
+          <View style={styles.toolBannerText}>
+            <Text style={styles.mythsBannerTitle}>Why Hospice?</Text>
+            <Text style={styles.mythsBannerSubtitle}>
+              Common fears and misconceptions — answered honestly
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={16} color={Colors.journeyBefore} />
+        </Pressable>
+      )}
+
       {/* Quick Tool CTA (Before stage) */}
       {stage === "before" && (
         <Pressable
@@ -328,6 +350,35 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textSecondary,
     lineHeight: 20,
+  },
+  mythsBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.journeyBefore + "40",
+  },
+  mythsBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.journeyBefore + "18",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mythsBannerTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    letterSpacing: -0.2,
+  },
+  mythsBannerSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSecondary,
   },
   toolBanner: {
     flexDirection: "row",

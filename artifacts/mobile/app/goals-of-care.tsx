@@ -19,10 +19,10 @@ import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
+import { GOC_FIELDS } from "@workspace/goc-merge";
+
 import { GoalsOfCare } from "@/types";
 import { PremiumGate } from "@/components/PremiumGate";
-
-const TOTAL_SECTIONS = 8;
 
 const DNR_OPTIONS: { value: GoalsOfCare["dnrStatus"]; label: string; desc: string; color: string }[] = [
   { value: "dnr", label: "DNR / Allow Natural Death", desc: "If the heart stops, we let it stop peacefully. No CPR.", color: "#7A5C8A" },
@@ -93,7 +93,10 @@ export default function GoalsOfCareScreen() {
   const [afterDeathWishes, setAfterDeathWishes] = useState(existing?.afterDeathWishes ?? "");
   const [isSaving, setIsSaving] = useState(false);
 
-  const filledCount = [
+  // Map current state values by field name so GOC_FIELDS drives the count.
+  // Any new field added to GOC_FIELDS (and the corresponding useState) will be
+  // included automatically once added to this map.
+  const fieldValues: Record<string, unknown> = {
     whatMattersMost,
     goodDayLooksLike,
     thingsToAvoid,
@@ -102,7 +105,8 @@ export default function GoalsOfCareScreen() {
     fearsAndConcerns,
     finalDaysWishes,
     afterDeathWishes,
-  ].filter(Boolean).length;
+  };
+  const filledCount = GOC_FIELDS.filter((f) => Boolean(fieldValues[f])).length;
 
   const hasAnyContent = filledCount > 0;
 
@@ -232,25 +236,54 @@ export default function GoalsOfCareScreen() {
             <View
               style={[
                 styles.completionBarFill,
-                { width: `${Math.round((filledCount / TOTAL_SECTIONS) * 100)}%` },
+                { width: `${Math.round((filledCount / GOC_FIELDS.length) * 100)}%` },
               ]}
             />
           </View>
           <Text style={styles.completionLabel}>
-            {filledCount} of {TOTAL_SECTIONS} sections filled
+            {filledCount} of {GOC_FIELDS.length} sections filled
           </Text>
         </View>
 
         {/* Questions */}
-        <QuestionField
-          label="What matters most right now?"
-          hint="To your loved one — or to you as their caregiver"
-          icon="star"
-          value={whatMattersMost}
-          onChange={setWhatMattersMost}
-          placeholder="e.g. Being at home. Seeing grandchildren. No pain. Being heard."
-          why="Ragna uses this to prioritize guidance. If being at home matters most, she'll always factor that into her advice."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="What matters most right now?"
+            hint="To your loved one — or to you as their caregiver"
+            icon="star"
+            value={whatMattersMost}
+            onChange={setWhatMattersMost}
+            placeholder="e.g. Being at home. Seeing grandchildren. No pain. Being heard."
+            why="Ragna uses this to prioritize guidance. If being at home matters most, she'll always factor that into her advice."
+          />
+          <Pressable
+            onPress={() => {
+              const saved = whatMattersMost.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: The initialMessage below carries a short excerpt of the user's current
+              // (possibly unsaved) field value so Ragna can reference it in her reply.
+              // The FULL saved GoalsOfCare profile is automatically injected into Ragna's
+              // system prompt on every message via buildRagnaPatientContext() →
+              // buildPatientContext() in AppContext (includeGoalsOfCare flag).
+              // No additional wiring is needed here — Ragna always has the full GoC context.
+              const initialMessage = saved
+                ? `You've noted that what matters most right now is: "${excerpt}". Can you help me think more deeply about what my loved one truly values at this stage, and how I can make sure their care reflects those priorities?`
+                : "Can you help me understand what typically matters most to people at this stage of the hospice journey, and how I can make sure my loved one's care reflects what they value most?";
+              router.push({
+                pathname: "/(tabs)/help",
+                params: { initialMessage },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
         <QuestionField
           label="What does a good day look like?"
@@ -340,43 +373,121 @@ export default function GoalsOfCareScreen() {
           <View style={styles.sectionDividerLine} />
         </View>
 
-        <QuestionField
-          label="What does your loved one fear most?"
-          hint="Their deepest worries about how this journey unfolds"
-          icon="alert-circle"
-          value={fearsAndConcerns}
-          onChange={setFearsAndConcerns}
-          placeholder="e.g. Being alone at the end. Being in pain. Losing dignity. Not recognizing family."
-          why="When Ragna knows what your loved one fears most, she can proactively address those concerns rather than waiting for you to bring them up. She can also help you prepare for those moments before they arrive."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="What does your loved one fear most?"
+            hint="Their deepest worries about how this journey unfolds"
+            icon="alert-circle"
+            value={fearsAndConcerns}
+            onChange={setFearsAndConcerns}
+            placeholder="e.g. Being alone at the end. Being in pain. Losing dignity. Not recognizing family."
+            why="When Ragna knows what your loved one fears most, she can proactively address those concerns rather than waiting for you to bring them up. She can also help you prepare for those moments before they arrive."
+          />
+          <Pressable
+            onPress={() => {
+              const saved = fearsAndConcerns.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: initialMessage carries only an excerpt for conversational framing.
+              // The full saved GoalsOfCare (including all fields) is automatically sent to
+              // Ragna via buildRagnaPatientContext() → buildPatientContext() on every message.
+              const initialMessage = saved
+                ? `You've noted that my loved one fears: "${excerpt}". Can you help me understand what my loved one is likely to fear most at this stage, and how I can prepare for those moments?`
+                : "Can you help me understand what my loved one is likely to fear most at this stage of the hospice journey, and how I can prepare for those moments?";
+              router.push({
+                pathname: "/(tabs)/help",
+                params: { initialMessage },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
-        <QuestionField
-          label="Wishes for the final days"
-          hint="Who should be present, environment, sensory preferences, spiritual rites"
-          icon="moon"
-          value={finalDaysWishes}
-          onChange={setFinalDaysWishes}
-          placeholder={
-            "e.g. Immediate family only. Soft music — Bach or nature sounds. " +
-            "Room dim and quiet. Wants to be held. Priest for last rites. " +
-            "No TV. Favorite blanket nearby."
-          }
-          why="The final days often unfold faster than families expect. Ragna can help you prepare the environment, guide conversations with the hospice team, and gently remind you of your loved one's wishes when it's hardest to think clearly."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="Wishes for the final days"
+            hint="Who should be present, environment, sensory preferences, spiritual rites"
+            icon="moon"
+            value={finalDaysWishes}
+            onChange={setFinalDaysWishes}
+            placeholder={
+              "e.g. Immediate family only. Soft music — Bach or nature sounds. " +
+              "Room dim and quiet. Wants to be held. Priest for last rites. " +
+              "No TV. Favorite blanket nearby."
+            }
+            why="The final days often unfold faster than families expect. Ragna can help you prepare the environment, guide conversations with the hospice team, and gently remind you of your loved one's wishes when it's hardest to think clearly."
+          />
+          <Pressable
+            onPress={() => {
+              const saved = finalDaysWishes.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: initialMessage carries only an excerpt for conversational framing.
+              // The full saved GoalsOfCare (including all fields) is automatically sent to
+              // Ragna via buildRagnaPatientContext() → buildPatientContext() on every message.
+              const initialMessage = saved
+                ? `You've noted that your loved one wants: "${excerpt}". Can you help me think through what else might matter for those final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?`
+                : "Can you help me think through what my loved one might want for their final days — who should be present, what the environment should feel like, and whether there are any spiritual rites that matter to them?";
+              router.push({
+                pathname: "/(tabs)/help",
+                params: { initialMessage },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
-        <QuestionField
-          label="After-death wishes"
-          hint="Arrangements, notifications, and memorial preferences"
-          icon="feather"
-          value={afterDeathWishes}
-          onChange={setAfterDeathWishes}
-          placeholder={
-            "e.g. Cremation. Scatter ashes at the lake. " +
-            "Call sister first. No funeral home — home funeral preferred. " +
-            "Memorial service at the church. Organ donor card on file."
-          }
-          why="Ragna can help you start conversations about what comes next — at the pace and time that feels right for your family. Having this recorded means you won't have to rely on memory in the most difficult moments."
-        />
+        <View style={styles.fieldGroup}>
+          <QuestionField
+            label="After-death wishes"
+            hint="Arrangements, notifications, and memorial preferences"
+            icon="feather"
+            value={afterDeathWishes}
+            onChange={setAfterDeathWishes}
+            placeholder={
+              "e.g. Cremation. Scatter ashes at the lake. " +
+              "Call sister first. No funeral home — home funeral preferred. " +
+              "Memorial service at the church. Organ donor card on file."
+            }
+            why="Ragna can help you start conversations about what comes next — at the pace and time that feels right for your family. Having this recorded means you won't have to rely on memory in the most difficult moments."
+          />
+          <Pressable
+            onPress={() => {
+              const saved = afterDeathWishes.trim();
+              const excerpt = saved.length > 120 ? saved.slice(0, 120).trimEnd() + "…" : saved;
+              // NOTE: initialMessage carries only an excerpt for conversational framing.
+              // The full saved GoalsOfCare (including all fields) is automatically sent to
+              // Ragna via buildRagnaPatientContext() → buildPatientContext() on every message.
+              const initialMessage = saved
+                ? `You've noted that your loved one wants: "${excerpt}". Can you help me think through what else might matter after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?`
+                : "Can you help me think through what my loved one might want after they've passed — things like arrangements, who to notify first, and how they might like to be remembered or honored?";
+              router.push({
+                pathname: "/(tabs)/help",
+                params: { initialMessage },
+              } as any);
+            }}
+            style={({ pressed }) => [styles.veraLink, styles.fieldGroupLink, pressed && { opacity: 0.7 }]}
+          >
+            <Image
+              source={require("@/assets/images/ragna-icon.png")}
+              style={{ width: 16, height: 16, borderRadius: 4 }}
+              resizeMode="cover"
+            />
+            <Text style={styles.veraLinkText}>Ask Ragna to help me think through this</Text>
+          </Pressable>
+        </View>
 
         {/* Vera context preview */}
         {hasAnyContent && (
@@ -594,4 +705,7 @@ const styles = StyleSheet.create({
     gap: 7, paddingVertical: 8,
   },
   veraLinkText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.primary },
+
+  fieldGroup: { gap: 6 },
+  fieldGroupLink: { paddingVertical: 6 },
 });

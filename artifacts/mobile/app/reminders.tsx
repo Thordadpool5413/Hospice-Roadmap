@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -20,12 +20,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
+import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useReminders } from "@/context/RemindersContext";
 import { Reminder, ReminderRecurrence, ReminderType } from "@/types";
 import {
   getEscalationAlertsEnabled,
   setEscalationAlertsEnabled,
 } from "@/utils/escalationNotifier";
+import {
+  cancelWellnessReminder,
+  getWellnessReminderTime,
+  setWellnessReminderTime,
+  syncWellnessReminder,
+} from "@/services/wellnessReminderNotifier";
 
 const TYPE_META: Record<ReminderType, { label: string; icon: string; color: string; bg: string }> = {
   medication: { label: "Medication", icon: "package", color: Colors.info, bg: Colors.infoPale },
@@ -51,6 +58,12 @@ function formatDatetime(dt: string): string {
   } catch {
     return dt;
   }
+}
+
+function formatTime(hour: number, minute: number): string {
+  const d = new Date();
+  d.setHours(hour, minute, 0, 0);
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 interface AddModalProps {
@@ -221,12 +234,25 @@ function AddReminderModal({ visible, onClose, editing }: AddModalProps) {
 export default function RemindersScreen() {
   const insets = useSafeAreaInsets();
   const { reminders, toggleReminder, deleteReminder } = useReminders();
+  const { entries: wellnessEntries } = useCaregiverWellness();
   const [showAdd, setShowAdd] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | undefined>();
   const [escalationEnabled, setEscalationEnabled] = useState(true);
 
+  // Wellness reminder time preference
+  const [wellnessHour, setWellnessHour] = useState(19);
+  const [wellnessMinute, setWellnessMinute] = useState(0);
+  const [showWellnessPicker, setShowWellnessPicker] = useState(false);
+
   useEffect(() => {
     getEscalationAlertsEnabled().then(setEscalationEnabled).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getWellnessReminderTime().then(({ hour, minute }) => {
+      setWellnessHour(hour);
+      setWellnessMinute(minute);
+    }).catch(() => {});
   }, []);
 
   const handleToggleEscalation = (value: boolean) => {
@@ -234,6 +260,26 @@ export default function RemindersScreen() {
     setEscalationEnabled(value);
     setEscalationAlertsEnabled(value).catch(() => {});
   };
+
+  const handleWellnessTimeChange = useCallback(async (_: unknown, date?: Date) => {
+    if (Platform.OS === "android") setShowWellnessPicker(false);
+    if (!date) return;
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    setWellnessHour(hour);
+    setWellnessMinute(minute);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await setWellnessReminderTime(hour, minute);
+    // Reschedule immediately so the existing notification uses the new time
+    await cancelWellnessReminder();
+    await syncWellnessReminder(wellnessEntries);
+  }, [wellnessEntries]);
+
+  const wellnessPickerDate = (() => {
+    const d = new Date();
+    d.setHours(wellnessHour, wellnessMinute, 0, 0);
+    return d;
+  })();
 
   const handleDelete = (r: Reminder) => {
     Alert.alert("Delete Reminder", `Delete "${r.label}"?`, [
@@ -293,6 +339,53 @@ export default function RemindersScreen() {
               thumbColor="#fff"
             />
           </View>
+        </View>
+
+        {/* ── Wellness Check-in Reminder time picker ── */}
+        <View style={styles.group}>
+          <Text style={styles.groupTitle}>Wellness Reminder</Text>
+          <View style={styles.escalationCard}>
+            <View style={[styles.escalationIcon, { backgroundColor: Colors.primaryPale ?? "rgba(26,92,200,0.15)" }]}>
+              <Feather name="heart" size={18} color={Colors.primary} />
+            </View>
+            <View style={styles.escalationInfo}>
+              <Text style={styles.escalationLabel}>Daily check-in time</Text>
+              <Text style={styles.escalationSub}>
+                Reminder fires after 3 missed days, at this time
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowWellnessPicker(true);
+              }}
+              style={({ pressed }) => [styles.timeBtn, pressed && { opacity: 0.75 }]}
+            >
+              <Text style={styles.timeBtnText}>
+                {formatTime(wellnessHour, wellnessMinute)}
+              </Text>
+              <Feather name="chevron-down" size={13} color={Colors.primary} />
+            </Pressable>
+          </View>
+
+          {Platform.OS !== "web" && showWellnessPicker && (
+            <View style={styles.wellnessPickerWrapper}>
+              <DateTimePicker
+                value={wellnessPickerDate}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleWellnessTimeChange}
+              />
+              {Platform.OS === "ios" && (
+                <Pressable
+                  onPress={() => setShowWellnessPicker(false)}
+                  style={({ pressed }) => [styles.pickerDoneBtn, pressed && { opacity: 0.8 }]}
+                >
+                  <Text style={styles.pickerDoneBtnText}>Done</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
         </View>
 
         {reminders.length === 0 ? (
@@ -460,6 +553,27 @@ const styles = StyleSheet.create({
   escalationInfo: { flex: 1, gap: 3 },
   escalationLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#DDE8FF", letterSpacing: -0.25 },
   escalationSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#4A6090", lineHeight: 17 },
+  timeBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(26, 92, 200, 0.15)",
+    borderRadius: 11, paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: "rgba(26, 92, 200, 0.35)",
+  },
+  timeBtnText: {
+    fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.primary,
+  },
+  wellnessPickerWrapper: {
+    backgroundColor: "rgba(12, 20, 55, 0.90)",
+    borderRadius: 16, overflow: "hidden",
+    borderWidth: 1, borderColor: "rgba(55, 85, 170, 0.22)",
+  },
+  pickerDoneBtn: {
+    alignSelf: "flex-end",
+    paddingHorizontal: 20, paddingVertical: 12,
+  },
+  pickerDoneBtnText: {
+    fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.primary,
+  },
   emptyInline: {
     alignItems: "center", paddingVertical: 28, paddingHorizontal: 24, gap: 14,
     backgroundColor: "rgba(12, 20, 55, 0.90)", borderRadius: 17,

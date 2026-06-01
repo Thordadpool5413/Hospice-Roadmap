@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
+import { useApp } from "@/context/AppContext";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "/api";
 const STORAGE_KEY = "@hospice_roadmap_interviews";
@@ -703,6 +704,8 @@ function ResultsView({ result, hospiceName, onNewInterview, onBack }: {
   result: ScoringResult; hospiceName: string;
   onNewInterview: () => void; onBack: () => void;
 }) {
+  const { user } = useApp();
+  const isBeforeStage = user?.journeyStage === "before";
   const scoreColor = result.overallScore >= 80 ? Colors.success : result.overallScore >= 60 ? Colors.warning : result.overallScore >= 40 ? Colors.accent : Colors.error;
   const recColor = result.recommendation === "Strong Candidate" ? Colors.success : result.recommendation === "Maybe" ? Colors.warning : Colors.error;
   const catColor = (c: string) => c === "green" ? Colors.success : c === "yellow" ? Colors.warning : Colors.error;
@@ -799,6 +802,26 @@ function ResultsView({ result, hospiceName, onNewInterview, onBack }: {
         <Feather name="message-circle" size={18} color="#fff" />
         <Text style={ui.askRagnaBtnText}>Talk It Through with Ragna</Text>
       </Pressable>
+
+      {isBeforeStage && (
+        <View style={ui.nextStepCard}>
+          <View style={ui.nextStepHeader}>
+            <Feather name="arrow-right-circle" size={16} color={Colors.journeyBefore} />
+            <Text style={ui.nextStepLabel}>Next Step</Text>
+          </View>
+          <Text style={ui.nextStepTitle}>Check Eligibility</Text>
+          <Text style={ui.nextStepBody}>
+            You've evaluated this hospice — now find out if your loved one clinically qualifies for the Medicare Hospice Benefit.
+          </Text>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/evaluation" as any); }}
+            style={({ pressed }) => [ui.nextStepBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={ui.nextStepBtnText}>Check Eligibility</Text>
+            <Feather name="chevron-right" size={16} color="#fff" />
+          </Pressable>
+        </View>
+      )}
 
       <Pressable onPress={onNewInterview} style={({ pressed }) => [ui.secondaryBtn, pressed && { opacity: 0.7 }]}>
         <Feather name="plus" size={16} color={Colors.primary} />
@@ -1211,6 +1234,19 @@ const ui = StyleSheet.create({
   secondaryBtnText: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.primary },
   retakeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
   retakeBtnText: { fontSize: 13, fontFamily: "Inter_500Medium", color: "#5A78A8" },
+  nextStepCard: {
+    backgroundColor: "rgba(12,20,55,0.90)", borderRadius: 16, padding: 16, gap: 8,
+    borderWidth: 1.5, borderColor: "rgba(100,180,255,0.28)",
+  },
+  nextStepHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  nextStepLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.journeyBefore, textTransform: "uppercase", letterSpacing: 0.8 },
+  nextStepTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#EEF4FF", letterSpacing: -0.3 },
+  nextStepBody: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#7A90B8", lineHeight: 19 },
+  nextStepBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: Colors.journeyBefore, borderRadius: 12, paddingVertical: 12, marginTop: 4,
+  },
+  nextStepBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -0.2 },
   // Landing
   landingHero: {
     backgroundColor: "rgba(12,20,55,0.90)", borderRadius: 16, padding: 20,

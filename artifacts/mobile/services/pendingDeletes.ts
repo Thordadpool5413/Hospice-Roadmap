@@ -22,7 +22,7 @@
  *      post-delete snapshot to the server.
  *
  * Storage key: @pending_deletes_v1
- * Structure: { symptoms: string[], journal: string[], reminders: string[] }
+ * Structure: { symptoms: string[], journal: string[], reminders: string[], wellness: string[] }
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -33,18 +33,20 @@ const PENDING_DELETES_KEY = "@pending_deletes_v1";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DeleteStoreType = "symptoms" | "journal" | "reminders";
+export type DeleteStoreType = "symptoms" | "journal" | "reminders" | "wellness";
 
 export interface PendingDeletesStore {
   symptoms: string[];
   journal: string[];
   reminders: string[];
+  wellness: string[];
 }
 
 const EMPTY_STORE: PendingDeletesStore = {
   symptoms: [],
   journal: [],
   reminders: [],
+  wellness: [],
 };
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -58,6 +60,7 @@ async function readStore(): Promise<PendingDeletesStore> {
       symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms : [],
       journal: Array.isArray(parsed.journal) ? parsed.journal : [],
       reminders: Array.isArray(parsed.reminders) ? parsed.reminders : [],
+      wellness: Array.isArray(parsed.wellness) ? parsed.wellness : [],
     };
   } catch {
     return { ...EMPTY_STORE };

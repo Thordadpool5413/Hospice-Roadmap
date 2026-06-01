@@ -5,40 +5,8 @@ export type UserRole =
   | "caregiver"
   | "other";
 
-/** The eight editable scalar fields on a GoalsOfCare document. */
-export type GoalsOfCareField =
-  | "whatMattersMost"
-  | "goodDayLooksLike"
-  | "thingsToAvoid"
-  | "dnrStatus"
-  | "additionalDirectives"
-  | "fearsAndConcerns"
-  | "finalDaysWishes"
-  | "afterDeathWishes";
-
-export interface GoalsOfCare {
-  whatMattersMost?: string;
-  goodDayLooksLike?: string;
-  thingsToAvoid?: string;
-  dnrStatus?: "dnr" | "full-code" | "unknown" | "not-discussed";
-  additionalDirectives?: string;
-  /** What the patient fears most (e.g. being alone, being in pain, losing dignity). */
-  fearsAndConcerns?: string;
-  /** Specific wishes for the final days — who to have present, environment, sensory preferences, spiritual rites. */
-  finalDaysWishes?: string;
-  /** After-death wishes — organ donation, burial vs cremation, who to notify, memorial preferences. */
-  afterDeathWishes?: string;
-  /** Document-level ISO timestamp — the last time any field was saved locally. */
-  updatedAt?: string;
-  /**
-   * Per-field ISO timestamps populated by the sync merge step.
-   * When present, these take precedence over the document-level `updatedAt`
-   * during field-level conflict resolution so that a device that only edits
-   * one field while offline does not overwrite unrelated fields from another
-   * device. Set by `mergeGoalsOfCare()` — not written by the UI.
-   */
-  fieldUpdatedAt?: Partial<Record<GoalsOfCareField, string>>;
-}
+import type { DnrStatus, GoalsOfCare, GoalsOfCareField } from "@workspace/goc-merge";
+export type { DnrStatus, GoalsOfCare, GoalsOfCareField };
 
 export interface MedicationEntry {
   id: string;
