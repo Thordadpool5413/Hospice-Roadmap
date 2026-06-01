@@ -297,6 +297,13 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       //
       // `hydrateProfileFromServer` always preserves the local goalsOfCare value
       // so the two sync paths don't interfere with each other.
+      //
+      // IMPORTANT: `appliedServerProfile` drives the Step 3 push decision.
+      // When we hydrate from server the `user` React closure still holds the
+      // pre-hydration (stale) value. We must NOT push the closure in that case
+      // or we'd immediately overwrite the correct server data with stale local
+      // data (doubly dangerous for legacy profiles that lack `updatedAt`).
+      let appliedServerProfile = false;
       if (serverData.userProfile?.data) {
         const serverProfileTs  = serverData.userProfile.updatedAt;
         const localProfileTs   = user?.updatedAt;
@@ -307,6 +314,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
         if (serverIsNewer || isNewDevice) {
           await hydrateProfileFromServer(serverData.userProfile.data);
+          appliedServerProfile = true;
         }
       }
 
@@ -357,10 +365,16 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushOps.push(uploadCaregiverWellness(mergedWellness));
       }
 
-      // Push user profile when the user has a completed profile.
-      // We always push (not just when local is newer) so a device that was
-      // offline gets the server synced to the current local state as well.
-      if (user?.onboardingComplete) {
+      // Push user profile when:
+      //   1. The user has a completed profile (onboardingComplete).
+      //   2. The local profile was NOT just replaced by the server (appliedServerProfile=false).
+      //      If we hydrated from server in Step 2, the `user` closure is still the
+      //      pre-hydration stale value — pushing it would overwrite the correct server
+      //      data. The next real user edit will stamp updatedAt and trigger write-through.
+      //   3. The profile has an updatedAt stamp. Profiles without updatedAt were saved
+      //      before the sync migration; we don't know when they were last modified and
+      //      must not claim they are "current" with a fabricated timestamp.
+      if (user?.onboardingComplete && !appliedServerProfile && user.updatedAt) {
         pushOps.push(uploadProfile(user));
       }
 

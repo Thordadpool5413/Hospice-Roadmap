@@ -410,9 +410,14 @@ export async function uploadProfile(user: import("@/types").User): Promise<boole
     const { goalsOfCare: _goc, ...rest } = user.patientProfile;
     profileData["patientProfile"] = Object.keys(rest).length > 0 ? rest : undefined;
   }
+  // When updatedAt is absent the profile predates the sync migration and we
+  // don't know its true modification time. Use the Unix epoch as a safe
+  // sentinel so LWW can never let this upload overwrite any properly-stamped
+  // server record. The upload still runs so the server gets initial data, but
+  // any subsequent write from another device (which WILL have updatedAt) wins.
   return syncPut("/profile", {
     data: profileData,
-    clientUpdatedAt: user.updatedAt ?? new Date().toISOString(),
+    clientUpdatedAt: user.updatedAt ?? new Date(0).toISOString(),
   });
 }
 
