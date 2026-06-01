@@ -66,6 +66,8 @@
     "expo-audio": "~1.1.1",
     "expo-clipboard": "~8.0.8",
     "expo-local-authentication": "~17.0.8",
+    "expo-clipboard": "^8.0.8",
+    "expo-local-authentication": "^17.0.8",
     "expo-modules-core": "3.0.30",
     "expo-notifications": "^0.32.17",
     "expo-speech": "~14.0.8",

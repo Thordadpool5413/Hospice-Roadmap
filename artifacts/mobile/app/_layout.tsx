@@ -12,7 +12,7 @@ import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
 import React, { useEffect, useRef } from "react";
-import { Alert, Platform, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -48,17 +48,22 @@ if (notificationsAvailable) {
   }
 }
 
+// Safe module-scope initialization — never call Alert.alert() here because
+// the React Native bridge is not ready when module-level code executes on iOS.
 try {
   initializeRevenueCat();
 } catch (err: unknown) {
   const e = err as { message?: string };
   // Log to Metro console so the error is visible when debugging with Expo Go.
   console.warn("[RevenueCat] Initialization skipped:", e?.message ?? "unknown error");
+  console.warn("[RevenueCat] Initialization failed:", e?.message ?? "Subscription features may not be available.");
 }
 
 const queryClient = new QueryClient();
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+// Read the Clerk publishable key once at module scope so the guard below
+// can detect a missing key before attempting to render ClerkProvider.
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 // LearningSync bridges RagnaLearningContext and VeraMemoryContext.
@@ -413,5 +418,86 @@ export default function RootLayout() {
         </SafeAreaProvider>
       </ClerkLoaded>
     </ClerkProvider>
+  // Safe loading state — dark view keeps the splash color while fonts load.
+  // Never return null: on iOS a null root causes a brief blank flash before
+  // the React tree has a chance to paint.
+  if (!fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: "#030A18" }} />;
+  }
+
+  // Guard against a missing Clerk publishable key (e.g. EAS secret not
+  // configured for this build profile). Rendering ClerkProvider with an empty
+  // key throws synchronously and crashes the app; show a safe error instead.
+  if (!publishableKey) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#030A18", alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <Text style={{ color: "#EEF4FF", fontSize: 16, textAlign: "center", lineHeight: 24 }}>
+          App configuration error — authentication could not be initialized.{"\n\n"}Please update to the latest version or contact support.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    // ErrorBoundary is placed OUTSIDE ClerkProvider so it catches any error
+    // thrown by ClerkProvider itself (e.g. invalid key format, network error
+    // during token refresh) and shows a safe fallback instead of crashing.
+    <ErrorBoundary>
+      <ClerkProvider
+        publishableKey={publishableKey}
+        tokenCache={tokenCache}
+        proxyUrl={proxyUrl}
+      >
+        {/* ClerkLoading renders a matching dark view while Clerk bootstraps
+            (reads the keychain / refreshes the session token). Without this,
+            the tree under ClerkLoaded is simply absent during init, which
+            produces a blank white flash on fast devices. */}
+        <ClerkLoading>
+          <SafeAreaProvider>
+            <View style={{ flex: 1, backgroundColor: "#030A18" }} />
+          </SafeAreaProvider>
+        </ClerkLoading>
+
+        <ClerkLoaded>
+          <SafeAreaProvider>
+            <ErrorBoundary>
+              <AccessibilityProvider>
+              <AppProvider>
+                <JournalProvider>
+                <RemindersProvider>
+                <SymptomProvider>
+                <CaregiverWellnessProvider>
+                <VeraMemoryProvider>
+                <RagnaLearningProvider>
+                <QueryClientProvider client={queryClient}>
+                  <SubscriptionProvider>
+                  <AppLockProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <CloudSyncProvider>
+                      <View style={{ flex: 1 }}>
+                        <LearningSync />
+                        <RootLayoutNav />
+                        <OfflineBanner />
+                        <SyncSuccessToast />
+                        <LockOverlay />
+                      </View>
+                    </CloudSyncProvider>
+                  </GestureHandlerRootView>
+                  </AppLockProvider>
+                  </SubscriptionProvider>
+                </QueryClientProvider>
+                </RagnaLearningProvider>
+                </VeraMemoryProvider>
+                </CaregiverWellnessProvider>
+                </SymptomProvider>
+                </RemindersProvider>
+                </JournalProvider>
+              </AppProvider>
+              </AccessibilityProvider>
+            </ErrorBoundary>
+          </SafeAreaProvider>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </ErrorBoundary>
   );
 }

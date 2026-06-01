@@ -5,25 +5,21 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development"
     },
     "preview": {
-      "distribution": "internal",
+      "distribution": "store",
+      "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "true"
+        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "true",
+        "EXPO_DEBUG": "1"
       }
     },
     "production": {
       "distribution": "store",
-      "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "false"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": {}
+      "environment": "production",
+      "autoIncrement": true
     }
   }
 }
