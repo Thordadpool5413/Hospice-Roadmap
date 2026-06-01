@@ -23,6 +23,7 @@ import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
+import { clearPendingDeletesForStore } from "@/services/pendingDeletes";
 import {
   deleteServerGoals,
   deleteServerJournal,
@@ -214,7 +215,10 @@ export default function DataControlsScreen() {
         confirm(
           "Clear Saved Providers",
           "Remove all saved provider bookmarks from this device?",
-          clearSavedProviders
+          async () => {
+            await clearSavedProviders();
+            await clearPendingDeletesForStore("savedProviders");
+          }
         ),
     },
     {
@@ -226,7 +230,10 @@ export default function DataControlsScreen() {
         confirm(
           "Clear Saved Resources",
           "Remove all saved resource bookmarks from this device?",
-          clearSavedResources
+          async () => {
+            await clearSavedResources();
+            await clearPendingDeletesForStore("savedResources");
+          }
         ),
     },
     {
