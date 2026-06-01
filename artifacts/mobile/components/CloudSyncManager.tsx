@@ -72,6 +72,7 @@ import {
   uploadGoals,
   uploadJournal,
   uploadLivingProfile,
+  uploadProfile,
   uploadReminders,
   uploadSymptoms,
 } from "@/services/syncService";
@@ -119,7 +120,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { isOnline } = useAppNetwork();
 
   // isLoading from AppContext is true until AsyncStorage hydration is done
-  const { user, isLoading: appLoading, updatePatientProfile } = useApp();
+  const { user, isLoading: appLoading, updatePatientProfile, hydrateProfileFromServer } = useApp();
   const { entries: symptoms, isLoading: sympLoading, hydrateFromServer: hydrateSymptoms } = useSymptoms();
   const { entries: journal, isLoading: jrnLoading, hydrateFromServer: hydrateJournal } = useJournal();
   const { reminders, isLoading: remLoading, hydrateFromServer: hydrateReminders } = useReminders();
@@ -284,6 +285,31 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const mergedWellness = mergeWellnessEntries(wellnessEntries, filteredServerWellness);
       await hydrateWellness(mergedWellness);
 
+      // ── User profile (true LWW by user.updatedAt) ─────────────────────────
+      // The server stores role, journeyStage, name, onboardingComplete,
+      // savedResources/Providers, ragnaPrivacy, and patientProfile WITHOUT
+      // goalsOfCare (that field is owned by the /sync/goals path above).
+      //
+      // Restore strategy:
+      //   - If server has a profile AND it is newer than local → hydrate.
+      //   - If local has no completed profile (fresh device/reinstall) → hydrate.
+      //   - Otherwise local wins (no change to state).
+      //
+      // `hydrateProfileFromServer` always preserves the local goalsOfCare value
+      // so the two sync paths don't interfere with each other.
+      if (serverData.userProfile?.data) {
+        const serverProfileTs  = serverData.userProfile.updatedAt;
+        const localProfileTs   = user?.updatedAt;
+        const serverIsNewer    = serverProfileTs && (
+          !localProfileTs || new Date(serverProfileTs) > new Date(localProfileTs)
+        );
+        const isNewDevice = !user?.onboardingComplete;
+
+        if (serverIsNewer || isNewDevice) {
+          await hydrateProfileFromServer(serverData.userProfile.data);
+        }
+      }
+
       // Step 3: push current local state to server with stored LWW timestamps.
       //
       // For symptoms and journal we push the *merged* arrays captured above
@@ -329,6 +355,13 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // the next sync would restore the deleted entry.
       if (mergedWellness.length > 0 || pendingDeletes.wellness.length > 0) {
         pushOps.push(uploadCaregiverWellness(mergedWellness));
+      }
+
+      // Push user profile when the user has a completed profile.
+      // We always push (not just when local is newer) so a device that was
+      // offline gets the server synced to the current local state as well.
+      if (user?.onboardingComplete) {
+        pushOps.push(uploadProfile(user));
       }
 
       const pushResults = await Promise.allSettled(pushOps);
@@ -385,6 +418,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     hydrateJournal,
     hydrateReminders,
     hydrateWellness,
+    hydrateProfileFromServer,
     updatePatientProfile,
     updateLivingProfile,
     markWellnessSynced,

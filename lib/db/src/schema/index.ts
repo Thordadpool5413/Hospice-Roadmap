@@ -29,3 +29,4 @@ export * from "./syncReminders";
 export * from "./familyUpdateLog";
 export * from "./smsOptOuts";
 export * from "./caregiverWellness";
+export * from "./userProfiles";

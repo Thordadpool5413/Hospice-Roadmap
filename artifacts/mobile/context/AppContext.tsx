@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { uploadProfile } from "@/services/syncService";
 
 import { GOC_FIELDS } from "@workspace/goc-merge";
 
@@ -116,6 +117,15 @@ interface AppContextValue {
   buildPatientContext: () => string;
   updateRagnaPrivacy: (updates: Partial<RagnaPrivacySettings>) => void;
   resetRagnaPrivacy: () => void;
+  /**
+   * Restore user profile data received from the server during cloud sync.
+   *
+   * Writes the merged profile to AsyncStorage + state WITHOUT triggering an
+   * upload back to the server (which would be redundant — we just received it).
+   * Crucially, it preserves the local `patientProfile.goalsOfCare` value, which
+   * is managed by a separate sync path and must not be overwritten here.
+   */
+  hydrateProfileFromServer: (data: Record<string, unknown>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -159,12 +169,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const saveUser = async (updatedUser: User) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      // Stamp a fresh updatedAt on every save so the LWW sync key is current.
+      const stamped: User = { ...updatedUser, updatedAt: new Date().toISOString() };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
+      setUser(stamped);
+      // Fire-and-forget: push to server. Non-fatal if offline.
+      uploadProfile(stamped).catch(() => {});
     } catch (e) {
       console.error("Error saving user:", e);
     }
   };
+
+  /**
+   * Restore user profile data from the server WITHOUT triggering an upload
+   * back (avoids a redundant round-trip and prevents stomping a newer server
+   * value with stale local data). Preserves the local GoC value because that
+   * field is managed by the separate /sync/goals endpoint.
+   */
+  const hydrateProfileFromServer = useCallback(
+    async (data: Record<string, unknown>): Promise<void> => {
+      try {
+        const serverUser = data as Partial<User>;
+
+        // Read the most-recent persisted state (not the React closure value,
+        // which may be stale if called before a state update settles).
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const currentUser: User | null = stored
+          ? normalizeUser(JSON.parse(stored) as User)
+          : null;
+
+        // Preserve the local GoC — it's authoritative here; the GoC sync path
+        // owns that field and will merge it separately.
+        const existingGoC = currentUser?.patientProfile?.goalsOfCare;
+
+        const merged: User = normalizeUser({
+          // Sensible fallback fields (device-local, never overwritten from server)
+          id: currentUser?.id ?? Date.now().toString(),
+          createdAt: currentUser?.createdAt ?? new Date().toISOString(),
+          // Apply all server fields
+          ...serverUser,
+          // Always keep the local GoC
+          patientProfile: serverUser.patientProfile
+            ? { ...(serverUser.patientProfile as PatientProfile), goalsOfCare: existingGoC }
+            : currentUser?.patientProfile,
+        } as User);
+
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        setUser(merged);
+      } catch (e) {
+        console.error("Error hydrating profile from server:", e);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const completeOnboarding = useCallback(
     (role: UserRole, stage: JourneyStage) => {
@@ -391,6 +449,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         buildPatientContext,
         updateRagnaPrivacy,
         resetRagnaPrivacy,
+        hydrateProfileFromServer,
       }}
     >
       {children}

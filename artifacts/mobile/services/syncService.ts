@@ -2,13 +2,14 @@
  * Cloud sync service — uploads local data to the server and restores it on
  * sign-in / app foreground / reconnect.
  *
- * Six data stores are synced:
+ * Seven data stores are synced:
  *   - symptom entries          (@hospice_roadmap_symptoms)
  *   - journal entries          (@hospice_roadmap_journal)
  *   - goals of care            (user.patientProfile.goalsOfCare in @hospice_roadmap_user)
  *   - living profile           (@vera_living_profile_v1)
  *   - reminders                (@hospice_roadmap_reminders)
  *   - caregiver wellness       (@caregiver_wellness_v1)
+ *   - user profile             (@hospice_roadmap_user — role/stage/settings, NOT goalsOfCare)
  *
  * Per-record conflict resolution (last-write-wins):
  *   Each record now carries an `updatedAt` field stamped at create/update time
@@ -59,12 +60,13 @@ export async function readSyncLastSuccess(): Promise<string | null> {
 
 // ─── Migration flag keys ──────────────────────────────────────────────────────
 
-const MIGRATED_SYMPTOMS  = "@sync_migrated_symptoms";
-const MIGRATED_JOURNAL   = "@sync_migrated_journal";
-const MIGRATED_GOALS     = "@sync_migrated_goals";
-const MIGRATED_PROFILE   = "@sync_migrated_profile";
-const MIGRATED_REMINDERS = "@sync_migrated_reminders";
-const MIGRATED_WELLNESS  = "@sync_migrated_wellness";
+const MIGRATED_SYMPTOMS      = "@sync_migrated_symptoms";
+const MIGRATED_JOURNAL       = "@sync_migrated_journal";
+const MIGRATED_GOALS         = "@sync_migrated_goals";
+const MIGRATED_PROFILE       = "@sync_migrated_profile";
+const MIGRATED_REMINDERS     = "@sync_migrated_reminders";
+const MIGRATED_WELLNESS      = "@sync_migrated_wellness";
+const MIGRATED_USER_PROFILE  = "@sync_migrated_user_profile";
 
 // ─── AsyncStorage source keys (must not be changed) ──────────────────────────
 
@@ -172,6 +174,11 @@ export interface ServerSyncData {
   reminders: Reminder[];
   /** Caregiver daily wellness check-in entries. Empty array when none exist. */
   caregiverWellness: CaregiverWellnessEntry[];
+  /**
+   * The full DB row for user profile — includes `updatedAt` (ISO string)
+   * alongside `data` (the User object without patientProfile.goalsOfCare).
+   */
+  userProfile: { data: Record<string, unknown>; updatedAt?: string } | null;
 }
 
 // ─── Per-record merge helpers ─────────────────────────────────────────────────
@@ -387,6 +394,32 @@ export async function deleteAllServerData(): Promise<boolean> {
   return syncDelete("/all");
 }
 
+// ─── User profile upload/delete ───────────────────────────────────────────────
+
+/**
+ * Upload the user profile to the server.
+ *
+ * patientProfile.goalsOfCare is stripped before sending — GoC is managed
+ * exclusively by the /sync/goals endpoint. Storing it here too would create
+ * two competing sources of truth for the same field.
+ */
+export async function uploadProfile(user: import("@/types").User): Promise<boolean> {
+  const profileData: Record<string, unknown> = { ...user };
+  if (user.patientProfile) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { goalsOfCare: _goc, ...rest } = user.patientProfile;
+    profileData["patientProfile"] = Object.keys(rest).length > 0 ? rest : undefined;
+  }
+  return syncPut("/profile", {
+    data: profileData,
+    clientUpdatedAt: user.updatedAt ?? new Date().toISOString(),
+  });
+}
+
+export async function deleteServerProfile(): Promise<boolean> {
+  return syncDelete("/profile");
+}
+
 // ─── Caregiver wellness merge ─────────────────────────────────────────────────
 
 /**
@@ -460,6 +493,7 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
     MIGRATED_PROFILE,
     MIGRATED_REMINDERS,
     MIGRATED_WELLNESS,
+    MIGRATED_USER_PROFILE,
   ]);
   const flagMap: Record<string, boolean> = {};
   for (const [key, val] of flags) {
@@ -580,6 +614,30 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
         } else {
           const ok = await uploadCaregiverWellness(local);
           if (ok) await AsyncStorage.setItem(MIGRATED_WELLNESS, "1");
+        }
+      }
+    })());
+  }
+
+  if (!flagMap[MIGRATED_USER_PROFILE]) {
+    migrations.push((async () => {
+      if (serverData.userProfile) {
+        // Server already has a profile row — mark done without re-uploading.
+        await AsyncStorage.setItem(MIGRATED_USER_PROFILE, "1");
+      } else {
+        const raw = await AsyncStorage.getItem(AS_USER);
+        if (!raw) {
+          // No local profile — nothing to migrate.
+          await AsyncStorage.setItem(MIGRATED_USER_PROFILE, "1");
+        } else {
+          const localUser = JSON.parse(raw) as import("@/types").User;
+          // Only migrate if onboarding is complete (user has a meaningful profile).
+          if (!localUser.onboardingComplete) {
+            await AsyncStorage.setItem(MIGRATED_USER_PROFILE, "1");
+          } else {
+            const ok = await uploadProfile(localUser);
+            if (ok) await AsyncStorage.setItem(MIGRATED_USER_PROFILE, "1");
+          }
         }
       }
     })());
