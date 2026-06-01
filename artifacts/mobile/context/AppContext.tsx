@@ -7,6 +7,11 @@ import React, {
   useState,
 } from "react";
 import { uploadProfile } from "@/services/syncService";
+import {
+  dequeuePendingDelete,
+  enqueuePendingDelete,
+  enqueuePendingDeletes,
+} from "@/services/pendingDeletes";
 
 import { GOC_FIELDS } from "@workspace/goc-merge";
 
@@ -138,6 +143,16 @@ interface AppContextValue {
    * overwrite a genuinely newer server profile via LWW.
    */
   hydrateGoalsFromSync: (goals: GoalsOfCare) => Promise<void>;
+  /**
+   * Apply union-merged savedResources and savedProviders arrays received from the
+   * server sync merge.
+   *
+   * Updates storage + state WITHOUT stamping `updatedAt` on the User record and
+   * WITHOUT triggering a write-through `uploadProfile` call. This is the correct
+   * path for sync-driven saved-list writes when the local profile is not being
+   * replaced wholesale by `hydrateProfileFromServer`.
+   */
+  hydrateSavedListsFromSync: (savedResources: string[], savedProviders: string[]) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -220,6 +235,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(merged);
       } catch (e) {
         console.error("Error hydrating goals from sync:", e);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  /**
+   * Sync-only saved-list write: merges `savedResources` and `savedProviders` into
+   * the persisted user WITHOUT stamping a new `updatedAt` and WITHOUT calling
+   * `uploadProfile`.
+   *
+   * Reads directly from AsyncStorage (not the React closure) so it is safe to
+   * call from CloudSyncManager even before the preceding `setUser` has flushed to
+   * the render cycle. Used when the local user profile wins the LWW comparison
+   * but the server side of the union merge contributed additional saved IDs.
+   */
+  const hydrateSavedListsFromSync = useCallback(
+    async (savedResources: string[], savedProviders: string[]): Promise<void> => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!stored) return;
+        const currentUser = normalizeUser(JSON.parse(stored) as User);
+        const merged: User = {
+          ...currentUser,
+          savedResources,
+          savedProviders,
+          // Intentionally do NOT update updatedAt here. This is a sync-driven
+          // write; stamping a new time would make the stale closure profile look
+          // newer on the next upload and overwrite a genuinely newer server record.
+        };
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        setUser(merged);
+      } catch (e) {
+        console.error("Error hydrating saved lists from sync:", e);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -354,11 +403,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const clearSavedResources = useCallback(async (): Promise<void> => {
     if (!user) return;
+    // Track all removed IDs so the next sync's union-merge filter excludes them
+    // and doesn't rehydrate them from the server.
+    await enqueuePendingDeletes("savedResources", user.savedResources).catch(() => {});
     await saveUser({ ...user, savedResources: [] });
   }, [user]);
 
   const clearSavedProviders = useCallback(async (): Promise<void> => {
     if (!user) return;
+    // Track all removed IDs so the next sync's union-merge filter excludes them
+    // and doesn't rehydrate them from the server.
+    await enqueuePendingDeletes("savedProviders", user.savedProviders).catch(() => {});
     await saveUser({ ...user, savedProviders: [] });
   }, [user]);
 
@@ -436,10 +491,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleSavedResource = useCallback(
     (resourceId: string) => {
       if (!user) return;
-      const saved = user.savedResources.includes(resourceId)
-        ? user.savedResources.filter((id) => id !== resourceId)
-        : [...user.savedResources, resourceId];
-      saveUser({ ...user, savedResources: saved });
+      if (user.savedResources.includes(resourceId)) {
+        // Un-saving: record the deletion so the next sync doesn't restore it
+        // from the server via the union merge.
+        enqueuePendingDelete("savedResources", resourceId).catch(() => {});
+        saveUser({ ...user, savedResources: user.savedResources.filter((id) => id !== resourceId) });
+      } else {
+        // Re-saving: remove any pending delete for this ID so the union-merge
+        // filter doesn't cancel the re-save on the next sync.
+        dequeuePendingDelete("savedResources", resourceId).catch(() => {});
+        saveUser({ ...user, savedResources: [...user.savedResources, resourceId] });
+      }
     },
     [user]
   );
@@ -447,10 +509,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleSavedProvider = useCallback(
     (providerId: string) => {
       if (!user) return;
-      const saved = user.savedProviders.includes(providerId)
-        ? user.savedProviders.filter((id) => id !== providerId)
-        : [...user.savedProviders, providerId];
-      saveUser({ ...user, savedProviders: saved });
+      if (user.savedProviders.includes(providerId)) {
+        // Un-saving: record the deletion so the next sync doesn't restore it
+        // from the server via the union merge.
+        enqueuePendingDelete("savedProviders", providerId).catch(() => {});
+        saveUser({ ...user, savedProviders: user.savedProviders.filter((id) => id !== providerId) });
+      } else {
+        // Re-saving: remove any pending delete for this ID so the union-merge
+        // filter doesn't cancel the re-save on the next sync.
+        dequeuePendingDelete("savedProviders", providerId).catch(() => {});
+        saveUser({ ...user, savedProviders: [...user.savedProviders, providerId] });
+      }
     },
     [user]
   );
@@ -491,6 +560,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         resetRagnaPrivacy,
         hydrateProfileFromServer,
         hydrateGoalsFromSync,
+        hydrateSavedListsFromSync,
       }}
     >
       {children}

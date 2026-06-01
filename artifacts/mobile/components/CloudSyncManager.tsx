@@ -120,7 +120,13 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { isOnline } = useAppNetwork();
 
   // isLoading from AppContext is true until AsyncStorage hydration is done
-  const { user, isLoading: appLoading, hydrateGoalsFromSync, hydrateProfileFromServer } = useApp();
+  const {
+    user,
+    isLoading: appLoading,
+    hydrateGoalsFromSync,
+    hydrateProfileFromServer,
+    hydrateSavedListsFromSync,
+  } = useApp();
   const { entries: symptoms, isLoading: sympLoading, hydrateFromServer: hydrateSymptoms } = useSymptoms();
   const { entries: journal, isLoading: jrnLoading, hydrateFromServer: hydrateJournal } = useJournal();
   const { reminders, isLoading: remLoading, hydrateFromServer: hydrateReminders } = useReminders();
@@ -289,15 +295,44 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const mergedWellness = mergeWellnessEntries(wellnessEntries, filteredServerWellness);
       await hydrateWellness(mergedWellness);
 
-      // ── User profile (true LWW by user.updatedAt) ─────────────────────────
+      // ── Saved resources & providers (set union merge) ─────────────────────
+      //
+      // These two arrays are part of the user profile object but use a union
+      // merge strategy (like symptoms/journal) rather than true LWW.  This
+      // ensures a resource bookmarked on Device A while offline is never wiped
+      // by a newer profile saved on Device B.
+      //
+      // IDs the user explicitly un-saved while offline are tracked in the
+      // pending-deletes queue (savedResources / savedProviders stores) and
+      // filtered out of the union so the deletion survives a sync.
+      const serverSavedResources: string[] =
+        Array.isArray(serverData.userProfile?.data?.savedResources)
+          ? (serverData.userProfile!.data.savedResources as string[])
+          : [];
+      const serverSavedProviders: string[] =
+        Array.isArray(serverData.userProfile?.data?.savedProviders)
+          ? (serverData.userProfile!.data.savedProviders as string[])
+          : [];
+      const localSavedResources: string[] = user?.savedResources ?? [];
+      const localSavedProviders: string[] = user?.savedProviders ?? [];
+
+      const mergedSavedResources = Array.from(
+        new Set([...localSavedResources, ...serverSavedResources]),
+      ).filter((id) => !pendingDeletes.savedResources.includes(id));
+
+      const mergedSavedProviders = Array.from(
+        new Set([...localSavedProviders, ...serverSavedProviders]),
+      ).filter((id) => !pendingDeletes.savedProviders.includes(id));
+
+      // ── User profile (LWW for scalar fields, union for saved lists) ────────
       // The server stores role, journeyStage, name, onboardingComplete,
       // savedResources/Providers, ragnaPrivacy, and patientProfile WITHOUT
       // goalsOfCare (that field is owned by the /sync/goals path above).
       //
-      // Restore strategy:
-      //   - If server has a profile AND it is newer than local → hydrate.
-      //   - If local has no completed profile (fresh device/reinstall) → hydrate.
-      //   - Otherwise local wins (no change to state).
+      // Scalar fields (role, journeyStage, ragnaPrivacy …) use true LWW keyed
+      // on user.updatedAt. The saved-list fields always use the union computed
+      // above and are injected into whichever profile data wins the LWW so
+      // `hydrateProfileFromServer` persists the correct union.
       //
       // `hydrateProfileFromServer` always preserves the local goalsOfCare value
       // so the two sync paths don't interfere with each other.
@@ -317,8 +352,44 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         const isNewDevice = !user?.onboardingComplete;
 
         if (serverIsNewer || isNewDevice) {
-          await hydrateProfileFromServer(serverData.userProfile.data);
+          // Inject the union-merged saved lists so hydrateProfileFromServer
+          // persists them rather than restoring the server's raw (possibly
+          // smaller) snapshot.
+          const dataWithMergedLists: Record<string, unknown> = {
+            ...serverData.userProfile.data,
+            savedResources: mergedSavedResources,
+            savedProviders: mergedSavedProviders,
+          };
+          await hydrateProfileFromServer(dataWithMergedLists);
           appliedServerProfile = true;
+        } else {
+          // Local profile wins the LWW comparison, but we still union-merge the
+          // saved lists in case the server contributed bookmarks from another
+          // device. Only write if the merged result actually differs from local.
+          const savedListsChanged =
+            mergedSavedResources.length !== localSavedResources.length ||
+            mergedSavedProviders.length !== localSavedProviders.length ||
+            mergedSavedResources.some((id) => !localSavedResources.includes(id)) ||
+            mergedSavedProviders.some((id) => !localSavedProviders.includes(id));
+
+          if (savedListsChanged) {
+            await hydrateSavedListsFromSync(mergedSavedResources, mergedSavedProviders);
+          }
+        }
+      } else if (user?.onboardingComplete) {
+        // No server profile yet — still apply local pending-deletes filtering
+        // so un-saved IDs don't linger after the queue is cleared.
+        const filteredResources = localSavedResources.filter(
+          (id) => !pendingDeletes.savedResources.includes(id),
+        );
+        const filteredProviders = localSavedProviders.filter(
+          (id) => !pendingDeletes.savedProviders.includes(id),
+        );
+        const savedListsChanged =
+          filteredResources.length !== localSavedResources.length ||
+          filteredProviders.length !== localSavedProviders.length;
+        if (savedListsChanged) {
+          await hydrateSavedListsFromSync(filteredResources, filteredProviders);
         }
       }
 
@@ -369,17 +440,64 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         pushOps.push(uploadCaregiverWellness(mergedWellness));
       }
 
-      // Push user profile when:
-      //   1. The user has a completed profile (onboardingComplete).
-      //   2. The local profile was NOT just replaced by the server (appliedServerProfile=false).
-      //      If we hydrated from server in Step 2, the `user` closure is still the
-      //      pre-hydration stale value — pushing it would overwrite the correct server
-      //      data. The next real user edit will stamp updatedAt and trigger write-through.
-      //   3. The profile has an updatedAt stamp. Profiles without updatedAt were saved
-      //      before the sync migration; we don't know when they were last modified and
-      //      must not claim they are "current" with a fabricated timestamp.
-      if (user?.onboardingComplete && !appliedServerProfile && user.updatedAt) {
-        pushOps.push(uploadProfile(user));
+      // Push user profile:
+      //
+      // Case A — local profile wins LWW (appliedServerProfile=false):
+      //   Push the local `user` closure with merged saved lists injected. We use
+      //   the captured `mergedSavedResources`/`mergedSavedProviders` rather than
+      //   `user.savedResources`/`user.savedProviders` because the hydrate call
+      //   above (hydrateSavedListsFromSync) is batched and the closure hasn't
+      //   updated yet. Guards: onboardingComplete + updatedAt (same as before).
+      //
+      // Case B — server profile wins LWW (appliedServerProfile=true):
+      //   The `user` closure is stale — we must NOT push it wholesale. But if
+      //   the merged saved lists differ from the server's snapshot, we still need
+      //   to push so that the union survives on the server. In this case we
+      //   construct a synthetic profile from the server's own data (already the
+      //   "winning" value for scalar fields) + merged lists + a fresh updatedAt
+      //   so the server's LWW accepts the update.
+      if (!appliedServerProfile && user?.onboardingComplete && user.updatedAt) {
+        // Case A: push closure with merged saved lists
+        const profileWithMergedLists = {
+          ...user,
+          savedResources: mergedSavedResources,
+          savedProviders: mergedSavedProviders,
+        };
+        pushOps.push(uploadProfile(profileWithMergedLists));
+      } else if (appliedServerProfile && serverData.userProfile?.data && user?.onboardingComplete) {
+        // Case B: push only when merged lists contain bookmarks the server lacked.
+        // Compare merged result against what the server originally sent — if the
+        // union added any IDs (or pending deletes removed any), push the update.
+        const serverHadAllResources = mergedSavedResources.every((id) =>
+          serverSavedResources.includes(id),
+        );
+        const serverHadAllProviders = mergedSavedProviders.every((id) =>
+          serverSavedProviders.includes(id),
+        );
+        const serverHadExtraResources = serverSavedResources.some(
+          (id) => pendingDeletes.savedResources.includes(id),
+        );
+        const serverHadExtraProviders = serverSavedProviders.some(
+          (id) => pendingDeletes.savedProviders.includes(id),
+        );
+        const needsListPush =
+          !serverHadAllResources ||
+          !serverHadAllProviders ||
+          serverHadExtraResources ||
+          serverHadExtraProviders;
+
+        if (needsListPush) {
+          // Use the server's profile data as the base so we don't push stale
+          // scalar fields from the closure. Override saved lists with the union
+          // and stamp a fresh updatedAt so the server accepts the update.
+          const syntheticProfile = {
+            ...(serverData.userProfile.data as unknown as import("@/types").User),
+            savedResources: mergedSavedResources,
+            savedProviders: mergedSavedProviders,
+            updatedAt: new Date().toISOString(),
+          };
+          pushOps.push(uploadProfile(syntheticProfile));
+        }
       }
 
       const pushResults = await Promise.allSettled(pushOps);
@@ -438,6 +556,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     hydrateWellness,
     hydrateGoalsFromSync,
     hydrateProfileFromServer,
+    hydrateSavedListsFromSync,
     updateLivingProfile,
     markWellnessSynced,
   ]);
