@@ -98,12 +98,19 @@ interface CloudSyncContextValue {
    * this value to decide when to show a confirmation.
    */
   syncSucceededAt: Date | null;
+  /**
+   * Set to a human-readable error message when the most recent sync attempt
+   * failed (e.g. network error or partial upload failure). Cleared to null
+   * at the start of every new sync attempt and after a successful sync.
+   */
+  syncError: string | null;
 }
 
 const CloudSyncContext = createContext<CloudSyncContextValue>({
   triggerSync: async () => {},
   isSyncing: false,
   syncSucceededAt: null,
+  syncError: null,
 });
 
 export function useCloudSync(): CloudSyncContextValue {
@@ -159,6 +166,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   // "Qualifying" = app is active + previous sync was > SYNC_TOAST_THRESHOLD_MS ago.
   const [syncSucceededAt, setSyncSucceededAt] = useState<Date | null>(null);
 
+  // Set to a human-readable message when a sync attempt fails; cleared on the
+  // next sync start and cleared again on success.
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   // All six local stores must have finished loading from AsyncStorage before
   // we attempt any sync or hydration. This prevents pushing stale empty-state
   // or missing a restore because any context was still null at sync time.
@@ -168,6 +179,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     if (!isSignedIn || isSyncingRef.current) return;
     isSyncingRef.current = true;
     setIsSyncing(true);
+    setSyncError(null);
 
     try {
       const serverData = await fetchServerData();
@@ -578,6 +590,8 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         // any queued retry payloads and pending-delete entries are redundant.
         await clearRetryQueue();
         await clearAllPendingDeletes();
+        // Clear any previous error now that sync succeeded.
+        setSyncError(null);
 
         // ── Toast eligibility ────────────────────────────────────────────
         // Show the "Synced" confirmation only when:
@@ -590,9 +604,15 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         if (isForegrounded && thresholdElapsed) {
           setSyncSucceededAt(new Date());
         }
+      } else {
+        // One or more push operations failed — let the UI know so it can
+        // surface a useful error message to the user.
+        setSyncError("Last sync failed — reconnect to sync");
       }
     } catch {
-      // Sync failures are silent — app continues to work offline
+      // Sync failures are silent at the system level — app continues offline.
+      // Surface the failure to the UI via syncError.
+      setSyncError("Last sync failed — reconnect to sync");
     } finally {
       isSyncingRef.current = false;
       setIsSyncing(false);
@@ -674,7 +694,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   }, [isSignedIn, isOnline, runSync]);
 
   return (
-    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt }}>
+    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt, syncError }}>
       {children}
     </CloudSyncContext.Provider>
   );
