@@ -9,9 +9,12 @@ for (const file of ["package-lock.json", "yarn.lock"]) {
   }
 }
 
-const userAgent = process.env.npm_config_user_agent || "";
+const userAgent = (process.env.npm_config_user_agent || "").toLowerCase();
+const execPath = (process.env.npm_execpath || "").toLowerCase();
+const isPnpmInvocation =
+  userAgent.includes("pnpm/") || execPath.includes("pnpm");
 
-if (!userAgent.startsWith("pnpm/")) {
+if (!isPnpmInvocation) {
   console.error("Use pnpm instead");
   process.exit(1);
 }
