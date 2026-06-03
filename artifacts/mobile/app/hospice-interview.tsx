@@ -19,8 +19,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
+import { apiBase } from "@/services/apiClient";
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "/api";
 const STORAGE_KEY = "@hospice_roadmap_interviews";
 
 // ─── Data Model ──────────────────────────────────────────────────────────────
@@ -966,7 +966,7 @@ export default function HospiceInterviewScreen() {
   const handleScore = async () => {
     setIsScoring(true);
     try {
-      const resp = await fetch(`${API_BASE}/anthropic/score-hospice`, {
+      const resp = await fetch(`${apiBase()}/anthropic/score-hospice`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interview: data }),

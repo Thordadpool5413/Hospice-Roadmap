@@ -35,7 +35,7 @@ type ViewMode = "list" | "map";
 export default function ProvidersScreen() {
   const insets = useSafeAreaInsets();
   const { toggleSavedProvider, isSavedProvider } = useApp();
-  const { isOnline } = useAppNetwork();
+  const { isOnline, issue: networkIssue, statusMessage } = useAppNetwork();
 
   const [selectedState, setSelectedState] = useState("");
   const [zipInput, setZipInput] = useState("");
@@ -49,11 +49,14 @@ export default function ProvidersScreen() {
   const [nameFilter, setNameFilter] = useState("");
   const [qualitySummaries, setQualitySummaries] = useState<Record<string, QualitySummary>>({});
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const offlineNotice =
+    statusMessage ??
+    "No internet connection — provider search unavailable offline.";
 
   const handleSearch = useCallback(async () => {
     if (!selectedState && !zipInput) return;
     if (!isOnline) {
-      setError("No internet connection. Provider search requires internet access.");
+      setError(offlineNotice);
       return;
     }
     setLoading(true);
@@ -87,7 +90,7 @@ export default function ProvidersScreen() {
     } finally {
       setLoading(false);
     }
-  }, [selectedState, zipInput, isOnline]);
+  }, [selectedState, zipInput, isOnline, offlineNotice]);
 
   const filteredStates = stateFilter
     ? US_STATES.filter(
@@ -158,9 +161,13 @@ export default function ProvidersScreen() {
 
             {!isOnline && (
               <View style={styles.offlineNotice}>
-                <Feather name="wifi-off" size={14} color={Colors.amber} />
+                <Feather
+                  name={networkIssue === "offline" ? "wifi-off" : "alert-circle"}
+                  size={14}
+                  color={Colors.amber}
+                />
                 <Text style={styles.offlineText}>
-                  No internet connection — provider search unavailable offline.
+                  {offlineNotice}
                 </Text>
               </View>
             )}

@@ -60,10 +60,56 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+function getRuntimeExtraConfig(): {
+  clerkPublishableKey?: string;
+  clerkProxyUrl?: string;
+} {
+  const constants = Constants as unknown as {
+    expoConfig?: {
+      extra?: {
+        clerkPublishableKey?: string | null;
+        clerkProxyUrl?: string | null;
+      } | null;
+    } | null;
+    manifest?: {
+      extra?: {
+        clerkPublishableKey?: string | null;
+        clerkProxyUrl?: string | null;
+      } | null;
+    } | null;
+    manifest2?: {
+      extra?: {
+        clerkPublishableKey?: string | null;
+        clerkProxyUrl?: string | null;
+      } | null;
+    } | null;
+  };
+
+  return {
+    clerkPublishableKey:
+      constants.expoConfig?.extra?.clerkPublishableKey ??
+      constants.manifest?.extra?.clerkPublishableKey ??
+      constants.manifest2?.extra?.clerkPublishableKey ??
+      undefined,
+    clerkProxyUrl:
+      constants.expoConfig?.extra?.clerkProxyUrl ??
+      constants.manifest?.extra?.clerkProxyUrl ??
+      constants.manifest2?.extra?.clerkProxyUrl ??
+      undefined,
+  };
+}
+
 // Read the Clerk publishable key once at module scope so the guard below
 // can detect a missing key before attempting to render ClerkProvider.
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+const runtimeExtra = getRuntimeExtraConfig();
+const publishableKey =
+  process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+  runtimeExtra.clerkPublishableKey ||
+  "";
+const proxyUrl =
+  process.env.EXPO_PUBLIC_CLERK_PROXY_URL ||
+  runtimeExtra.clerkProxyUrl ||
+  undefined;
 
 /**
  * AuthTokenBridge — registers the Clerk token getter BEFORE CloudSyncProvider

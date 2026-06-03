@@ -15,6 +15,8 @@ import { Platform } from "react-native";
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 
+const LOCAL_DEV_API_BASE = "http://localhost:8080/api";
+
 function getExpoExtraConfig(): { apiUrl?: string; domain?: string } {
   const constants = Constants as unknown as {
     expoConfig?: {
@@ -60,6 +62,29 @@ function normalizeApiUrl(value?: string | null): string | null {
   return trimmed.replace(/\/+$/, "");
 }
 
+function isNativeDevelopmentRuntime(): boolean {
+  return Platform.OS !== "web" && typeof __DEV__ !== "undefined" && __DEV__;
+}
+
+export class ApiBaseConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ApiBaseConfigurationError";
+  }
+}
+
+export type ApiBaseResolutionSource =
+  | "env"
+  | "expo-extra-api-url"
+  | "expo-extra-domain"
+  | "window-location"
+  | "localhost-dev";
+
+export interface ApiBaseResolution {
+  url: string;
+  source: ApiBaseResolutionSource;
+}
+
 /**
  * Resolve the API base URL for the current environment.
  *
@@ -71,33 +96,54 @@ function normalizeApiUrl(value?: string | null): string | null {
  *  3. Expo config extra.domain — build the API URL from the known Replit host.
  *  4. window.location — web fallback for Replit iframe preview when the env
  *     var is unavailable.
- *  5. localhost fallback for local non-Expo dev.
+ *  5. localhost fallback for local native development only.
+ *
+ * Native preview / production builds must never silently fall back to
+ * localhost. If the public API URL is missing in those builds, we throw a
+ * configuration error so the app can surface the real problem.
  */
-export function apiBase(): string {
+export function resolveApiBase(): ApiBaseResolution {
   const envUrl = normalizeApiUrl(process.env["EXPO_PUBLIC_API_URL"]);
-  if (envUrl) return envUrl;
+  if (envUrl) {
+    return { url: envUrl, source: "env" };
+  }
 
   const expoExtra = getExpoExtraConfig();
   const extraApiUrl = normalizeApiUrl(expoExtra.apiUrl);
-  if (extraApiUrl) return extraApiUrl;
+  if (extraApiUrl) {
+    return { url: extraApiUrl, source: "expo-extra-api-url" };
+  }
 
   const domain = expoExtra.domain?.trim();
   if (domain) {
-    return `https://${domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/api`;
+    return {
+      url: `https://${domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/api`,
+      source: "expo-extra-domain",
+    };
   }
 
   if (typeof window !== "undefined" && window.location?.hostname) {
     const host = window.location.hostname.replace(".expo.", ".");
-    return `https://${host}/api`;
+    return {
+      url: `https://${host}/api`,
+      source: "window-location",
+    };
   }
 
-  if (Platform.OS !== "web") {
+  if (isNativeDevelopmentRuntime()) {
     console.warn(
       "[apiClient] Falling back to localhost API on native. Expo config is missing apiUrl/domain.",
     );
+    return { url: LOCAL_DEV_API_BASE, source: "localhost-dev" };
   }
 
-  return "http://localhost:8080/api";
+  throw new ApiBaseConfigurationError(
+    "This app build is missing its API server URL. Set EXPO_PUBLIC_API_URL or EXPO_PUBLIC_DOMAIN before shipping the mobile app.",
+  );
+}
+
+export function apiBase(): string {
+  return resolveApiBase().url;
 }
 
 // ─── Timeouts ────────────────────────────────────────────────────────────────
