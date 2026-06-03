@@ -10,6 +10,7 @@
     },
     "preview": {
       "distribution": "store",
+      "environment": "preview",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "true",
