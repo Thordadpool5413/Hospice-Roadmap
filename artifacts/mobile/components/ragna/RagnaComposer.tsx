@@ -24,6 +24,8 @@ interface RagnaComposerProps {
   onSend: (text: string) => void;
   isStreaming: boolean;
   isOnline: boolean;
+  offlineMessage?: string | null;
+  offlinePlaceholder?: string;
   hasMessages: boolean;
   insetsBottom: number;
   inputRef: React.RefObject<TextInput | null>;
@@ -50,6 +52,8 @@ export function RagnaComposer({
   onSend,
   isStreaming,
   isOnline,
+  offlineMessage,
+  offlinePlaceholder,
   hasMessages,
   insetsBottom,
   inputRef,
@@ -94,7 +98,7 @@ export function RagnaComposer({
         <View style={styles.offlineInputNotice}>
           <Feather name="wifi-off" size={15} color={Colors.amber} />
           <Text style={styles.offlineInputText}>
-            No connection. Check your internet and try again.
+            {offlineMessage ?? "No connection. Check your internet and try again."}
           </Text>
         </View>
       )}
@@ -243,7 +247,7 @@ export function RagnaComposer({
           onChangeText={onChangeText}
           placeholder={
             !isOnline
-              ? "Reconnecting to Ragna…"
+              ? (offlinePlaceholder ?? "Reconnecting to Ragna…")
               : isStreaming
                 ? "Ragna is responding…"
                 : hasMessages

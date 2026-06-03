@@ -24,14 +24,20 @@ if (!devDomain) {
 }
 
 const lines = [
-  `EXPO_PUBLIC_API_URL=https://${devDomain}/api`,
-  `EXPO_PUBLIC_DOMAIN=${devDomain}`,
   `EXPO_PUBLIC_REPL_ID=${replId}`,
-  `EXPO_PACKAGER_PROXY_URL=https://${expoDevDomain}`,
-  `REACT_NATIVE_PACKAGER_HOSTNAME=${devDomain}`,
   `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=${clerkPublishableKey}`,
   `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=${googleMapsApiKey}`,
 ];
+
+if (devDomain) {
+  lines.unshift(`EXPO_PUBLIC_DOMAIN=${devDomain}`);
+  lines.unshift(`EXPO_PUBLIC_API_URL=https://${devDomain}/api`);
+  lines.push(`REACT_NATIVE_PACKAGER_HOSTNAME=${devDomain}`);
+}
+
+if (expoDevDomain) {
+  lines.push(`EXPO_PACKAGER_PROXY_URL=https://${expoDevDomain}`);
+}
 
 const envPath = path.join(__dirname, "..", ".env.local");
 fs.writeFileSync(envPath, lines.join("\n") + "\n", "utf8");

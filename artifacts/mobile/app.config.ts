@@ -17,7 +17,31 @@ const explicitApiUrl =
   process.env["EXPO_PUBLIC_API_URL"] ||
   (devDomain ? `https://${devDomain}/api` : "");
 
+const clerkPublishableKey =
+  process.env["EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY"] ||
+  process.env["CLERK_PUBLISHABLE_KEY"] ||
+  "";
+const clerkProxyUrl =
+  process.env["EXPO_PUBLIC_CLERK_PROXY_URL"] ||
+  process.env["CLERK_PROXY_URL"] ||
+  "";
+
 const googleMapsApiKey = process.env["GOOGLE_MAPS_API_KEY"] || "";
+const easBuildProfile = process.env["EAS_BUILD_PROFILE"] || "";
+const requiresHostedApiConfig =
+  easBuildProfile === "preview" || easBuildProfile === "production";
+
+if (requiresHostedApiConfig && !explicitApiUrl) {
+  throw new Error(
+    "[app.config] Missing API configuration for preview/production build. Set EXPO_PUBLIC_API_URL or EXPO_PUBLIC_DOMAIN before shipping the mobile app.",
+  );
+}
+
+if (requiresHostedApiConfig && !clerkPublishableKey) {
+  throw new Error(
+    "[app.config] Missing Clerk publishable key for preview/production build. Set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY.",
+  );
+}
 
 const withAndroidAutoMedia: ConfigPlugin = (config) => {
   const withManifest = withAndroidManifest(config, (cfg) => {
@@ -129,6 +153,8 @@ const config: ExpoConfig = {
   extra: {
     apiUrl: explicitApiUrl || undefined,
     domain: devDomain || undefined,
+    clerkPublishableKey: clerkPublishableKey || undefined,
+    clerkProxyUrl: clerkProxyUrl || undefined,
     eas: {
       projectId: "e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc",
     },

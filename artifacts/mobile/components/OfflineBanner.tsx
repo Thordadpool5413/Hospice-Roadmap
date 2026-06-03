@@ -9,7 +9,7 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 const useNative = Platform.OS !== "web";
 
 export function OfflineBanner() {
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, issue, statusMessage } = useNetworkStatus();
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(-60)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -46,6 +46,10 @@ export function OfflineBanner() {
   }, [isOnline, translateY, opacity]);
 
   const topOffset = Platform.OS === "web" ? 67 : insets.top;
+  const iconName = issue === "offline" ? "wifi-off" : "alert-circle";
+  const message =
+    statusMessage ??
+    "No internet — AI and provider search unavailable. Guidance works offline.";
 
   return (
     <Animated.View
@@ -56,9 +60,9 @@ export function OfflineBanner() {
       pointerEvents="none"
     >
       <View style={styles.inner}>
-        <Feather name="wifi-off" size={14} color={Colors.amber} />
+        <Feather name={iconName} size={14} color={Colors.amber} />
         <Text style={styles.text}>
-          No internet — AI and provider search unavailable. Guidance works offline.
+          {message}
         </Text>
       </View>
     </Animated.View>

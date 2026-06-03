@@ -310,7 +310,7 @@ export default function HelpScreen() {
   } = useVeraMemory();
   const { getObservationContext } = useRagnaLearning();
   const { getWellnessSummary } = useCaregiverWellness();
-  const { isOnline } = useAppNetwork();
+  const { isOnline, issue: networkIssue, statusMessage } = useAppNetwork();
   const { initialMessage } = useLocalSearchParams<{
     initialMessage?: string;
   }>();
@@ -1310,6 +1310,12 @@ export default function HelpScreen() {
         }}
         isStreaming={isStreaming}
         isOnline={isOnline}
+        offlineMessage={statusMessage}
+        offlinePlaceholder={
+          networkIssue === "offline"
+            ? "Reconnecting to Ragna…"
+            : "Ragna is unavailable right now…"
+        }
         hasMessages={hasMessages}
         insetsBottom={insets.bottom}
         inputRef={inputRef}

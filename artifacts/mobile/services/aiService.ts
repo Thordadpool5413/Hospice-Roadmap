@@ -220,7 +220,21 @@ export async function streamMessage(
     );
 
     if (!res.ok) {
-      onError("Failed to connect to AI");
+      let message = "Failed to connect to AI";
+      try {
+        const data = (await res.json()) as { error?: string; message?: string };
+        message = data.error ?? data.message ?? message;
+      } catch {
+        try {
+          const raw = await res.text();
+          if (raw) {
+            message = raw;
+          }
+        } catch {
+          // Ignore non-text bodies.
+        }
+      }
+      onError(message);
       return;
     }
 
