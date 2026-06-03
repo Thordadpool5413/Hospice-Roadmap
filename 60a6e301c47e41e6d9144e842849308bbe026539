@@ -1,0 +1,21 @@
+package.json
+  s_f1fd765348fd16::t_c2fa8b937ee749 6
+scripts/enforce-pnpm.cjs
+  s_f1fd765348fd16::t_c2fa8b937ee749 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "60a6e301c47e41e6d9144e842849308bbe026539",
+  "prompts": {},
+  "sessions": {
+    "s_f1fd765348fd16": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e813f-c34d-7113-91c1-0758f39028cf",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}
