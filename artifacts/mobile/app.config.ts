@@ -4,7 +4,7 @@ import {
   withAndroidManifest,
   withDangerousMod,
   type ConfigPlugin,
-} from "expo/config-plugins";
+} from "expo/config-plugins.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
