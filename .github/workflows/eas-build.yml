@@ -81,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm exec eas env:exec --non-interactive "$PROFILE" '
-            set -euo pipefail
+            set -eu
 
             if [ -n "${API_URL_OVERRIDE:-}" ]; then
               export EXPO_PUBLIC_API_URL="$API_URL_OVERRIDE"
@@ -119,7 +119,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm exec eas env:exec --non-interactive "$PROFILE" '
-            set -euo pipefail
+            set -eu
 
             if [ -n "${API_URL_OVERRIDE:-}" ]; then
               export EXPO_PUBLIC_API_URL="$API_URL_OVERRIDE"
