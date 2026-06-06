@@ -1,12 +1,9 @@
 import type { ExpoConfig } from "expo/config";
-import {
-  AndroidConfig,
-  withAndroidManifest,
-  withDangerousMod,
-  type ConfigPlugin,
-} from "expo/config-plugins.js";
+import configPlugins from "expo/config-plugins.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+const { AndroidConfig, withAndroidManifest, withDangerousMod } = configPlugins;
 
 const devDomain =
   process.env["REPLIT_DEV_DOMAIN"] ||
@@ -43,7 +40,7 @@ if (requiresHostedApiConfig && !clerkPublishableKey) {
   );
 }
 
-const withAndroidAutoMedia: ConfigPlugin = (config) => {
+const withAndroidAutoMedia = (config: ExpoConfig) => {
   const withManifest = withAndroidManifest(config, (cfg) => {
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(
       cfg.modResults,
