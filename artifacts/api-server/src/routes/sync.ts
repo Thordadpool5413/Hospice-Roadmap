@@ -12,6 +12,7 @@ import {
   userProfiles,
   ragnaMemory,
   gocContentSchema,
+  type GoalsOfCareContent,
 } from "@workspace/db/schema";
 
 const router = Router();
@@ -256,13 +257,14 @@ router.put("/goals", async (req, res) => {
     res.status(400).json({ error: "invalid content", issues: parsed.error.issues });
     return;
   }
+  const content = parsed.data as GoalsOfCareContent;
 
   try {
     const clientUpdatedAt = parseClientTs(body.clientUpdatedAt);
 
     await db
       .insert(goalsOfCare)
-      .values({ userId, content: parsed.data, updatedAt: clientUpdatedAt })
+      .values({ userId, content, updatedAt: clientUpdatedAt })
       .onConflictDoUpdate({
         target: goalsOfCare.userId,
         set: {

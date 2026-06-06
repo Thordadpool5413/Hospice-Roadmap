@@ -643,6 +643,7 @@ export default function HelpScreen() {
     if (!message.audioBase64 && !message.audioUrl) return;
     try {
       stopLiveSpeechPreview(true);
+      setVoiceStatusText("Starting Ragna's voice reply…");
       await playNativeOpenAiVoiceAudio({
         audioBase64: message.audioBase64,
         audioMimeType: message.audioMimeType,
@@ -664,9 +665,11 @@ export default function HelpScreen() {
     try {
       if (isPlaybackActive) {
         if (isPlaybackPaused) {
+          setVoiceStatusText("Resuming Ragna's voice reply…");
           await resumeNativeOpenAiVoicePlayback();
           setVoiceStatusText("Resumed Ragna's voice reply.");
         } else {
+          setVoiceStatusText("Pausing Ragna's voice reply…");
           await pauseNativeOpenAiVoicePlayback();
           setVoiceStatusText("Paused Ragna's voice reply.");
         }
@@ -674,19 +677,9 @@ export default function HelpScreen() {
       }
 
       if (isLiveSpeechActive) {
+        setVoiceStatusText("Stopping live voice reply…");
         stopLiveSpeechPreview(true);
         setVoiceStatusText("Stopped live voice reply.");
-        return;
-      }
-
-      if (isPlaybackActive) {
-        if (isPlaybackPaused) {
-          await resumeNativeOpenAiVoicePlayback();
-          setVoiceStatusText("Resumed Ragna's voice reply.");
-        } else {
-          await pauseNativeOpenAiVoicePlayback();
-          setVoiceStatusText("Paused Ragna's voice reply.");
-        }
         return;
       }
 
@@ -703,6 +696,7 @@ export default function HelpScreen() {
       }
 
       if (latestAssistantMessage.audioBase64 || latestAssistantMessage.audioUrl) {
+        setVoiceStatusText("Starting Ragna's voice reply…");
         await playNativeOpenAiVoiceAudio({
           audioBase64: latestAssistantMessage.audioBase64,
           audioMimeType: latestAssistantMessage.audioMimeType,
@@ -762,6 +756,7 @@ export default function HelpScreen() {
   ]);
 
   const handlePlaybackStop = useCallback(async () => {
+    setVoiceStatusText("Stopping Ragna's voice reply…");
     stopLiveSpeechPreview(true);
     await stopNativeOpenAiVoicePlayback();
     setVoiceStatusText("Stopped Ragna's voice reply.");

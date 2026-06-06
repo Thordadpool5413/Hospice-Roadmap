@@ -18,9 +18,9 @@
  * @returns Deduplicated union of local + server with pendingDeletes excluded.
  */
 export function mergeSavedList(
-  local: string[],
-  server: string[],
-  pendingDeletes: string[],
+  local: readonly string[],
+  server: readonly string[],
+  pendingDeletes: readonly string[],
 ): string[] {
   const deleteSet = new Set(pendingDeletes);
   return Array.from(new Set([...local, ...server])).filter(

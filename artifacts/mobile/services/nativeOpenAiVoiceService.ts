@@ -694,7 +694,10 @@ async function playFromBase64(
 }
 
 function shouldPreferAudioUrl(audioUrl?: string): boolean {
-  return Boolean(audioUrl) && (isExpoGoStoreClient() || Platform.OS === "ios");
+  // Native builds already get the generated base64 payload. Prefer the local
+  // file on device so playback starts faster and pause/resume stays attached to
+  // the same player instead of fetching the remote cache URL first.
+  return Boolean(audioUrl) && isExpoGoStoreClient();
 }
 
 async function playAudioReply({
@@ -759,43 +762,43 @@ export function updateNativeOpenAiVoiceReplySummary(text: string | null | undefi
 
 export async function pauseNativeOpenAiVoicePlayback(): Promise<void> {
   if (activeSound) {
-    activeSound.pause();
     emitPlaybackState({ isPlaying: true, isPaused: true });
+    activeSound.pause();
     return;
   }
 
   if (isUsingSpeechFallback) {
     const controls = getSpeechControls();
     if (controls.pause) {
+      emitPlaybackState({ isPlaying: true, isPaused: true });
       controls.pause();
       pauseSpeechCarrier();
-      emitPlaybackState({ isPlaying: true, isPaused: true });
       return;
     }
     // Older expo-speech builds have no `pause`. Stop the engine but keep
     // `fallbackSpeechText` and `spokenCharOffset` intact so the caregiver
     // can resume from where they left off; report a paused (not stopped)
     // state so the UI surfaces a resume affordance.
+    emitPlaybackState({ isPlaying: true, isPaused: true });
     controls.stop?.();
     isUsingSpeechFallback = false;
     void stopSpeechCarrier();
-    emitPlaybackState({ isPlaying: true, isPaused: true });
   }
 }
 
 export async function resumeNativeOpenAiVoicePlayback(): Promise<void> {
   if (activeSound) {
-    activeSound.play();
     emitPlaybackState({ isPlaying: true, isPaused: false });
+    activeSound.play();
     return;
   }
 
   if (fallbackSpeechText) {
     const controls = getSpeechControls();
     if (isUsingSpeechFallback && controls.resume) {
+      emitPlaybackState({ isPlaying: true, isPaused: false });
       controls.resume();
       resumeSpeechCarrier();
-      emitPlaybackState({ isPlaying: true, isPaused: false });
       return;
     }
     // No native resume — re-speak from the last word boundary we saw via

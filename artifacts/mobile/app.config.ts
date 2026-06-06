@@ -2,7 +2,10 @@ import * as configPlugins from "expo/config-plugins.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const configPluginApi = configPlugins.default ?? configPlugins;
+const configPluginApi =
+  (configPlugins as typeof configPlugins & {
+    default?: typeof configPlugins;
+  }).default ?? configPlugins;
 const AndroidConfig = configPluginApi.AndroidConfig ?? configPlugins.AndroidConfig;
 const withAndroidManifest = configPluginApi.withAndroidManifest;
 const withDangerousMod = configPluginApi.withDangerousMod;
@@ -42,8 +45,8 @@ if (requiresHostedApiConfig && !clerkPublishableKey) {
   );
 }
 
-const withAndroidAutoMedia = (config) => {
-  const withManifest = withAndroidManifest(config, (cfg) => {
+const withAndroidAutoMedia = (config: any) => {
+  const withManifest = withAndroidManifest(config, (cfg: any) => {
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(
       cfg.modResults,
     );
@@ -69,7 +72,7 @@ const withAndroidAutoMedia = (config) => {
 
   return withDangerousMod(withManifest, [
     "android",
-    async (cfg) => {
+    async (cfg: any) => {
       const xmlDir = path.join(
         cfg.modRequest.platformProjectRoot,
         "app/src/main/res/xml",
