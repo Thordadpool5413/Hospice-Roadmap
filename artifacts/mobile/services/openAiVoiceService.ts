@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 
 import { getAuthToken } from "@workspace/api-client-react";
 
+import { getClientId } from "./clientIdentity";
 import { apiBase, mergeJsonHeaders } from "./apiClient";
 
 export type OpenAiVoiceStatus =
@@ -37,6 +38,14 @@ type RealtimeEvent =
   | { type: "conversation.item.input_audio_transcription.completed"; transcript?: string }
   | { type: "error"; error?: { message?: string } }
   | { type: string; [key: string]: unknown };
+
+async function authClientJsonHeaders(): Promise<Record<string, string>> {
+  const [token, clientId] = await Promise.all([getAuthToken(), getClientId()]);
+  return mergeJsonHeaders({
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    x_client_id: clientId,
+  });
+}
 
 function createManagedRemoteAudio(): HTMLAudioElement {
   const audio = document.createElement("audio");
@@ -223,10 +232,9 @@ export async function startOpenAiVoiceSession({
   await peerConnection.setLocalDescription(offer);
   await waitForIceGatheringComplete(peerConnection);
 
-  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/realtime/session`, {
     method: "POST",
-    headers: mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined),
+    headers: await authClientJsonHeaders(),
     body: JSON.stringify({
       sdp: peerConnection.localDescription?.sdp ?? offer.sdp,
       patientContext,

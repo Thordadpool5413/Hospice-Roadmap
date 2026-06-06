@@ -1,18 +1,17 @@
 import { getAuthToken } from "@workspace/api-client-react";
 
+import { getClientId } from "./clientIdentity";
 import { apiBase, fetchJson, mergeJsonHeaders } from "./apiClient";
 
 // ─── Internal header helpers ─────────────────────────────────────────────────
 // These are async because they must await the Clerk JWT.
 
-async function jsonHeaders(): Promise<Record<string, string>> {
-  const token = await getAuthToken();
-  return mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined);
-}
-
-async function baseHeaders(): Promise<Record<string, string>> {
-  const token = await getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+async function requestHeaders(): Promise<Record<string, string>> {
+  const [token, clientId] = await Promise.all([getAuthToken(), getClientId()]);
+  return mergeJsonHeaders({
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    x_client_id: clientId,
+  });
 }
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -37,7 +36,7 @@ export interface AiConversation {
 export async function createConversation(title: string): Promise<AiConversation> {
   return fetchJson<AiConversation>(`${apiBase()}/anthropic/conversations`, {
     method: "POST",
-    headers: await jsonHeaders(),
+    headers: await requestHeaders(),
     body: JSON.stringify({ title }),
   });
 }
@@ -45,7 +44,7 @@ export async function createConversation(title: string): Promise<AiConversation>
 export async function getConversation(id: number): Promise<AiConversation> {
   return fetchJson<AiConversation>(
     `${apiBase()}/anthropic/conversations/${id}`,
-    { headers: await baseHeaders() }
+    { headers: await requestHeaders() }
   );
 }
 
@@ -54,7 +53,7 @@ export async function deleteConversation(id: number): Promise<void> {
   // parse an empty response as JSON.
   const res = await fetch(`${apiBase()}/anthropic/conversations/${id}`, {
     method: "DELETE",
-    headers: await baseHeaders(),
+    headers: await requestHeaders(),
   });
   if (!res.ok) throw new Error("Failed to delete conversation");
 }
@@ -68,7 +67,7 @@ export async function saveVoiceExchange(
     `${apiBase()}/anthropic/conversations/${conversationId}/voice-exchange`,
     {
       method: "POST",
-      headers: await jsonHeaders(),
+      headers: await requestHeaders(),
       body: JSON.stringify({ userTranscript, assistantTranscript }),
     },
   );
@@ -103,7 +102,7 @@ export async function synthesizeProfile(
       `${apiBase()}/anthropic/profile-synthesize`,
       {
         method: "POST",
-        headers: await jsonHeaders(),
+        headers: await requestHeaders(),
         body: JSON.stringify({ currentProfile, memory, tileHistory }),
       }
     );
@@ -163,7 +162,7 @@ export async function generateConversationMemory(
       `${apiBase()}/anthropic/conversations/${conversationId}/memory`,
       {
         method: "POST",
-        headers: await baseHeaders(),
+        headers: await requestHeaders(),
       }
     );
   } catch {
@@ -214,7 +213,7 @@ export async function streamMessage(
       `${apiBase()}/anthropic/conversations/${conversationId}/messages`,
       {
         method: "POST",
-        headers: await jsonHeaders(),
+        headers: await requestHeaders(),
         body: JSON.stringify({ content, patientContext }),
       }
     );
@@ -297,7 +296,7 @@ export async function claimDevice(clientId: string): Promise<number | null> {
       `${apiBase()}/anthropic/claim-device`,
       {
         method: "POST",
-        headers: await jsonHeaders(),
+        headers: await requestHeaders(),
         body: JSON.stringify({ clientId }),
       },
     );

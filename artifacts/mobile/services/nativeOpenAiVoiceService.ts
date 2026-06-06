@@ -14,6 +14,7 @@ import { Image, Platform } from "react-native";
 
 import { getAuthToken } from "@workspace/api-client-react";
 
+import { getClientId } from "./clientIdentity";
 import { apiBase, mergeJsonHeaders } from "./apiClient";
 
 export interface NativeOpenAiVoiceTranscriptResult {
@@ -119,6 +120,14 @@ interface LockScreenMetadata {
   artist: string;
   albumTitle?: string;
   artworkUrl?: string;
+}
+
+async function authClientHeaders(): Promise<Record<string, string>> {
+  const [token, clientId] = await Promise.all([getAuthToken(), getClientId()]);
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    x_client_id: clientId,
+  };
 }
 
 const LOCK_SCREEN_DEFAULTS = {
@@ -846,10 +855,9 @@ export async function stopNativeOpenAiVoiceRecordingAndTranscribe(): Promise<Nat
     type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
   } as never);
 
-  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/mobile-transcribe`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: await authClientHeaders(),
     body: formData,
   });
 
@@ -906,10 +914,9 @@ export async function stopNativeOpenAiVoiceRecordingAndSend({
   }
   formData.append("voice", voice);
 
-  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/mobile-voice-turn`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: await authClientHeaders(),
     body: formData,
   });
 
@@ -996,10 +1003,9 @@ export async function speakNativeOpenAiVoiceText({
     return { didAutoPlayAudio: false };
   }
 
-  const token = await getAuthToken();
   const response = await fetch(`${apiBase()}/openai/speak`, {
     method: "POST",
-    headers: mergeJsonHeaders(token ? { Authorization: `Bearer ${token}` } : undefined),
+    headers: mergeJsonHeaders(await authClientHeaders()),
     body: JSON.stringify({
       text: trimmed,
       voice,

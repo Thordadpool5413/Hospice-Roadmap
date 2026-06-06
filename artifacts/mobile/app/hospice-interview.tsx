@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { apiBase } from "@/services/apiClient";
+import { apiBase, mergeJsonHeaders } from "@/services/apiClient";
+import { getClientId } from "@/services/clientIdentity";
 
 const STORAGE_KEY = "@hospice_roadmap_interviews";
 
@@ -966,9 +967,10 @@ export default function HospiceInterviewScreen() {
   const handleScore = async () => {
     setIsScoring(true);
     try {
+      const clientId = await getClientId();
       const resp = await fetch(`${apiBase()}/anthropic/score-hospice`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: mergeJsonHeaders({ x_client_id: clientId }),
         body: JSON.stringify({ interview: data }),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

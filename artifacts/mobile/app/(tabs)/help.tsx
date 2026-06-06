@@ -824,10 +824,16 @@ export default function HelpScreen() {
           activeConv = await createConversation(text.slice(0, 60));
           setConversation(activeConv);
           await setActiveConversationId(activeConv.id);
-        } catch {
+        } catch (error) {
+          const detail =
+            error instanceof Error && error.message.trim()
+              ? error.message.trim()
+              : "";
           Alert.alert(
             "Connection Error",
-            "Could not connect to Ragna. Please check your connection.",
+            detail
+              ? detail
+              : "Could not connect to Ragna. Please check your connection.",
           );
           setIsLoading(false);
           return;
