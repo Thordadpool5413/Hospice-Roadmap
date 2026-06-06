@@ -1,18 +1,11 @@
-import type { ExpoConfig } from "expo/config";
 import * as configPlugins from "expo/config-plugins.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const configPluginApi = (configPlugins.default ?? configPlugins) as Record<
-  string,
-  unknown
->;
-const { AndroidConfig, withAndroidManifest, withDangerousMod } =
-  configPluginApi as {
-    AndroidConfig: typeof configPlugins.AndroidConfig;
-    withAndroidManifest: typeof import("expo/config-plugins.js").default.withAndroidManifest;
-    withDangerousMod: typeof import("expo/config-plugins.js").default.withDangerousMod;
-  };
+const configPluginApi = configPlugins.default ?? configPlugins;
+const AndroidConfig = configPluginApi.AndroidConfig ?? configPlugins.AndroidConfig;
+const withAndroidManifest = configPluginApi.withAndroidManifest;
+const withDangerousMod = configPluginApi.withDangerousMod;
 
 const devDomain =
   process.env["REPLIT_DEV_DOMAIN"] ||
@@ -49,7 +42,7 @@ if (requiresHostedApiConfig && !clerkPublishableKey) {
   );
 }
 
-const withAndroidAutoMedia = (config: ExpoConfig) => {
+const withAndroidAutoMedia = (config) => {
   const withManifest = withAndroidManifest(config, (cfg) => {
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(
       cfg.modResults,
@@ -95,7 +88,7 @@ const withAndroidAutoMedia = (config: ExpoConfig) => {
   ]);
 };
 
-const config: ExpoConfig = {
+const config = {
   name: "Hospice Roadmap",
   slug: "mobile",
   owner: "thordadpool",
@@ -144,13 +137,13 @@ const config: ExpoConfig = {
     backgroundColor: "#030A18",
     description:
       "Guidance for patients and caregivers before, during, and after hospice care.",
-  } as ExpoConfig["web"],
+  },
   plugins: [
     "expo-router",
     "expo-font",
     "expo-web-browser",
     "expo-audio",
-    withAndroidAutoMedia as unknown as string,
+    withAndroidAutoMedia,
   ],
   experiments: {
     typedRoutes: true,
