@@ -95,14 +95,16 @@ jobs:
               export EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY_OVERRIDE"
             fi
 
-            if [ -z "${EXPO_PUBLIC_API_URL:-}" ] && [ -z "${EXPO_PUBLIC_DOMAIN:-}" ]; then
-              echo "::error::Missing hosted API configuration. Supply workflow input api_url/domain or set EXPO_PUBLIC_API_URL / EXPO_PUBLIC_DOMAIN in the selected EAS environment."
-              exit 1
-            fi
+            if [ "$PROFILE" = "preview" ] || [ "$PROFILE" = "production" ]; then
+              if [ -z "${EXPO_PUBLIC_API_URL:-}" ] && [ -z "${EXPO_PUBLIC_DOMAIN:-}" ]; then
+                echo "::error::Missing hosted API configuration. Supply workflow input api_url/domain or set EXPO_PUBLIC_API_URL / EXPO_PUBLIC_DOMAIN in the selected EAS environment."
+                exit 1
+              fi
 
-            if [ -z "${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ] && [ -z "${CLERK_PUBLISHABLE_KEY:-}" ]; then
-              echo "::error::Missing Clerk publishable key. Supply workflow input clerk_publishable_key or set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY / CLERK_PUBLISHABLE_KEY in the selected EAS environment."
-              exit 1
+              if [ -z "${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ] && [ -z "${CLERK_PUBLISHABLE_KEY:-}" ]; then
+                echo "::error::Missing Clerk publishable key. Supply workflow input clerk_publishable_key or set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY / CLERK_PUBLISHABLE_KEY in the selected EAS environment."
+                exit 1
+              fi
             fi
 
             export EAS_BUILD_PROFILE="$PROFILE"
