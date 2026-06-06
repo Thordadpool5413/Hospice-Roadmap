@@ -1,0 +1,23 @@
+artifacts/mobile/eas.json
+  s_2c2dcad3988d68::t_65a366fd8fcae9 13
+package.json
+  s_2c2dcad3988d68::t_65a366fd8fcae9 5
+.github/workflows/eas-build.yml
+  s_2c2dcad3988d68::t_65a366fd8fcae9 36-38,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2e1046705844e4db0c3db4da7a96b11691ca816d",
+  "prompts": {},
+  "sessions": {
+    "s_2c2dcad3988d68": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e89e9-8578-7450-96db-e5ddb6fc7e91",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}
