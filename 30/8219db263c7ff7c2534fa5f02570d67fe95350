@@ -1,0 +1,19 @@
+artifacts/mobile/app.config.ts
+  s_93ca52e64603b2::t_5f9def82d34472 5-8,45,91,140,146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "308219db263c7ff7c2534fa5f02570d67fe95350",
+  "prompts": {},
+  "sessions": {
+    "s_93ca52e64603b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9a2f-a557-7ac1-8077-1d53d01e0648",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}
