@@ -25,6 +25,10 @@ on:
         description: 'Optional hosted domain for manual builds when api_url is not provided'
         required: false
         type: string
+      clerk_publishable_key:
+        description: 'Optional Clerk publishable key override when the selected EAS environment does not already provide one'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -70,20 +74,65 @@ jobs:
       - name: Validate EAS config
         if: github.event_name == 'workflow_dispatch'
         env:
-          EAS_BUILD_PROFILE: ${{ github.event.inputs.profile || 'preview' }}
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
-          EXPO_PUBLIC_DOMAIN: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
-        run: pnpm exec eas config --platform ios --profile ${{ github.event.inputs.profile || 'preview' }} --non-interactive > /dev/null
+          PROFILE: ${{ github.event.inputs.profile || 'preview' }}
+          API_URL_OVERRIDE: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
+          DOMAIN_OVERRIDE: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
+          CLERK_PUBLISHABLE_KEY_OVERRIDE: ${{ github.event.inputs.clerk_publishable_key || vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || vars.CLERK_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          pnpm exec eas env:exec --non-interactive "$PROFILE" '
+            set -euo pipefail
+
+            if [ -n "${API_URL_OVERRIDE:-}" ]; then
+              export EXPO_PUBLIC_API_URL="$API_URL_OVERRIDE"
+            fi
+
+            if [ -n "${DOMAIN_OVERRIDE:-}" ]; then
+              export EXPO_PUBLIC_DOMAIN="$DOMAIN_OVERRIDE"
+            fi
+
+            if [ -n "${CLERK_PUBLISHABLE_KEY_OVERRIDE:-}" ]; then
+              export EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY_OVERRIDE"
+            fi
+
+            if [ -z "${EXPO_PUBLIC_API_URL:-}" ] && [ -z "${EXPO_PUBLIC_DOMAIN:-}" ]; then
+              echo "::error::Missing hosted API configuration. Supply workflow input api_url/domain or set EXPO_PUBLIC_API_URL / EXPO_PUBLIC_DOMAIN in the selected EAS environment."
+              exit 1
+            fi
+
+            if [ -z "${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ] && [ -z "${CLERK_PUBLISHABLE_KEY:-}" ]; then
+              echo "::error::Missing Clerk publishable key. Supply workflow input clerk_publishable_key or set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY / CLERK_PUBLISHABLE_KEY in the selected EAS environment."
+              exit 1
+            fi
+
+            export EAS_BUILD_PROFILE="$PROFILE"
+            pnpm exec eas config --platform ios --profile "$PROFILE" --non-interactive > /dev/null
+          '
 
       - name: Build
         if: github.event_name == 'workflow_dispatch'
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_API_URL: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
-          EXPO_PUBLIC_DOMAIN: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
-        run: eas build --platform ios --profile ${{ github.event.inputs.profile || 'preview' }} --non-interactive
+          PROFILE: ${{ github.event.inputs.profile || 'preview' }}
+          API_URL_OVERRIDE: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
+          DOMAIN_OVERRIDE: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
+          CLERK_PUBLISHABLE_KEY_OVERRIDE: ${{ github.event.inputs.clerk_publishable_key || vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || vars.CLERK_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          pnpm exec eas env:exec --non-interactive "$PROFILE" '
+            set -euo pipefail
+
+            if [ -n "${API_URL_OVERRIDE:-}" ]; then
+              export EXPO_PUBLIC_API_URL="$API_URL_OVERRIDE"
+            fi
+
+            if [ -n "${DOMAIN_OVERRIDE:-}" ]; then
+              export EXPO_PUBLIC_DOMAIN="$DOMAIN_OVERRIDE"
+            fi
+
+            if [ -n "${CLERK_PUBLISHABLE_KEY_OVERRIDE:-}" ]; then
+              export EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY_OVERRIDE"
+            fi
+
+            export EAS_BUILD_PROFILE="$PROFILE"
+            eas build --platform ios --profile "$PROFILE" --non-interactive
+          '
