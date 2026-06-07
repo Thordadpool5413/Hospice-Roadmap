@@ -19,15 +19,15 @@ function buildStars(seed: number, n: number): StarDot[] {
   }));
 }
 
-const STARS = buildStars(0xc0ffee, 32);
+const STARS = buildStars(0xc0ffee, 20);
 
 export function CosmicBackground() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {/* ── 1. Deep void base gradient ── */}
       <LinearGradient
-        colors={["#020810", "#050F22", "#080F2A", "#060C1E"]}
-        locations={[0, 0.30, 0.65, 1]}
+        colors={["#020810", "#051124", "#07142B", "#050C1C"]}
+        locations={[0, 0.28, 0.65, 1]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -63,13 +63,13 @@ export function CosmicBackground() {
 
       {/* ── 7. Bottom fade for legibility ── */}
       <LinearGradient
-        colors={["transparent", "rgba(2,8,16,0.70)"]}
+        colors={["transparent", "rgba(2,8,16,0.78)"]}
         style={s.bottomFade}
       />
 
       {/* ── 8. Top vignette ── */}
       <LinearGradient
-        colors={["rgba(2,8,16,0.30)", "transparent"]}
+        colors={["rgba(2,8,16,0.36)", "transparent"]}
         style={s.topVignette}
       />
     </View>
@@ -80,30 +80,30 @@ const s = StyleSheet.create({
   nebulaLeft: {
     position: "absolute",
     top: -110, left: -130,
-    width: 400, height: 400,
+    width: 360, height: 360,
     borderRadius: 200,
-    backgroundColor: "rgba(28, 70, 220, 0.11)",
+    backgroundColor: "rgba(28, 70, 220, 0.08)",
   },
   nebulaRight: {
     position: "absolute",
     top: -60, right: -90,
-    width: 300, height: 300,
+    width: 280, height: 280,
     borderRadius: 150,
-    backgroundColor: "rgba(80, 40, 200, 0.08)",
+    backgroundColor: "rgba(80, 40, 200, 0.05)",
   },
   warmCenter: {
     position: "absolute",
     top: "30%", left: "20%",
-    width: 260, height: 200,
+    width: 240, height: 180,
     borderRadius: 130,
-    backgroundColor: "rgba(80, 100, 255, 0.05)",
+    backgroundColor: "rgba(80, 100, 255, 0.03)",
   },
   tealLow: {
     position: "absolute",
     bottom: 80, left: -60,
-    width: 220, height: 220,
+    width: 200, height: 200,
     borderRadius: 110,
-    backgroundColor: "rgba(20, 120, 180, 0.05)",
+    backgroundColor: "rgba(20, 120, 180, 0.03)",
   },
   star: {
     position: "absolute",

@@ -50,6 +50,9 @@ export function RagnaEmptyState({
   onPressProactiveOpener,
   onPressSymptomAlert,
 }: RagnaEmptyStateProps) {
+  const primaryTiles = visibleTiles.slice(0, 4);
+  const moreTileCount = Math.max(0, visibleTiles.length - primaryTiles.length);
+
   return (
     <>
       <View style={styles.welcomeSection}>
@@ -65,10 +68,10 @@ export function RagnaEmptyState({
         </Text>
         <Text style={styles.welcomeSubtitle}>
           {memoryCount > 0
-            ? "I remember our previous conversations. I'm here whenever you need guidance, support, or just someone to talk through what's happening."
+            ? "I remember our previous conversations. Start with what feels urgent, then we can slow it down together."
             : isPatient
-            ? "Ask me anything about your symptoms, medications, comfort, or what to expect. I'm here to support you."
-            : "Ask me anything about symptoms, medications, caregiving tasks, equipment, or what to expect. I'll give you clear, step-by-step guidance."}
+            ? "Ask me anything about your symptoms, medications, comfort, or what to expect."
+            : "Ask me about symptoms, medications, caregiving tasks, equipment, or what to expect."}
         </Text>
       </View>
 
@@ -110,9 +113,9 @@ export function RagnaEmptyState({
         </Pressable>
       )}
 
-      <Text style={styles.tilesLabel}>What's happening right now?</Text>
+      <Text style={styles.tilesLabel}>Start here</Text>
       <View style={styles.tilesGrid}>
-        {visibleTiles.map((tile) => (
+        {primaryTiles.map((tile) => (
           <Pressable
             key={tile.label}
             onPress={() => onTilePress(tile)}
@@ -130,9 +133,25 @@ export function RagnaEmptyState({
         ))}
       </View>
 
+      {moreTileCount > 0 && (
+        <Pressable
+          onPress={() => router.push("/(tabs)/more" as any)}
+          style={({ pressed }) => [
+            styles.moreTopicsCard,
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          <Feather name="grid" size={14} color={Colors.primaryLight} />
+          <Text style={styles.moreTopicsText}>
+            Browse {moreTileCount} more situation{moreTileCount === 1 ? "" : "s"} in More
+          </Text>
+          <Feather name="chevron-right" size={14} color={Colors.primaryLight} />
+        </Pressable>
+      )}
+
       {guidancePrompts.length > 0 && (
         <View style={styles.guidanceSection}>
-          <Text style={styles.guidanceLabel}>Common Questions</Text>
+          <Text style={styles.guidanceLabel}>Follow-up questions</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -195,26 +214,19 @@ export function RagnaEmptyState({
       <View style={styles.profileNudge}>
         <Feather name="user" size={14} color={Colors.primary} />
         <Text style={styles.profileNudgeText}>
-          Add your patient's name, diagnosis, and medications in{" "}
+          Add the patient profile to tailor Ragna, and{" "}
           <Text
             style={styles.profileNudgeLink}
             onPress={() => router.push("/patient-profile" as any)}
           >
-            Patient Profile
+            update it here
           </Text>{" "}
-          and Ragna's responses will be tailored to your specific situation.
-        </Text>
-      </View>
-
-      <View style={styles.profileNudge}>
-        <Feather name="shield" size={14} color={Colors.textSubtle} />
-        <Text style={styles.profileNudgeText}>
-          You can review or{" "}
+          or{" "}
           <Text
             style={styles.profileNudgeLink}
             onPress={() => router.push("/ragna-privacy" as any)}
           >
-            change what Ragna uses
+            review privacy
           </Text>{" "}
           anytime.
         </Text>
@@ -226,7 +238,7 @@ export function RagnaEmptyState({
 const styles = StyleSheet.create({
   welcomeSection: {
     alignItems: "center",
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 8,
     gap: 10,
   },
@@ -243,11 +255,11 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   welcomeTitle: {
-    fontSize: 24,
+    fontSize: 23,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
     textAlign: "center",
-    letterSpacing: -0.5,
+    letterSpacing: -0.45,
   },
   welcomeSubtitle: {
     fontSize: 14,
@@ -255,13 +267,13 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     lineHeight: 21,
-    maxWidth: 320,
+    maxWidth: 330,
   },
   tilesLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
-    letterSpacing: -0.2,
+    letterSpacing: -0.15,
     marginBottom: -4,
   },
   tilesGrid: {
@@ -271,7 +283,7 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: "47.5%",
-    borderRadius: 14,
+    borderRadius: 15,
     padding: 12,
     borderWidth: 1,
     gap: 8,
@@ -293,11 +305,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: Colors.surfaceMid,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(80, 110, 180, 0.18)",
   },
   chatOnlyBannerText: {
     flex: 1,
@@ -307,11 +319,11 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   knowsCard: {
-    backgroundColor: Colors.surfaceMid,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
     borderRadius: 14,
     padding: 13,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: "rgba(80, 110, 180, 0.18)",
   },
   knowsHeader: {
     flexDirection: "row",
@@ -341,11 +353,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: Colors.surfaceMid,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: Colors.primary + "50",
+    borderColor: Colors.primary + "32",
   },
   profileNudgeText: {
     flex: 1,
@@ -362,15 +374,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
     borderRadius: 16,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: Colors.primary + "30",
-    shadowColor: Colors.primary,
+    borderColor: Colors.primary + "20",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
     elevation: 2,
   },
   veraOpenerAvatar: {
@@ -387,14 +399,14 @@ const styles = StyleSheet.create({
   veraOpenerName: {
     fontSize: 11,
     fontFamily: "Inter_700Bold",
-    color: Colors.primary,
+    color: Colors.primaryLight,
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
   veraOpenerText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: Colors.text,
+    color: Colors.textSecondary,
     lineHeight: 20,
   },
   guidanceSection: {
@@ -404,7 +416,7 @@ const styles = StyleSheet.create({
   guidanceLabel: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.textMuted,
+    color: "#788AAE",
     textTransform: "uppercase",
     letterSpacing: 0.4,
     paddingHorizontal: 16,
@@ -419,9 +431,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
-    backgroundColor: Colors.surfaceMid,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(80, 110, 180, 0.18)",
   },
   guidanceChipText: {
     fontSize: 13,
@@ -453,5 +465,23 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.accentLight,
     lineHeight: 19,
+  },
+  moreTopicsCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 14,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(80, 110, 180, 0.18)",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  moreTopicsText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.primaryLight,
+    lineHeight: 17,
   },
 });

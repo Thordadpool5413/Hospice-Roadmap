@@ -42,8 +42,6 @@ interface RagnaComposerProps {
   replyPreviewText?: string;
   onPlaybackToggle?: () => void;
   onPlaybackStop?: () => void;
-  onReplyPreviewPress?: () => void;
-  onReplyPreviewLongPress?: () => void;
 }
 
 export function RagnaComposer({
@@ -70,8 +68,6 @@ export function RagnaComposer({
   replyPreviewText,
   onPlaybackToggle,
   onPlaybackStop,
-  onReplyPreviewPress,
-  onReplyPreviewLongPress,
 }: RagnaComposerProps) {
   const voiceDisabled = !isOnline || isStreaming || isVoiceBusy;
   const showVoiceOptions =
@@ -152,56 +148,15 @@ export function RagnaComposer({
         </ScrollView>
       ) : null}
       {(showPlaybackControls || isStreaming) && replyPreviewText ? (
-        onReplyPreviewPress || onReplyPreviewLongPress ? (
-          <Pressable
-            onPress={onReplyPreviewPress}
-            onLongPress={onReplyPreviewLongPress}
-            accessibilityRole="button"
-            accessibilityLabel={
-              onReplyPreviewPress
-                ? "Jump to Ragna's latest reply"
-                : "Ragna's live reply preview"
-            }
-            accessibilityHint={
-              onReplyPreviewPress && onReplyPreviewLongPress
-                ? "Tap to scroll to the live reply. Long press to hide the preview."
-                : onReplyPreviewPress
-                  ? "Scrolls the chat to the live reply"
-                  : "Long press to hide the preview"
-            }
-            style={({ pressed }) => [
-              styles.replyPreview,
-              pressed && styles.replyPreviewPressed,
-            ]}
-          >
-            <Feather
-              name="message-circle"
-              size={13}
-              color={Colors.primaryLight}
-            />
-            <Text style={styles.replyPreviewText} numberOfLines={2}>
-              {replyPreviewText}
-            </Text>
-            {onReplyPreviewPress ? (
-              <Feather
-                name="chevron-down"
-                size={14}
-                color={Colors.primaryLight}
-              />
-            ) : null}
-          </Pressable>
-        ) : (
-          <View style={styles.replyPreview}>
-            <Feather
-              name="message-circle"
-              size={13}
-              color={Colors.primaryLight}
-            />
+        <View style={styles.replyPreview}>
+          <Feather name="message-circle" size={13} color={Colors.primaryLight} />
+          <View style={styles.replyPreviewBody}>
+            <Text style={styles.replyPreviewLabel}>Live reply preview</Text>
             <Text style={styles.replyPreviewText} numberOfLines={2}>
               {replyPreviewText}
             </Text>
           </View>
-        )
+        </View>
       ) : null}
       {showPlaybackControls ? (
         <View style={styles.playbackRow}>
@@ -306,12 +261,12 @@ export function RagnaComposer({
 const styles = StyleSheet.create({
   inputBar: {
     flexDirection: "column",
-    gap: 8,
+    gap: 9,
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(40,65,140,0.40)",
-    backgroundColor: "rgba(3,10,24,0.97)",
+    borderTopColor: "rgba(40,65,140,0.32)",
+    backgroundColor: "rgba(3,10,24,0.96)",
   },
   streamingBanner: {
     flexDirection: "row",
@@ -322,14 +277,18 @@ const styles = StyleSheet.create({
   streamingBannerText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: "#5A78A8",
-    fontStyle: "italic",
+    color: "#7A90BA",
   },
   voiceBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: "rgba(60,120,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(60,120,255,0.16)",
   },
   voiceBannerText: {
     flex: 1,
@@ -374,19 +333,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: "rgba(60,120,255,0.08)",
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: "rgba(60,120,255,0.10)",
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(73,118,255,0.18)",
+    borderColor: "rgba(73,118,255,0.20)",
   },
-  replyPreviewPressed: {
-    backgroundColor: "rgba(60,120,255,0.16)",
-    borderColor: "rgba(73,118,255,0.32)",
+  replyPreviewBody: {
+    flex: 1,
+    gap: 4,
+  },
+  replyPreviewLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: "#7A90BA",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   replyPreviewText: {
-    flex: 1,
     fontSize: 12,
     lineHeight: 17,
     fontFamily: "Inter_500Medium",
@@ -397,11 +362,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    backgroundColor: Colors.primaryPale,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "rgba(26, 46, 90, 0.92)",
     borderWidth: 1,
-    borderColor: Colors.primary + "30",
+    borderColor: Colors.primary + "24",
   },
   playbackButtonDisabled: {
     opacity: 0.45,
@@ -409,7 +375,7 @@ const styles = StyleSheet.create({
   playbackButtonText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.primaryDark,
+    color: Colors.primaryLight,
   },
   inputRow: {
     flexDirection: "row",
@@ -421,11 +387,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     maxHeight: 120,
     backgroundColor: "rgba(8,16,45,0.95)",
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(50,75,160,0.30)",
+    borderColor: "rgba(50,75,160,0.26)",
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 12,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     color: "#EEF4FF",

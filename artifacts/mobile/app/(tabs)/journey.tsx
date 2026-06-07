@@ -79,6 +79,7 @@ export default function JourneyScreen() {
 
   const activeStage = user?.journeyStage ?? "before";
   const activeDesc = stageDescriptions[activeStage];
+  const stagePrompt = `Help me understand the ${activeStage === "before" ? "before hospice" : activeStage === "during" ? "during hospice" : "after hospice"} journey and what I should focus on right now.`;
 
   return (
     <View style={styles.container}>
@@ -94,10 +95,9 @@ export default function JourneyScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.title}>Journey Navigator</Text>
+      <Text style={styles.title}>Journey</Text>
       <Text style={styles.subtitle}>
-        Hospice Roadmap supports you through every phase of the hospice
-        experience.
+        Start with the stage that matches where you are today.
       </Text>
 
       {/* Stage Selector */}
@@ -154,11 +154,26 @@ export default function JourneyScreen() {
           <Text style={styles.exploreBtnText}>Explore {activeStage === "before" ? "Before Hospice" : activeStage === "during" ? "During Hospice" : "After Hospice"}</Text>
           <Feather name="arrow-right" size={16} color="#FFFFFF" />
         </Pressable>
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: "/(tabs)/help",
+              params: { initialMessage: stagePrompt },
+            } as any)
+          }
+          style={({ pressed }) => [
+            styles.secondaryBtn,
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          <Feather name="message-circle" size={15} color={Colors.primaryLight} />
+          <Text style={styles.secondaryBtnText}>Ask Ragna about this stage</Text>
+        </Pressable>
       </View>
 
       {/* Additional Options */}
       <View style={styles.actionsSection}>
-        <Text style={styles.actionsSectionTitle}>Tools & Resources</Text>
+        <Text style={styles.actionsSectionTitle}>Related tools</Text>
         <View style={styles.actionsList}>
           {[
             // During/After users see a validating context page instead of the
@@ -212,17 +227,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     lineHeight: 21,
-    marginTop: -12,
+    marginTop: -10,
   },
   stageList: {
     gap: 8,
   },
   overviewCard: {
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 16,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
+    borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: "rgba(80, 110, 180, 0.18)",
     gap: 12,
     shadowColor: "#000820",
     shadowOffset: { width: 0, height: 3 },
@@ -289,7 +304,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     backgroundColor: Colors.primary,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 13,
     marginTop: 2,
   },
@@ -298,6 +313,23 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
     letterSpacing: -0.25,
+  },
+  secondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 12,
+    backgroundColor: "rgba(60,120,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(73,118,255,0.18)",
+  },
+  secondaryBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primaryLight,
+    letterSpacing: -0.1,
   },
   actionsSection: {
     gap: 10,
@@ -309,10 +341,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.35,
   },
   actionsList: {
-    backgroundColor: Colors.surfaceMid,
-    borderRadius: 14,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    borderColor: "rgba(80, 110, 180, 0.18)",
     overflow: "hidden",
   },
   actionCard: {
@@ -322,7 +354,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
+    borderBottomColor: "rgba(80, 110, 180, 0.12)",
   },
   actionIcon: {
     width: 36,

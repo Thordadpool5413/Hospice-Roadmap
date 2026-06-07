@@ -47,19 +47,20 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surfaceMid,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.cardBorder,
+    borderCurve: "continuous",
   },
   elevated: {
     shadowColor: "#000820",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 3,
   },
   pressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.985 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
   },
 });

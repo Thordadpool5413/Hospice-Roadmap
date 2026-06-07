@@ -43,7 +43,8 @@ export function JourneyBadge({ stage, size = "sm" }: JourneyBadgeProps) {
           borderColor: config.color + "35",
           paddingHorizontal: isSmall ? 7 : 11,
           paddingVertical: isSmall ? 3 : 5,
-          borderRadius: isSmall ? 6 : 8,
+          borderRadius: isSmall ? 7 : 10,
+          borderCurve: "continuous",
         },
       ]}
     >

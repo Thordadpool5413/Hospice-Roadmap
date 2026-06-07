@@ -209,34 +209,34 @@ function ActionCard({ item, onPress }: { item: ActionItem; onPress: () => void }
 const ac = StyleSheet.create({
   card: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(80, 120, 210, 0.18)",
-    padding: 13,
-    gap: 9,
+    borderColor: "rgba(80, 120, 210, 0.16)",
+    padding: 14,
+    gap: 10,
     overflow: "hidden",
-    backgroundColor: "rgba(14, 24, 62, 0.85)",
+    backgroundColor: "rgba(14, 24, 62, 0.82)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.30,
+    shadowOpacity: 0.24,
     shadowRadius: 10,
-    elevation: 6,
+    elevation: 5,
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 16,
+    borderRadius: 18,
   },
   iconWrap: {
-    width: 38, height: 38, borderRadius: 11,
+    width: 40, height: 40, borderRadius: 12,
     alignItems: "center", justifyContent: "center",
   },
   label: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_700Bold",
     color: "#E8F0FF",
-    letterSpacing: -0.15,
-    lineHeight: 18,
+    letterSpacing: -0.2,
+    lineHeight: 19,
   },
 });
 
@@ -268,15 +268,15 @@ const rc = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "rgba(14, 22, 58, 0.85)",
-    borderRadius: 16,
+    backgroundColor: "rgba(14, 22, 58, 0.82)",
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(70, 110, 210, 0.20)",
+    borderColor: "rgba(70, 110, 210, 0.18)",
     paddingHorizontal: 14,
     paddingVertical: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.20,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -287,7 +287,7 @@ const rc = StyleSheet.create({
   },
   textWrap: { flex: 1, gap: 2 },
   label: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#E8F0FF", letterSpacing: -0.2 },
-  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#7A8EB8", lineHeight: 17 },
+  sub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#7F93BC", lineHeight: 17 },
 });
 
 // ─── Journey Card ─────────────────────────────────────────────────────────────
@@ -309,7 +309,7 @@ function JourneyCard({ stageLabel, onPress }: { stageLabel: string; onPress: () 
         </View>
         <View style={jc.textWrap}>
           <Text style={jc.label}>{stageLabel}</Text>
-          <Text style={jc.sub}>Journey Guide & Stage Planner</Text>
+          <Text style={jc.sub}>See the stage you are in and what usually matters next</Text>
         </View>
       </View>
       <View style={jc.chevronWrap}>
@@ -323,7 +323,7 @@ const jc = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: "rgba(12, 22, 62, 0.88)",
+    backgroundColor: "rgba(12, 22, 62, 0.84)",
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(88, 182, 255, 0.22)",
@@ -332,8 +332,8 @@ const jc = StyleSheet.create({
     overflow: "hidden",
     shadowColor: "#2060C0",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.20,
-    shadowRadius: 12,
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
     elevation: 5,
   },
   left: { flex: 1, flexDirection: "row", alignItems: "center", gap: 14 },
@@ -363,15 +363,20 @@ function HeroRagnaCard({ title, subtitle, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] }]}
     >
-      <View style={hero.glowRing} />
       <View style={hero.card}>
         <LinearGradient
-          colors={["rgba(16, 28, 80, 0.96)", "rgba(12, 20, 68, 0.98)"]}
+          colors={["rgba(12, 20, 56, 0.96)", "rgba(10, 18, 48, 0.98)"]}
           style={StyleSheet.absoluteFill}
         />
+        <View style={hero.headerRow}>
+          <View style={hero.badge}>
+            <Feather name="message-circle" size={12} color={Colors.primaryLight} />
+            <Text style={hero.badgeText}>Ask Ragna</Text>
+          </View>
+        </View>
         <Text style={hero.question}>{title}</Text>
         <LinearGradient
-          colors={["rgba(28, 48, 110, 0.95)", "rgba(22, 36, 95, 0.98)", "rgba(34, 24, 90, 0.95)"]}
+          colors={["rgba(28, 48, 110, 0.90)", "rgba(22, 36, 95, 0.96)", "rgba(28, 24, 78, 0.92)"]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           style={hero.ctaRow}
         >
@@ -394,37 +399,48 @@ function HeroRagnaCard({ title, subtitle, onPress }: {
   );
 }
 const hero = StyleSheet.create({
-  glowRing: {
-    position: "absolute",
-    inset: -1,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "rgba(70, 180, 255, 0.50)",
-    shadowColor: "#50C0FF",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.50,
-    shadowRadius: 16,
-    elevation: 0,
-  },
   card: {
     borderRadius: 20,
-    padding: 20,
-    gap: 16,
+    padding: 18,
+    gap: 14,
     borderWidth: 1,
-    borderColor: "rgba(70, 150, 240, 0.15)",
+    borderColor: "rgba(70, 150, 240, 0.12)",
     overflow: "hidden",
-    shadowColor: "#1040A0",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.50,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: "#10295A",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.36,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(96, 150, 255, 0.12)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: "rgba(96, 150, 255, 0.24)",
+  },
+  badgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primaryLight,
+    letterSpacing: 0.3,
   },
   question: {
-    fontSize: 21,
+    fontSize: 22,
     fontFamily: "Inter_700Bold",
     color: "#EEF4FF",
-    letterSpacing: -0.5,
-    lineHeight: 28,
+    letterSpacing: -0.45,
+    lineHeight: 29,
   },
   ctaRow: {
     flexDirection: "row",
@@ -434,7 +450,7 @@ const hero = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
     borderWidth: 1,
-    borderColor: "rgba(100, 150, 255, 0.22)",
+    borderColor: "rgba(100, 150, 255, 0.20)",
   },
   avatar: {
     width: 44, height: 44,
@@ -462,32 +478,140 @@ const hero = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: "#6A80AE",
+    color: "#7B8DB6",
     lineHeight: 19,
+  },
+});
+
+function UrgentHelpCard({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        urgent.card,
+        pressed && { opacity: 0.92, transform: [{ scale: 0.987 }] },
+      ]}
+    >
+      <LinearGradient
+        colors={["rgba(98, 38, 48, 0.70)", "rgba(52, 20, 26, 0.88)"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={urgent.header}>
+        <View style={urgent.iconWrap}>
+          <Feather name="phone-call" size={18} color="#FFB0A0" />
+        </View>
+        <View style={urgent.textWrap}>
+          <Text style={urgent.label}>Get help now</Text>
+          <Text style={urgent.sub}>
+            For breathing, pain, confusion, equipment, or any moment that feels urgent.
+          </Text>
+        </View>
+      </View>
+      <View style={urgent.ctaRow}>
+        <Text style={urgent.ctaText}>Open Situation Finder</Text>
+        <Feather name="arrow-right" size={16} color="#FFD2C8" />
+      </View>
+    </Pressable>
+  );
+}
+const urgent = StyleSheet.create({
+  card: {
+    borderRadius: 20,
+    padding: 18,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 160, 140, 0.18)",
+    overflow: "hidden",
+    shadowColor: "#5B1D2A",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 176, 160, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 176, 160, 0.18)",
+    flexShrink: 0,
+  },
+  textWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  label: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: "#FFF2EE",
+    letterSpacing: -0.25,
+  },
+  sub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#E4BBB2",
+    lineHeight: 19,
+  },
+  ctaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+  },
+  ctaText: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#FFD2C8",
+    letterSpacing: -0.1,
   },
 });
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <View style={sh.row}>
-      <Text style={sh.title}>{title}</Text>
+    <View style={sh.wrap}>
+      <View style={sh.textWrap}>
+        <Text style={sh.title}>{title}</Text>
+        {subtitle ? <Text style={sh.subtitle}>{subtitle}</Text> : null}
+      </View>
       <View style={sh.line} />
     </View>
   );
 }
 const sh = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  wrap: { flexDirection: "row", alignItems: "flex-end", gap: 12 },
+  textWrap: { gap: 3, flexShrink: 1 },
   title: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_700Bold",
-    color: "#4A6090",
+    color: "#6F84AD",
     textTransform: "uppercase",
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     flexShrink: 0,
   },
-  line: { flex: 1, height: 1, backgroundColor: "rgba(60, 90, 160, 0.25)" },
+  subtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#6D7E9D",
+    lineHeight: 17,
+  },
+  line: { flex: 1, height: 1, backgroundColor: "rgba(60, 90, 160, 0.20)" },
 });
 
 // ─── Today Status Row ─────────────────────────────────────────────────────────
@@ -813,6 +937,9 @@ export default function HomeScreen() {
         {/* ── Today at a glance ── */}
         <TodayStatusRow chips={statusChips} onPress={tap} />
 
+        {/* ── Urgent support ── */}
+        <UrgentHelpCard onPress={() => tap("/situation-finder")} />
+
         {/* ── Caregiver daily wellness check-in ── */}
         {(role === "caregiver" || role === "other") && (
           <CaregiverWellnessCard />
@@ -836,7 +963,7 @@ export default function HomeScreen() {
 
         {/* ── Key Actions ── */}
         <View style={sc.section}>
-          <SectionHeader title="Quick Actions" />
+          <SectionHeader title="Daily Care" subtitle="Small steps that keep the day moving" />
           <View style={sc.actionGrid}>
             {rows.map((row, ri) => (
               <View key={ri} style={sc.actionRow}>
@@ -855,7 +982,7 @@ export default function HomeScreen() {
 
         {/* ── Helpful Resources ── */}
         <View style={sc.section}>
-          <SectionHeader title="Resources" />
+          <SectionHeader title="More to explore" subtitle="Background info, planning, and stage guides" />
           <View style={sc.resourceCol}>
             {config.resources.map((item) => (
               <ResourceCard key={item.label} item={item} onPress={() => tap(item.route)} />
@@ -916,7 +1043,7 @@ export default function HomeScreen() {
 const sc = StyleSheet.create({
   root:   { flex: 1, backgroundColor: "#030A18" },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 18, gap: 24 },
+  content: { paddingHorizontal: 18, gap: 20 },
 
   header:      { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   headerLeft:  { flex: 1, gap: 6 },
@@ -941,11 +1068,11 @@ const sc = StyleSheet.create({
   },
 
   pageTitle: {
-    fontSize: 28,
+    fontSize: 27,
     fontFamily: "Inter_700Bold",
     color: "#EEF4FF",
-    letterSpacing: -0.7,
-    lineHeight: 34,
+    letterSpacing: -0.65,
+    lineHeight: 33,
   },
   contextLine: {
     fontSize: 14,
@@ -974,7 +1101,7 @@ const fu = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: "rgba(12, 22, 58, 0.88)",
+    backgroundColor: "rgba(12, 22, 58, 0.84)",
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(58, 128, 96, 0.28)",
@@ -983,8 +1110,8 @@ const fu = StyleSheet.create({
     overflow: "hidden",
     shadowColor: "#2A7A58",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
     elevation: 5,
   },
   left: { flex: 1, flexDirection: "row", alignItems: "center", gap: 14 },

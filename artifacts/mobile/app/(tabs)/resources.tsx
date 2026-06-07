@@ -34,7 +34,7 @@ const categoryLabels: Record<ResourceCategory, string> = {
 };
 
 const filterTabs = [
-  { id: "all", label: "All" },
+  { id: "all", label: "All stages" },
   { id: "before", label: "Before" },
   { id: "during", label: "During" },
   { id: "after", label: "After" },
@@ -72,9 +72,9 @@ export default function ResourcesScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Learn</Text>
+          <Text style={styles.title}>Resources</Text>
           <Text style={styles.subtitle}>
-            Educational resources across the full hospice journey
+            Search by stage, symptom, or topic
           </Text>
         </View>
 
@@ -127,15 +127,15 @@ export default function ResourcesScreen() {
         {filtered.length === 0 ? (
           <View style={styles.emptyState}>
             <Feather name="search" size={32} color={Colors.textSubtle} />
-            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptyTitle}>No guides match this search</Text>
             <Text style={styles.emptyText}>
-              Try adjusting your search or filter
+              Try a different keyword or clear the current filter
             </Text>
           </View>
         ) : (
           <View style={styles.resourceList}>
             <Text style={styles.resultsCount}>
-              {filtered.length} article{filtered.length !== 1 ? "s" : ""}
+              Showing {filtered.length} guide{filtered.length !== 1 ? "s" : ""}
             </Text>
             {filtered.map((resource) => (
               <ResourceCard
@@ -171,10 +171,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 27,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
-    letterSpacing: -0.6,
+    letterSpacing: -0.55,
   },
   subtitle: {
     fontSize: 14,
@@ -185,12 +185,12 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
+    borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: Colors.divider,
+    borderColor: "rgba(80, 110, 180, 0.18)",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     gap: 10,
   },
   searchIcon: {
@@ -209,11 +209,11 @@ const styles = StyleSheet.create({
   },
   filterTab: {
     paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: "rgba(15, 24, 54, 0.92)",
     borderWidth: 1,
-    borderColor: Colors.divider,
+    borderColor: "rgba(80, 110, 180, 0.18)",
   },
   filterTabActive: {
     backgroundColor: Colors.primary,
@@ -248,6 +248,6 @@ const styles = StyleSheet.create({
   resultsCount: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: Colors.textMuted,
+    color: "#7A8DB3",
   },
 });

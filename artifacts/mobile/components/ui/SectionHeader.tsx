@@ -35,23 +35,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   textContainer: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   title: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
-    lineHeight: 17,
+    lineHeight: 18,
   },
   seeAll: {
     flexDirection: "row",
@@ -64,6 +64,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.primary,
-    letterSpacing: -0.1,
+    letterSpacing: -0.05,
   },
 });

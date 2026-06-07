@@ -227,7 +227,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="more"
         options={{
-          title: "Tools",
+          title: "More",
           tabBarIcon: ({ color, focused }) => (
             <ToolsTabIcon
               color={color}

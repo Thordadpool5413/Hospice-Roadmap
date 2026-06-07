@@ -106,19 +106,8 @@ export default function MoreScreen() {
 
   const menuSections: MenuSection[] = [
     {
-      title: "Your Profile",
-      subtitle: "Personalizes Ragna for your situation",
-      accent: Colors.accentGoals,
-      icon: "user",
-      items: [
-        { label: isPatient ? "My Profile" : "Patient Profile", icon: "user", route: "/patient-profile", color: Colors.primary },
-        { label: "Goals of Care", icon: "heart", route: "/goals-of-care", color: Colors.accentGoals },
-        { label: "Ragna Privacy Controls", icon: "shield", route: "/ragna-privacy", color: Colors.accentReminders },
-      ],
-    },
-    {
       title: "Daily Care",
-      subtitle: isPatient ? "Tools for your daily wellbeing" : "Tools for everyday caregiving",
+      subtitle: isPatient ? "Track your day and keep notes" : "Journal, reminders, and symptom tracking",
       accent: Colors.accentSymptom,
       icon: "activity",
       items: [
@@ -131,8 +120,19 @@ export default function MoreScreen() {
       ],
     },
     {
-      title: "Clinical Reference",
-      subtitle: "Tools for specific care situations",
+      title: "Essentials",
+      subtitle: "Profile, privacy, and personalization",
+      accent: Colors.accentGoals,
+      icon: "user",
+      items: [
+        { label: isPatient ? "My Profile" : "Patient Profile", icon: "user", route: "/patient-profile", color: Colors.primary },
+        { label: "Goals of Care", icon: "heart", route: "/goals-of-care", color: Colors.accentGoals },
+        { label: "Ragna Privacy Controls", icon: "shield", route: "/ragna-privacy", color: Colors.accentReminders },
+      ],
+    },
+    {
+      title: "Guidance",
+      subtitle: "Step-by-step support for the moments that matter",
       accent: Colors.accentSituation,
       icon: "clipboard",
       items: [
@@ -149,7 +149,7 @@ export default function MoreScreen() {
       ],
     },
     {
-      title: "Benefits & Rights",
+      title: "Coverage & Rights",
       subtitle: "Financial guidance and patient rights",
       accent: Colors.accentJourney,
       icon: "file-text",
@@ -159,8 +159,8 @@ export default function MoreScreen() {
       ],
     },
     {
-      title: "Help & Support",
-      subtitle: "App settings and information",
+      title: "Support & Legal",
+      subtitle: "Help, policies, and account actions",
       accent: Colors.textMuted,
       icon: "info",
       items: [
@@ -226,13 +226,13 @@ export default function MoreScreen() {
       >
         {/* ── Page title ── */}
         <View style={s.pageHeader}>
-          <Text style={s.pageTitle}>Your Tools</Text>
-          <Text style={s.pageSubtitle}>Everything you need, in one place</Text>
+          <Text style={s.pageTitle}>More</Text>
+          <Text style={s.pageSubtitle}>Profile, settings, and care tools</Text>
         </View>
 
         {/* ── Emergency Card Banner ── */}
         <Pressable
-          onPress={() => router.push("/emergency-card" as any)}
+          onPress={() => router.push("/situation-finder" as any)}
           style={({ pressed }) => [
             s.emergencyCard,
             pressed && { opacity: 0.87, transform: [{ scale: 0.98 }] },
@@ -243,8 +243,8 @@ export default function MoreScreen() {
               <Feather name="phone-call" size={20} color="#FF6B6B" />
             </View>
             <View style={s.emergencyText}>
-              <Text style={s.emergencyTitle}>Emergency Information Card</Text>
-              <Text style={s.emergencySub}>Hospice contacts, medications & equipment</Text>
+              <Text style={s.emergencyTitle}>Get help now</Text>
+              <Text style={s.emergencySub}>Breathing, pain, confusion, equipment, or a situation that feels urgent</Text>
             </View>
           </View>
           <View style={s.emergencyChevron}>
@@ -337,6 +337,52 @@ export default function MoreScreen() {
             })}
           </View>
         </View>
+
+        {/* ── Menu Sections ── */}
+        {menuSections.map((section) => (
+          <View key={section.title} style={s.menuSection}>
+            <View style={s.sectionHeaderRow}>
+              <View style={[s.sectionIcon, { backgroundColor: section.accent + "20" }]}>
+                <Feather name={section.icon as any} size={14} color={section.accent} />
+              </View>
+              <View style={s.sectionTitleWrap}>
+                <Text style={s.sectionTitle}>{section.title}</Text>
+                {section.subtitle && <Text style={s.sectionSubtitle}>{section.subtitle}</Text>}
+              </View>
+            </View>
+            <View style={s.menuCard}>
+              {section.items.map((item, idx) => (
+                <Pressable
+                  key={item.label}
+                  onPress={() => handleMenuPress(item)}
+                  style={({ pressed }) => [
+                    s.menuRow,
+                    idx < section.items.length - 1 && s.menuRowBorder,
+                    pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
+                  ]}
+                >
+                  <View style={[s.menuIconWrap, { backgroundColor: (item.color || Colors.primary) + "20" }]}>
+                    <Feather
+                      name={item.icon as any}
+                      size={16}
+                      color={item.destructive ? Colors.error : (item.color || Colors.primary)}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      s.menuLabel,
+                      { flex: 1 },
+                      item.destructive && { color: Colors.error },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ))}
 
         {/* ── Accessibility ── */}
         <View style={s.menuSection}>
@@ -472,52 +518,6 @@ export default function MoreScreen() {
             )}
           </View>
         </View>
-
-        {/* ── Menu Sections ── */}
-        {menuSections.map((section) => (
-          <View key={section.title} style={s.menuSection}>
-            <View style={s.sectionHeaderRow}>
-              <View style={[s.sectionIcon, { backgroundColor: section.accent + "20" }]}>
-                <Feather name={section.icon as any} size={14} color={section.accent} />
-              </View>
-              <View style={s.sectionTitleWrap}>
-                <Text style={s.sectionTitle}>{section.title}</Text>
-                {section.subtitle && <Text style={s.sectionSubtitle}>{section.subtitle}</Text>}
-              </View>
-            </View>
-            <View style={s.menuCard}>
-              {section.items.map((item, idx) => (
-                <Pressable
-                  key={item.label}
-                  onPress={() => handleMenuPress(item)}
-                  style={({ pressed }) => [
-                    s.menuRow,
-                    idx < section.items.length - 1 && s.menuRowBorder,
-                    pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
-                  ]}
-                >
-                  <View style={[s.menuIconWrap, { backgroundColor: (item.color || Colors.primary) + "20" }]}>
-                    <Feather
-                      name={item.icon as any}
-                      size={16}
-                      color={item.destructive ? Colors.error : (item.color || Colors.primary)}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      s.menuLabel,
-                      { flex: 1 },
-                      item.destructive && { color: Colors.error },
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                  <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        ))}
 
         {/* ── Stats ── */}
         <View style={s.statsCard}>

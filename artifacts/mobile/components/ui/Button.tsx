@@ -40,9 +40,9 @@ export function Button({
   };
 
   const sizeStyles = {
-    sm: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, fontSize: 14 },
-    md: { paddingVertical: 13, paddingHorizontal: 24, borderRadius: 12, fontSize: 15 },
-    lg: { paddingVertical: 16, paddingHorizontal: 28, borderRadius: 14, fontSize: 16 },
+    sm: { paddingVertical: 9, paddingHorizontal: 16, borderRadius: 12, fontSize: 14 },
+    md: { paddingVertical: 13, paddingHorizontal: 24, borderRadius: 14, fontSize: 15 },
+    lg: { paddingVertical: 16, paddingHorizontal: 28, borderRadius: 16, fontSize: 16 },
   };
 
   const variantStyles: Record<ButtonVariant, { bg: string; textColor: string; borderColor?: string }> = {
@@ -70,8 +70,9 @@ export function Button({
           paddingVertical: sz.paddingVertical,
           paddingHorizontal: sz.paddingHorizontal,
           borderRadius: sz.borderRadius,
+          borderCurve: "continuous",
           opacity: isDisabled ? 0.42 : 1,
-          transform: [{ scale: isDisabled ? 1 : pressed ? 0.97 : 1 }],
+          transform: [{ scale: isDisabled ? 1 : pressed ? 0.98 : 1 }],
           alignSelf: fullWidth ? undefined : "flex-start",
           width: fullWidth ? "100%" : undefined,
         },
@@ -107,6 +108,6 @@ const styles = StyleSheet.create({
   text: {
     fontFamily: "Inter_600SemiBold",
     textAlign: "center",
-    letterSpacing: -0.25,
+    letterSpacing: -0.15,
   },
 });

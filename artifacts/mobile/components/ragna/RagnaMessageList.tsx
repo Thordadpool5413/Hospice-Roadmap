@@ -92,14 +92,20 @@ export function RagnaMessageList({
 
 const styles = StyleSheet.create({
   messagesContainer: {
-    gap: 12,
+    gap: 13,
     paddingTop: 4,
   },
   loadingBubble: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(15, 24, 54, 0.78)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(80, 110, 180, 0.16)",
+    alignSelf: "flex-start",
   },
   loadingText: {
     fontSize: 13,
@@ -114,30 +120,30 @@ const styles = StyleSheet.create({
   suggestionsLabel: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    color: Colors.textSubtle,
+    color: "#7588AD",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginLeft: 2,
   },
   suggestionPills: {
     flexDirection: "column",
-    gap: 7,
+    gap: 8,
   },
   suggestionPill: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: Colors.primaryPale,
+    backgroundColor: "rgba(26, 46, 90, 0.92)",
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: Colors.primary + "30",
+    borderColor: Colors.primary + "22",
   },
   suggestionPillText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: Colors.primaryDark,
+    color: Colors.primaryLight,
     lineHeight: 18,
   },
 });
