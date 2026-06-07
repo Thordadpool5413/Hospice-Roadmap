@@ -1,0 +1,27 @@
+artifacts/mobile/app.config.ts
+  s_93ca52e64603b2::t_20bb91daf23879 34-36,40,46
+artifacts/mobile/package.json
+  s_93ca52e64603b2::t_9559e84b61e550 9
+artifacts/mobile/eas.json
+  s_93ca52e64603b2::t_5266bf98c1bf4f 24-33,48
+artifacts/mobile/context/SubscriptionContext.tsx
+  s_93ca52e64603b2::t_05d79b4d2af599 21-24
+.github/workflows/eas-build.yml
+  s_93ca52e64603b2::t_db6fba2df9a7d0 14,19,78,99,118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "dca8880ddf8dd4a7c58704ad3d70440f4c556f44",
+  "prompts": {},
+  "sessions": {
+    "s_93ca52e64603b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9a2f-a557-7ac1-8077-1d53d01e0648",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}
