@@ -11,11 +11,12 @@ on:
       profile:
         description: 'EAS build profile'
         required: true
-        default: 'preview'
+        default: 'testflight'
         type: choice
         options:
           - development
           - preview
+          - testflight
           - production
       api_url:
         description: 'Optional hosted API URL for manual builds (for example https://example.com/api)'
@@ -74,7 +75,7 @@ jobs:
       - name: Validate EAS config
         if: github.event_name == 'workflow_dispatch'
         env:
-          PROFILE: ${{ github.event.inputs.profile || 'preview' }}
+          PROFILE: ${{ github.event.inputs.profile || 'testflight' }}
           API_URL_OVERRIDE: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
           DOMAIN_OVERRIDE: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
           CLERK_PUBLISHABLE_KEY_OVERRIDE: ${{ github.event.inputs.clerk_publishable_key || vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || vars.CLERK_PUBLISHABLE_KEY }}
@@ -95,7 +96,7 @@ jobs:
               export EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY_OVERRIDE"
             fi
 
-            if [ "$PROFILE" = "preview" ] || [ "$PROFILE" = "production" ]; then
+            if [ "$PROFILE" = "preview" ] || [ "$PROFILE" = "testflight" ] || [ "$PROFILE" = "production" ]; then
               if [ -z "${EXPO_PUBLIC_API_URL:-}" ] && [ -z "${EXPO_PUBLIC_DOMAIN:-}" ]; then
                 echo "::error::Missing hosted API configuration. Supply workflow input api_url/domain or set EXPO_PUBLIC_API_URL / EXPO_PUBLIC_DOMAIN in the selected EAS environment."
                 exit 1
@@ -114,7 +115,7 @@ jobs:
       - name: Build
         if: github.event_name == 'workflow_dispatch'
         env:
-          PROFILE: ${{ github.event.inputs.profile || 'preview' }}
+          PROFILE: ${{ github.event.inputs.profile || 'testflight' }}
           API_URL_OVERRIDE: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
           DOMAIN_OVERRIDE: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
           CLERK_PUBLISHABLE_KEY_OVERRIDE: ${{ github.event.inputs.clerk_publishable_key || vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || vars.CLERK_PUBLISHABLE_KEY }}

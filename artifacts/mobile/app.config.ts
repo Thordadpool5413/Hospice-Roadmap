@@ -31,17 +31,19 @@ const clerkProxyUrl =
 const googleMapsApiKey = process.env["GOOGLE_MAPS_API_KEY"] || "";
 const easBuildProfile = process.env["EAS_BUILD_PROFILE"] || "";
 const requiresHostedApiConfig =
-  easBuildProfile === "preview" || easBuildProfile === "production";
+  easBuildProfile === "preview" ||
+  easBuildProfile === "testflight" ||
+  easBuildProfile === "production";
 
 if (requiresHostedApiConfig && !explicitApiUrl) {
   throw new Error(
-    "[app.config] Missing API configuration for preview/production build. Set EXPO_PUBLIC_API_URL or EXPO_PUBLIC_DOMAIN before shipping the mobile app.",
+    "[app.config] Missing API configuration for preview/testflight/production build. Set EXPO_PUBLIC_API_URL or EXPO_PUBLIC_DOMAIN before shipping the mobile app.",
   );
 }
 
 if (requiresHostedApiConfig && !clerkPublishableKey) {
   throw new Error(
-    "[app.config] Missing Clerk publishable key for preview/production build. Set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY.",
+    "[app.config] Missing Clerk publishable key for preview/testflight/production build. Set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY.",
   );
 }
 

@@ -18,9 +18,10 @@ import { ENTITLEMENT_IDENTIFIER } from "@/constants/subscriptionProducts";
 
 /**
  * Beta override — set EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM=true in the EAS
- * build profile (e.g. "preview") to give all TestFlight testers full premium
- * access without a real subscription. NEVER set this in the "production"
- * profile — it would bypass the paywall for all App Store users.
+ * build profile used for TestFlight/beta releases (e.g. "testflight") to give
+ * all beta testers full premium access without a real subscription. NEVER set
+ * this in the "production" profile — it would bypass the paywall for all App
+ * Store users.
  */
 const BETA_OVERRIDE = process.env.EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM === "true";
 

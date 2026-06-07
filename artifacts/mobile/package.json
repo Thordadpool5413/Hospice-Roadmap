@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node scripts/write-env.js && pnpm exec expo start --localhost --port $PORT",
     "build": "node scripts/build.js",
+    "testflight": "npx eas-cli@latest build -p ios --profile testflight --auto-submit --non-interactive",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
