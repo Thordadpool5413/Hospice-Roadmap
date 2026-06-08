@@ -286,7 +286,7 @@ export default function PainAdScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030A18" },
+  container: { flex: 1, backgroundColor: "#0B1730" },
   header: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingVertical: 12,
@@ -404,3 +404,4 @@ const styles = StyleSheet.create({
     color: "#4A6090", lineHeight: 16,
   },
 });
+

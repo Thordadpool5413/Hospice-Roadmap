@@ -1295,12 +1295,12 @@ const ui = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030A18" },
+  container: { flex: 1, backgroundColor: "#0B1730" },
   header: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: "rgba(40,65,140,0.40)",
-    backgroundColor: "rgba(3,10,24,0.97)",
+    backgroundColor: "rgba(11,23,48,0.97)",
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 12,
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#EEF4FF", letterSpacing: -0.3 },
   headerSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#5A78A8", marginTop: 1 },
-  progressBar: { flexDirection: "row", paddingHorizontal: 16, paddingVertical: 8, gap: 4, backgroundColor: "#030A18" },
+  progressBar: { flexDirection: "row", paddingHorizontal: 16, paddingVertical: 8, gap: 4, backgroundColor: "#0B1730" },
   progressSegment: { flex: 1, height: 3, borderRadius: 2 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
   sectionTitleBlock: { gap: 4, paddingBottom: 4 },
@@ -1320,7 +1320,7 @@ const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 20, paddingTop: 12, gap: 12,
-    borderTopWidth: 1, borderTopColor: "rgba(40,65,140,0.40)", backgroundColor: "#030A18",
+    borderTopWidth: 1, borderTopColor: "rgba(40,65,140,0.40)", backgroundColor: "#0B1730",
   },
   prevBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", gap: 4,
@@ -1336,3 +1336,4 @@ const styles = StyleSheet.create({
   },
   nextBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -0.2 },
 });
+

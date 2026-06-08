@@ -329,7 +329,7 @@ export default function ActiveDyingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030A18" },
+  container: { flex: 1, backgroundColor: "#0B1730" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -578,3 +578,4 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)", marginTop: 2,
   },
 });
+

@@ -177,7 +177,7 @@ export default function EvaluationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030A18",
+    backgroundColor: "#0B1730",
   },
   content: {
     paddingHorizontal: 20,
@@ -188,3 +188,4 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 });
+

@@ -7,17 +7,17 @@
 
 const palette = {
   // ── Background layers ── (deepest → lifted)
-  bg0:    "#091734",   // page background (deepest)
-  bg1:    "#10214A",   // deep panel / base surface
-  bg2:    "#14295A",   // standard card
-  bg3:    "#1A3470",   // elevated card / overlay lift
-  bg4:    "#223A80",   // top modal / focused surface
+  bg0:    "#0B1730",   // page background (deepest)
+  bg1:    "#122347",   // deep panel / base surface
+  bg2:    "#17305E",   // standard card
+  bg3:    "#1E3B73",   // elevated card / overlay lift
+  bg4:    "#274681",   // top modal / focused surface
 
   // ── Text ──
   txtPrimary:   "#F3F6FF",   // primary text
-  txtSecondary: "#B6C0DA",   // secondary / supporting
-  txtMuted:     "#8F9AB8",   // hint / disabled
-  txtSubtle:    "#4A6090",   // very muted / border-weight
+  txtSecondary: "#C0CBE0",   // secondary / supporting
+  txtMuted:     "#97A5C2",   // hint / disabled
+  txtSubtle:    "#536A96",   // very muted / border-weight
 
   // ── Primary accent — cool ice blue ──
   blue400: "#63C8FF",   // hero glow / primary cta
@@ -26,9 +26,9 @@ const palette = {
   blue900: "#0A1E3A",   // pale tinted bg
 
   // ── Border / structural ──
-  border0: "#1E3060",   // subtle divider
-  border1: "#355E9F",   // soft blue border
-  border2: "rgba(130, 190, 255, 0.18)",  // card edge highlight
+  border0: "#24396B",   // subtle divider
+  border1: "#4167A6",   // soft blue border
+  border2: "rgba(140, 200, 255, 0.18)",  // card edge highlight
   borderGlow: "#58C8FF",  // hero glow
 
   // ── Stage pill (fixed warm rose, always) ──
@@ -67,7 +67,7 @@ const palette = {
   accentJourney:   "#58B6FF",
 
   // ── Tab nav ──
-  tabBg:       "rgba(9, 18, 46, 0.97)",
+  tabBg:       "rgba(11, 22, 49, 0.96)",
   tabActive:   "#77C8FF",
   tabInactive: "#A3AECF",
   chatDot:     "#7CFF7A",

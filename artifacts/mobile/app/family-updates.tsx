@@ -694,7 +694,7 @@ export default function FamilyUpdatesScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#030A18",
+    backgroundColor: "#0B1730",
   },
   header: {
     flexDirection: "row",
@@ -871,3 +871,4 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
   },
 });
+

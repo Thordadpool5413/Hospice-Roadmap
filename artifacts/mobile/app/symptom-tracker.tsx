@@ -894,7 +894,7 @@ export default function SymptomTrackerScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const sc = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030A18" },
+  container: { flex: 1, backgroundColor: "#0B1730" },
   header: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingVertical: 12,
@@ -1007,3 +1007,4 @@ const sc = StyleSheet.create({
   emptyHistoryText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#5A78A8" },
   emptyHistoryHint: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#3A5080", textAlign: "center" },
 });
+

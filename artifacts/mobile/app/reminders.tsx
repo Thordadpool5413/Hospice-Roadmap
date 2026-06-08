@@ -475,7 +475,7 @@ export default function RemindersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030A18" },
+  container: { flex: 1, backgroundColor: "#0B1730" },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
   emptyBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -0.1 },
   // Modal
-  modalContainer: { flex: 1, backgroundColor: "#030A18" },
+  modalContainer: { flex: 1, backgroundColor: "#0B1730" },
   modalHeader: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingTop: 18, paddingBottom: 14,
@@ -663,3 +663,4 @@ const styles = StyleSheet.create({
   },
   webNoteText: { flex: 1, fontSize: 12, fontFamily: "Inter_400Regular", color: "#6A90A8", lineHeight: 18 },
 });
+

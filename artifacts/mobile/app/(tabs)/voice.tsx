@@ -743,7 +743,7 @@ export default function VoiceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030A18",
+    backgroundColor: "#0B1730",
   },
   content: {
     paddingHorizontal: 16,
@@ -1008,7 +1008,7 @@ const styles = StyleSheet.create({
   },
   transcriptCard: {
     borderRadius: 16,
-    backgroundColor: "rgba(3,10,24,0.7)",
+    backgroundColor: "rgba(11,23,48,0.7)",
     borderWidth: 1,
     borderColor: "rgba(73,118,255,0.18)",
     padding: 14,
@@ -1064,3 +1064,4 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
 });
+

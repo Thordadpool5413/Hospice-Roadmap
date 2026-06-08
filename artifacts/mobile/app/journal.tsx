@@ -389,7 +389,7 @@ export default function JournalScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030A18",
+    backgroundColor: "#0B1730",
   },
   topBar: {
     flexDirection: "row",
@@ -611,3 +611,4 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
 });
+

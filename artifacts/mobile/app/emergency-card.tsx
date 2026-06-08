@@ -436,7 +436,7 @@ export default function EmergencyCardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030A18",
+    backgroundColor: "#0B1730",
   },
   header: {
     flexDirection: "row",
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(40,65,140,0.40)",
-    backgroundColor: "rgba(3,10,24,0.97)",
+    backgroundColor: "rgba(11,23,48,0.97)",
   },
   backBtn: {
     width: 40,
@@ -828,3 +828,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+

@@ -545,7 +545,7 @@ export default function GoalsOfCareScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030A18" },
+  container: { flex: 1, backgroundColor: "#0B1730" },
   header: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingVertical: 12,
@@ -709,3 +709,4 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: 6 },
   fieldGroupLink: { paddingVertical: 6 },
 });
+

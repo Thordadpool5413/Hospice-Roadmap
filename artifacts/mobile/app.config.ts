@@ -138,8 +138,8 @@ const config = {
     name: "Hospice Roadmap",
     shortName: "Hospice Roadmap",
     lang: "en",
-    themeColor: "#030A18",
-    backgroundColor: "#030A18",
+    themeColor: "#0B1730",
+    backgroundColor: "#0B1730",
     description:
       "Guidance for patients and caregivers before, during, and after hospice care.",
   },
@@ -166,3 +166,4 @@ const config = {
 };
 
 export default config;
+

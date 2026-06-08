@@ -59,7 +59,7 @@ export function LockScreen({ onUnlock }: Props) {
     <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
       <View style={ls.root}>
         <LinearGradient
-          colors={["#030A18", "#081630", "#091734"]}
+          colors={["#0B1730", "#081630", "#091734"]}
           style={StyleSheet.absoluteFill}
         />
 
@@ -224,3 +224,4 @@ const ls = StyleSheet.create({
     textAlign: "center",
   },
 });
+

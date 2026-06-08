@@ -115,7 +115,7 @@ export default function LegalInfoScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#030A18" },
+  container: { flex: 1, backgroundColor: "#0B1730" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -123,7 +123,7 @@ const s = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(40,65,140,0.40)",
-    backgroundColor: "rgba(3,10,24,0.97)",
+    backgroundColor: "rgba(11,23,48,0.97)",
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 12,
@@ -162,3 +162,4 @@ const s = StyleSheet.create({
   },
   backBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.primary },
 });
+

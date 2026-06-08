@@ -207,7 +207,7 @@ export function ProfileSetupWizard({ visible, onComplete, onDismiss }: ProfileSe
       presentationStyle="fullScreen"
       onRequestClose={handleFinishLater}
     >
-      <View style={[wz.root, { backgroundColor: "#030A18" }]}>
+      <View style={[wz.root, { backgroundColor: "#0B1730" }]}>
         <LinearGradient
           colors={["rgba(14, 28, 80, 0.90)", "rgba(6, 12, 40, 0.95)"]}
           style={StyleSheet.absoluteFill}
@@ -506,3 +506,4 @@ const wz = StyleSheet.create({
     color: "#344060",
   },
 });
+

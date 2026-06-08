@@ -33,7 +33,7 @@ export default function Root({ children }: PropsWithChildren) {
           content="Hospice Roadmap helps patients and caregivers navigate every stage of hospice care. Get AI-powered guidance from Ragna, track symptoms, find providers, and access advance directives for all 50 states — no account required."
         />
         <meta name="robots" content="index, follow" />
-        <meta name="theme-color" content="#030A18" />
+        <meta name="theme-color" content="#0B1730" />
 
         {/* ── Open Graph ────────────────────────────────────────────── */}
         <meta property="og:type" content="website" />
@@ -88,7 +88,7 @@ export default function Root({ children }: PropsWithChildren) {
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: `
-              html, body, #root { background-color: #030A18; height: 100%; }
+              html, body, #root { background-color: #0B1730; height: 100%; }
               body { overflow: hidden; }
             `,
           }}
@@ -98,3 +98,4 @@ export default function Root({ children }: PropsWithChildren) {
     </html>
   );
 }
+

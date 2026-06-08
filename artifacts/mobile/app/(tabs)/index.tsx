@@ -1041,7 +1041,7 @@ export default function HomeScreen() {
 }
 
 const sc = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: "#030A18" },
+  root:   { flex: 1, backgroundColor: "#0B1730" },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 18, gap: 20 },
 
@@ -1130,3 +1130,4 @@ const fu = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
 });
+

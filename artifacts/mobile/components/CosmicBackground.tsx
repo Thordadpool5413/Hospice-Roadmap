@@ -26,7 +26,7 @@ export function CosmicBackground() {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {/* ── 1. Deep void base gradient ── */}
       <LinearGradient
-        colors={["#020810", "#051124", "#07142B", "#050C1C"]}
+        colors={["#07111E", "#0C1A35", "#12264F", "#091625"]}
         locations={[0, 0.28, 0.65, 1]}
         style={StyleSheet.absoluteFill}
       />
@@ -63,13 +63,13 @@ export function CosmicBackground() {
 
       {/* ── 7. Bottom fade for legibility ── */}
       <LinearGradient
-        colors={["transparent", "rgba(2,8,16,0.78)"]}
+        colors={["transparent", "rgba(7,17,30,0.70)"]}
         style={s.bottomFade}
       />
 
       {/* ── 8. Top vignette ── */}
       <LinearGradient
-        colors={["rgba(2,8,16,0.36)", "transparent"]}
+        colors={["rgba(7,17,30,0.24)", "transparent"]}
         style={s.topVignette}
       />
     </View>
@@ -82,28 +82,28 @@ const s = StyleSheet.create({
     top: -110, left: -130,
     width: 360, height: 360,
     borderRadius: 200,
-    backgroundColor: "rgba(28, 70, 220, 0.08)",
+    backgroundColor: "rgba(42, 86, 236, 0.08)",
   },
   nebulaRight: {
     position: "absolute",
     top: -60, right: -90,
     width: 280, height: 280,
     borderRadius: 150,
-    backgroundColor: "rgba(80, 40, 200, 0.05)",
+    backgroundColor: "rgba(92, 56, 214, 0.06)",
   },
   warmCenter: {
     position: "absolute",
     top: "30%", left: "20%",
     width: 240, height: 180,
     borderRadius: 130,
-    backgroundColor: "rgba(80, 100, 255, 0.03)",
+    backgroundColor: "rgba(100, 118, 255, 0.04)",
   },
   tealLow: {
     position: "absolute",
     bottom: 80, left: -60,
     width: 200, height: 200,
     borderRadius: 110,
-    backgroundColor: "rgba(20, 120, 180, 0.03)",
+    backgroundColor: "rgba(26, 136, 190, 0.04)",
   },
   star: {
     position: "absolute",

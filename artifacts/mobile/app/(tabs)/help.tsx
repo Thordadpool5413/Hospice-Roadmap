@@ -781,11 +781,11 @@ export default function HelpScreen() {
   ]);
 
   const handlePlaybackStop = useCallback(async () => {
-    setVoiceStatusText("Stopping Ragna's voice reply…");
+    setVoiceStatusText("Holding Ragna's voice reply here…");
     stopLiveSpeechPreview(true);
-    setPlaybackUiState({ isPlaying: false, isPaused: false });
-    await stopNativeOpenAiVoicePlayback();
-    setVoiceStatusText("Stopped Ragna's voice reply.");
+    setPlaybackUiState({ isPlaying: true, isPaused: true });
+    await pauseNativeOpenAiVoicePlayback();
+    setVoiceStatusText("Ragna is paused here. Tap Resume to continue.");
   }, [stopLiveSpeechPreview]);
 
   const synthesizeAssistantVoice = useCallback(
@@ -1356,7 +1356,7 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030A18",
+    backgroundColor: "#0B1730",
   },
   scroll: {
     flex: 1,
@@ -1371,3 +1371,4 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
 });
+

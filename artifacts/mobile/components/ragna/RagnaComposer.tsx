@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "rgba(40,65,140,0.32)",
-    backgroundColor: "rgba(3,10,24,0.96)",
+    backgroundColor: "rgba(11,23,48,0.96)",
   },
   streamingBanner: {
     flexDirection: "row",
@@ -466,3 +466,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+

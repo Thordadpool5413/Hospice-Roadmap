@@ -431,7 +431,7 @@ export default function RootLayout() {
   // Never return null: on iOS a null root causes a brief blank flash before
   // the React tree has a chance to paint.
   if (!fontsLoaded && !fontError) {
-    return <View style={{ flex: 1, backgroundColor: "#030A18" }} />;
+    return <View style={{ flex: 1, backgroundColor: "#0B1730" }} />;
   }
 
   // Guard against a missing Clerk publishable key (e.g. EAS secret not
@@ -439,7 +439,7 @@ export default function RootLayout() {
   // key throws synchronously and crashes the app; show a safe error instead.
   if (!publishableKey) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#030A18", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <View style={{ flex: 1, backgroundColor: "#0B1730", alignItems: "center", justifyContent: "center", padding: 32 }}>
         <Text style={{ color: "#EEF4FF", fontSize: 16, textAlign: "center", lineHeight: 24 }}>
           App configuration error — authentication could not be initialized.{"\n\n"}Please update to the latest version or contact support.
         </Text>
@@ -463,7 +463,7 @@ export default function RootLayout() {
             produces a blank white flash on fast devices. */}
         <ClerkLoading>
           <SafeAreaProvider>
-            <View style={{ flex: 1, backgroundColor: "#030A18" }} />
+            <View style={{ flex: 1, backgroundColor: "#0B1730" }} />
           </SafeAreaProvider>
         </ClerkLoading>
 
@@ -511,3 +511,4 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+

@@ -93,7 +93,7 @@ export function PremiumGate({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030A18",
+    backgroundColor: "#0B1730",
   },
   backBtn: {
     position: "absolute",
@@ -187,3 +187,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
