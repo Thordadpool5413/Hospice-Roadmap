@@ -1,5 +1,5 @@
 import type { ExpoConfig } from "expo/config";
-import configPlugins from "expo/config-plugins.js";
+import * as configPlugins from "expo/config-plugins.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
