@@ -11,3 +11,21 @@ id = "FgjyITbG6nW4hr94HMazj"
 uri = "file://artifacts/app-preview-video/public/audio/bg_music.mp3"
 type = "audio"
 title = "hospice app background music"
+
+[[outputs]]
+id = "THZdOsnKvEu-pPnPr2eeR"
+uri = "file://artifacts/app-preview-video/public/audio/vo_symptom.mp3"
+type = "audio"
+title = "Symptom Tracker voiceover"
+
+[[outputs]]
+id = "W5mxXEI0utkFIDFJ0hTPA"
+uri = "file://artifacts/app-preview-video/public/audio/vo_ragna.mp3"
+type = "audio"
+title = "Ragna AI voiceover"
+
+[[outputs]]
+id = "nqv-vLHjne5qAdBaLfSxP"
+uri = "file://artifacts/app-preview-video/public/audio/vo_situation.mp3"
+type = "audio"
+title = "Situation Finder voiceover"
