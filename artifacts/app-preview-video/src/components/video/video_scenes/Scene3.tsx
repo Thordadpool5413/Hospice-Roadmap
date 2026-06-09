@@ -34,7 +34,7 @@ export function Scene3() {
             transition={{ duration: 0.8, ease: 'easeOut' }}
           >
             <h2 className="text-5xl font-display font-medium text-text-primary leading-tight mb-4">
-              Track what matters
+              Track symptoms. Spot trends. Stay ahead.
             </h2>
             <p className="text-xl text-text-secondary">
               Symptom Tracker

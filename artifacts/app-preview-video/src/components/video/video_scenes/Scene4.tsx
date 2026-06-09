@@ -29,7 +29,7 @@ export function Scene4() {
             transition={{ duration: 0.8, ease: 'easeOut' }}
           >
             <h2 className="text-5xl font-display font-medium text-text-primary leading-tight mb-4">
-              Find answers fast
+              Guidance for every difficult moment
             </h2>
             <p className="text-xl text-text-secondary">
               Situation Finder

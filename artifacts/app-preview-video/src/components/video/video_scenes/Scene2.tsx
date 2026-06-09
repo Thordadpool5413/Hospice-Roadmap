@@ -31,7 +31,7 @@ export function Scene2() {
             transition={{ duration: 0.8, ease: 'easeOut' }}
           >
             <h2 className="text-5xl font-display font-medium text-text-primary leading-tight mb-4">
-              AI guidance,<br/>always there
+              Your AI companion through every stage
             </h2>
             <p className="text-xl text-text-secondary">
               Ragna AI Companion
