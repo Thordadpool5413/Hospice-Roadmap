@@ -21,7 +21,47 @@ Marketing screenshots for the iOS App Store listing.
 | `04-symptom-tracker.png` | **Symptom Tracker** | Daily symptom check-in with sliders for Pain, Breathlessness, Nausea, Agitation, and Appetite; 7-day sparkline trends for each tracked symptom |
 | `05-emergency-card.png` | **Emergency Card** | Quick-dial contacts (hospice nurse, doctor, family, social worker, pharmacy), patient info summary (name, diagnosis, DNR status, allergies), and comfort-kit reminder |
 
-## Regenerating
+## App Store Preview Video
+
+A 27-second App Store preview video is committed at `artifacts/mobile/assets/app-preview-video.mp4`.
+
+### Flows demonstrated (in order)
+1. **Ragna AI Companion** (t=4–12s) — AI chat with streamed response and follow-up suggestions
+2. **Symptom Tracker** (t=12–20s) — animated sliders and 7-day sparkline trends
+3. **Situation Finder** (t=20–27s) — search and category navigation to emergency guidance
+
+### File specs
+
+| Property | Value |
+|---|---|
+| File | `artifacts/mobile/assets/app-preview-video.mp4` |
+| Duration | 27 s |
+| Resolution | 1290 × 2796 px (iPhone 15 Pro Max portrait) |
+| Format | MP4, H.264 |
+| Audio | AAC 128k, background music mixed at 45% volume |
+
+Upload `app-preview-video.mp4` directly to App Store Connect alongside the screenshots — no post-processing required.
+
+### Regenerating the video
+
+The animated source artifact lives at `artifacts/app-preview-video/`. To regenerate after design changes:
+
+1. Update scene files in `artifacts/app-preview-video/src/components/video/video_scenes/`
+2. Re-run the generation script (see that artifact's README) or re-run the ffmpeg pipeline:
+
+```bash
+# Step 1 – re-generate AI clips (run from project root in code_execution)
+# generateVideo({...}) for each of the 5 clips, output to attached_assets/generated_videos/
+
+# Step 2 – concatenate and scale
+ffmpeg -y -f concat -safe 0 -i /tmp/concat.txt \
+  -vf "scale=1290:2293,pad=1290:2796:0:251:color=0x091734,format=yuv420p" \
+  -c:v libx264 -preset fast -crf 20 -an /tmp/scaled.mp4
+
+# Step 3 – add text overlays + audio (see /tmp/overlay.sh for the full filter)
+```
+
+## Regenerating Screenshots
 
 Screenshots are generated programmatically by `/tmp/screenshot-gen/generate.js` using
 `@napi-rs/canvas` against the app's design system colors (`constants/colors.ts`).

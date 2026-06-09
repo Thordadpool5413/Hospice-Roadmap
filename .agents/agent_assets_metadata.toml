@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "KyUrqRxIpnTUctTikQM2C"
 uri = "file://artifacts/mobile/assets/images/splash-base.png"
 type = "image"
 title = "hospice roadmap splash base"
+
+[[outputs]]
+id = "FgjyITbG6nW4hr94HMazj"
+uri = "file://artifacts/app-preview-video/public/audio/bg_music.mp3"
+type = "audio"
+title = "hospice app background music"

@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg-deep: #091734;
+  --color-bg-panel: #10214A;
+  --color-bg-card: #14295A;
+  --color-surface-elevated: #1A3470;
+  
+  --color-primary: #63C8FF;
+  --color-primary-light: #77C8FF;
+  
+  --color-text-primary: #F3F6FF;
+  --color-text-secondary: #B6C0DA;
+  --color-text-muted: #8F9AB8;
+  
+  --color-accent-amber: #D59A32;
+  --color-accent-symptom: #67B7FF;
+  --color-accent-situation: #73B9FF;
+  --color-accent-goals: #B97DFF;
+  --color-accent-ragna: #7CFF7A;
+  
+  --color-pill-bg: #4C2A39;
+  --color-pill-text: #F09A7A;
+
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+@theme inline {
+  --color-bg-deep: var(--color-bg-deep);
+  --color-bg-panel: var(--color-bg-panel);
+  --color-bg-card: var(--color-bg-card);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-primary: var(--color-primary);
+  --color-primary-light: var(--color-primary-light);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-accent-amber: var(--color-accent-amber);
+  --color-accent-symptom: var(--color-accent-symptom);
+  --color-accent-situation: var(--color-accent-situation);
+  --color-accent-goals: var(--color-accent-goals);
+  --color-accent-ragna: var(--color-accent-ragna);
+  --color-pill-bg: var(--color-pill-bg);
+  --color-pill-text: var(--color-pill-text);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-deep);
+  color: var(--color-text-primary);
+}
