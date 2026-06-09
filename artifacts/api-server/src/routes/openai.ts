@@ -4,6 +4,7 @@ import multer from "multer";
 
 import { HOSPICE_SYSTEM_PROMPT } from "./anthropic/systemPrompt.js";
 import { MODELS } from "../config/models.js";
+import { synthesizeElevenLabsSpeech } from "../lib/elevenlabsTts.js";
 
 const router: IRouter = Router();
 const upload = multer({
@@ -299,28 +300,35 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
       return;
     }
 
-    const speechResponse = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODELS.openai.tts,
-        voice: selectedVoice,
-        input: assistantTranscript,
-        format: "mp3",
-      }),
-    });
+    let audioBuffer: Buffer;
+    try {
+      audioBuffer = await synthesizeElevenLabsSpeech(assistantTranscript);
+    } catch (elErr: unknown) {
+      req.log.warn({ err: elErr }, "ElevenLabs TTS failed for voice-turn, falling back to OpenAI TTS");
+      const speechResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: MODELS.openai.tts,
+          voice: selectedVoice,
+          input: assistantTranscript,
+          format: "mp3",
+        }),
+      });
 
-    if (!speechResponse.ok) {
-      const speechError = await speechResponse.text();
-      req.log.error({ status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
-      res.status(502).json({ error: speechError || "Failed to generate reply audio." });
-      return;
+      if (!speechResponse.ok) {
+        const speechError = await speechResponse.text();
+        req.log.error({ status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
+        res.status(502).json({ error: speechError || "Failed to generate reply audio." });
+        return;
+      }
+      audioBuffer = Buffer.from(await speechResponse.arrayBuffer());
     }
 
-    const audioBase64 = Buffer.from(await speechResponse.arrayBuffer()).toString("base64");
+    const audioBase64 = audioBuffer.toString("base64");
 
     res.json({
       userTranscript,
@@ -351,29 +359,35 @@ router.post("/speak", async (req: Request, res: Response) => {
   }
 
   try {
-    const speechResponse = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODELS.openai.tts,
-        voice: selectedVoice,
-        input: speakText,
-        format: "mp3",
-      }),
-    });
+    let audioBuffer: Buffer;
+    try {
+      audioBuffer = await synthesizeElevenLabsSpeech(speakText);
+    } catch (elErr: unknown) {
+      req.log.warn({ err: elErr }, "ElevenLabs TTS failed for speak, falling back to OpenAI TTS");
+      const speechResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: MODELS.openai.tts,
+          voice: selectedVoice,
+          input: speakText,
+          format: "mp3",
+        }),
+      });
 
-    if (!speechResponse.ok) {
-      const speechError = await speechResponse.text();
-      req.log.error({ status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
-      res.status(502).json({ error: speechError || "Failed to generate reply audio." });
-      return;
+      if (!speechResponse.ok) {
+        const speechError = await speechResponse.text();
+        req.log.error({ status: speechResponse.status, body: speechError }, "OpenAI speech generation error");
+        res.status(502).json({ error: speechError || "Failed to generate reply audio." });
+        return;
+      }
+      audioBuffer = Buffer.from(await speechResponse.arrayBuffer());
     }
 
     pruneSpeechCache();
-    const audioBuffer = Buffer.from(await speechResponse.arrayBuffer());
     const audioBase64 = audioBuffer.toString("base64");
     const audioId = randomUUID();
     speechCache.set(audioId, {
@@ -409,30 +423,36 @@ router.post("/preview", async (req: Request, res: Response) => {
       : DEFAULT_PREVIEW_TEXT;
 
   try {
-    const openAiResponse = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODELS.openai.tts,
-        voice: selectedVoice,
-        input: previewText,
-        format: "mp3",
-      }),
-    });
+    let audioBuffer: Buffer;
+    try {
+      audioBuffer = await synthesizeElevenLabsSpeech(previewText);
+    } catch (elErr: unknown) {
+      req.log.warn({ err: elErr }, "ElevenLabs TTS failed for preview, falling back to OpenAI TTS");
+      const openAiResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: MODELS.openai.tts,
+          voice: selectedVoice,
+          input: previewText,
+          format: "mp3",
+        }),
+      });
 
-    if (!openAiResponse.ok) {
-      const errorBody = await openAiResponse.text();
-      req.log.error({ status: openAiResponse.status, body: errorBody }, "OpenAI voice preview error");
-      res
-        .status(openAiResponse.status >= 400 && openAiResponse.status < 500 ? openAiResponse.status : 502)
-        .json({ error: errorBody || "Failed to generate voice preview." });
-      return;
+      if (!openAiResponse.ok) {
+        const errorBody = await openAiResponse.text();
+        req.log.error({ status: openAiResponse.status, body: errorBody }, "OpenAI voice preview error");
+        res
+          .status(openAiResponse.status >= 400 && openAiResponse.status < 500 ? openAiResponse.status : 502)
+          .json({ error: errorBody || "Failed to generate voice preview." });
+        return;
+      }
+      audioBuffer = Buffer.from(await openAiResponse.arrayBuffer());
     }
 
-    const audioBuffer = Buffer.from(await openAiResponse.arrayBuffer());
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "no-store");
     res.status(200).send(audioBuffer);
