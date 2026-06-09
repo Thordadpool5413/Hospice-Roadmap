@@ -22,5 +22,14 @@
       "environment": "production",
       "autoIncrement": true
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "../../attached_assets/ApiKey_DSUF9U37D3U8_1781040611285.p8",
+        "ascApiKeyId": "DSUF9U37D3U8",
+        "ascApiKeyIssuerId": "b6126ce7-eea8-4ad4-a1b5-3b718912f190"
+      }
+    }
   }
 }

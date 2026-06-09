@@ -65,3 +65,5 @@ pnpm-debug.log*
 # Local env overrides (never commit secrets)
 .env.local
 .env.*.local
+*.p8
+attached_assets/ApiKey_*.p8
