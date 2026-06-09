@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "KyUrqRxIpnTUctTikQM2C"
+uri = "file://artifacts/mobile/assets/images/splash-base.png"
+type = "image"
+title = "hospice roadmap splash base"
