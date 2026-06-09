@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@replit/connectors-sdk": "latest",
     "@clerk/express": "^2.1.22",
     "@clerk/shared": "^4.14.0",
     "@workspace/api-zod": "workspace:*",
