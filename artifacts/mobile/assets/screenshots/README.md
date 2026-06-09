@@ -23,7 +23,7 @@ Marketing screenshots for the iOS App Store listing.
 
 ## App Store Preview Video
 
-A 27-second App Store preview video is committed at `artifacts/mobile/assets/app-preview-video.mp4`.
+A 27-second App Store preview video is committed at `artifacts/mobile/assets/app-preview-video-portrait.mp4`.
 
 ### Flows demonstrated (in order)
 1. **Ragna AI Companion** (t=4–12s) — AI chat with streamed response and follow-up suggestions
@@ -34,13 +34,42 @@ A 27-second App Store preview video is committed at `artifacts/mobile/assets/app
 
 | Property | Value |
 |---|---|
-| File | `artifacts/mobile/assets/app-preview-video.mp4` |
+| File | `artifacts/mobile/assets/app-preview-video-portrait.mp4` |
 | Duration | 27 s |
 | Resolution | 1290 × 2796 px (iPhone 15 Pro Max portrait) |
-| Format | MP4, H.264 |
-| Audio | AAC 128k, background music mixed at 45% volume |
+| Format | MP4, H.264, CRF 20 |
+| Audio | AAC 128k |
+| Fill color | `#091734` (app navy background) |
+| File size | ~24 MB |
 
-Upload `app-preview-video.mp4` directly to App Store Connect alongside the screenshots — no post-processing required.
+### Uploading to App Store Connect
+
+1. Log in to [App Store Connect](https://appstoreconnect.apple.com) and open your app.
+2. Navigate to **App Store** → select the iOS platform → open the version you are editing.
+3. Scroll to **App Previews and Screenshots** and select the **6.7" Display (iPhone 15 Pro Max)** tab.
+4. Click **Choose File** (or drag and drop) under **App Previews** and upload `app-preview-video-portrait.mp4`.
+5. App Store Connect will transcode the video — this typically takes a few minutes. Once the thumbnail appears, drag the preview poster frame to a visually representative moment.
+6. Click **Save** in the top-right corner, then submit your version for review when ready.
+
+> **Apple requirements checklist**
+> - Duration: 15–30 s ✓ (27 s)
+> - Resolution: 1290 × 2796 px ✓
+> - Codec: H.264 ✓
+> - Format: MP4 ✓
+> - Audio: optional but present (AAC 128k) ✓
+> - No black bars or letterboxing ✓ (padded with app navy `#091734`)
+
+### Regenerating the portrait file
+
+If you update the source animation and need a new portrait export, run:
+
+```bash
+ffmpeg -y -i artifacts/mobile/assets/app-preview-video.mp4 \
+  -vf "scale=1290:2796:force_original_aspect_ratio=decrease,pad=1290:2796:(ow-iw)/2:(oh-ih)/2:color=0x091734,format=yuv420p" \
+  -c:v libx264 -preset fast -crf 20 \
+  -c:a aac -b:a 128k \
+  artifacts/mobile/assets/app-preview-video-portrait.mp4
+```
 
 ### Regenerating the video
 
