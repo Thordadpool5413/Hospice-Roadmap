@@ -90,6 +90,60 @@ ffmpeg -y -f concat -safe 0 -i /tmp/concat.txt \
 # Step 3 – add text overlays + audio (see /tmp/overlay.sh for the full filter)
 ```
 
+## Top Branding Element
+
+Each screenshot has a compact top branding bar (210 px tall at 1290 px wide) containing:
+
+| Element | Details |
+|---|---|
+| App icon | `artifacts/mobile/assets/images/app-icon.png`, resized to 110 × 110 px with iOS-style rounded corners (22 px radius) |
+| Wordmark | "Hospice Roadmap" in `#F3F6FF` (txtPrimary), DejaVu Sans Bold 52 pt |
+| Background | Solid `#091734` (app navy, bg0) — seamlessly matches the app's dark background |
+| Layout | Icon + wordmark centered horizontally as a unit; vertically centered with a slight 8 px downward nudge |
+
+The top element is visually distinct from the bottom headline overlays: smaller scale, icon-led, centered, and anchored to the navigation area rather than the content area.
+
+### Regenerating the top branding
+
+Run the ImageMagick script `/tmp/add-top-branding.sh` (or recreate it from the command below):
+
+```bash
+# Quick regeneration — run from project root after modifying app icon or wordmark
+SCREENSHOT_DIR="artifacts/mobile/assets/screenshots"
+ICON_SRC="artifacts/mobile/assets/images/app-icon.png"
+FONT="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+ICON_SIZE=110; RADIUS=22; FONT_SIZE=52; BAR_H=210; IMG_W=1290
+
+# 1. Rounded icon
+magick "$ICON_SRC" -resize ${ICON_SIZE}x${ICON_SIZE}! \
+  \( +clone -alpha opaque -fill black -colorize 100 \
+     -fill white -draw "roundrectangle 0,0 $((ICON_SIZE-1)),$((ICON_SIZE-1)) $RADIUS,$RADIUS" \) \
+  -compose DstIn -composite /tmp/icon-rounded.png
+
+# 2. Text label
+magick -background none -fill "#F3F6FF" -font "$FONT" -pointsize $FONT_SIZE \
+  label:"Hospice Roadmap" /tmp/label.png
+LABEL_W=$(identify -format '%w' /tmp/label.png); LABEL_H=$(identify -format '%h' /tmp/label.png)
+
+# 3. Branding strip (icon + text side-by-side)
+STRIP_W=$((ICON_SIZE + 24 + LABEL_W)); TEXT_Y=$(( (ICON_SIZE - LABEL_H) / 2 ))
+magick -size ${STRIP_W}x${ICON_SIZE} xc:none \
+  /tmp/icon-rounded.png -geometry +0+0 -composite \
+  /tmp/label.png -geometry +$((ICON_SIZE + 24))+${TEXT_Y} -composite \
+  /tmp/branding-strip.png
+ACTUAL_W=$(identify -format '%w' /tmp/branding-strip.png)
+
+# 4. Apply to each screenshot
+BRAND_X=$(( (IMG_W - ACTUAL_W) / 2 ))
+BRAND_Y=$(( (BAR_H - ICON_SIZE) / 2 + 8 ))
+for f in 01-home 02-ragna-chat 03-situation-finder 04-symptom-tracker 05-emergency-card; do
+  magick "$SCREENSHOT_DIR/${f}.png" \
+    \( -size ${IMG_W}x${BAR_H} xc:"#091734" \) -gravity NorthWest -composite \
+    /tmp/branding-strip.png -gravity NorthWest -geometry +${BRAND_X}+${BRAND_Y} -composite \
+    "$SCREENSHOT_DIR/${f}.png"
+done
+```
+
 ## Regenerating Screenshots
 
 Screenshots are generated programmatically by `/tmp/screenshot-gen/generate.js` using
@@ -104,3 +158,6 @@ node generate.js
 
 The script reads the color palette directly from the documented design system and renders
 each screen at 3× logical scale (1 pt = 3 px, 430pt logical width → 1290px).
+
+> **Note:** After running `generate.js`, re-apply the top branding by running the regeneration
+> snippet above (or `/tmp/add-top-branding.sh` if it is still present).
