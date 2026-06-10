@@ -3,7 +3,14 @@ import * as configPlugins from "expo/config-plugins.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const { AndroidConfig, withAndroidManifest, withDangerousMod } = configPlugins;
+const configPluginApi =
+  (configPlugins as typeof configPlugins & {
+    default?: typeof configPlugins;
+  }).default ?? configPlugins;
+const AndroidConfig =
+  configPluginApi.AndroidConfig ?? configPlugins.AndroidConfig;
+const withAndroidManifest = configPluginApi.withAndroidManifest;
+const withDangerousMod = configPluginApi.withDangerousMod;
 
 const devDomain =
   process.env["REPLIT_DEV_DOMAIN"] ||
