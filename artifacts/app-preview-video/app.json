@@ -2,7 +2,6 @@
   "expo": {
     "name": "HospiceRoadmap",
     "slug": "mobile",
-    "entryPoint": "./artifacts/app-preview-video/src/App.tsx",
     "ios": {
       "bundleIdentifier": "com.thordadpool.workspace",
       "infoPlist": {
