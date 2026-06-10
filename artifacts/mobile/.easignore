@@ -1,2 +1,29 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# EAS Build archive exclusions for artifacts/mobile (iOS/Android)
+#
+# EAS archives the entire monorepo root. Exclude everything the iOS build
+# does NOT need to keep the archive small and uploads fast.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# CRITICAL: exclude committed package-lock.json so EAS detects pnpm (not npm).
+# Without this, EAS runs `npm ci` instead of `pnpm install` and the build fails.
 package-lock.json
 yarn.lock
+
+# Other artifacts — none of these are needed for the iOS/Android build
+artifacts/api-server
+artifacts/app-preview-video
+artifacts/mockup-sandbox
+
+# Large media / generated assets not needed by the mobile build
+attached_assets/generated_videos
+attached_assets/*.mp4
+attached_assets/*.mov
+attached_assets/*.pdf
+
+# Development / tooling files
+node_modules
+.cache
+.local
+.git
+*.log
