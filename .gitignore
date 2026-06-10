@@ -54,6 +54,11 @@ artifacts/mobile/.expo
 artifacts/mobile/dist
 artifacts/mobile/web-build
 
+# package-lock.json is committed by Replit's tooling but must be excluded
+# from EAS archives via artifacts/mobile/.easignore so EAS detects pnpm.
+# Listed here to suppress future accidental tracking.
+package-lock.json
+
 # Mockup sandbox build artifacts (design tooling, not shipped)
 artifacts/mockup-sandbox/dist
 artifacts/mockup-sandbox/.vite
