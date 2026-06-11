@@ -20,6 +20,7 @@ import {
   CAREGIVER_PACKAGE_IDENTIFIER,
   COMPANION_PACKAGE_IDENTIFIER,
 } from "@/constants/subscriptionProducts";
+import { useApp } from "@/context/AppContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 
 interface PlanFeature {
@@ -99,6 +100,31 @@ const COMPANION_EXCLUSIVE_FEATURES: Array<{ icon: string; title: string; desc: s
   },
 ];
 
+/**
+ * Role-aware hero copy shown on the standard (non-upgrade) paywall.
+ * Falls back to generic copy when role is null / "other".
+ *
+ * Beta testing note: the mobile-side bypass is EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM=true
+ * (set in eas.json "preview" profile). The API server also needs REVENUECAT_BETA_BYPASS=true
+ * so that premium endpoints are unblocked server-side for TestFlight builds.
+ * NEVER set either flag in the production build/server.
+ */
+const ROLE_HERO_COPY: Record<string, { title: string; sub: string }> = {
+  caregiver: {
+    title: "Support your loved one every step of the way",
+    sub: "Get the tools caregivers rely on.",
+  },
+  patient: {
+    title: "Navigate your journey with confidence",
+    sub: "Guidance, answers, and support — made for you.",
+  },
+};
+
+const DEFAULT_HERO_COPY = {
+  title: "Upgrade Hospice Roadmap",
+  sub: "Get the tools and guidance you need — right when you need them most.",
+};
+
 function WhatYouGainSection({ companionPrice }: { companionPrice?: string }) {
   return (
     <View style={styles.gainSection}>
@@ -129,7 +155,7 @@ function WhatYouGainSection({ companionPrice }: { companionPrice?: string }) {
       <View style={styles.gainPriceRow}>
         <Feather name="tag" size={13} color={Colors.amber} />
         <Text style={styles.gainPriceText}>
-          {companionPrice ?? "$9.99"}/mo — cancel anytime
+          {companionPrice ?? "$9.99"}/wk — cancel anytime
         </Text>
       </View>
     </View>
@@ -168,11 +194,11 @@ function PlanComparisonTable({ caregiverPkg, companionPkg }: PlanComparisonTable
         <View style={styles.compFeatureCol} />
         <View style={[styles.compPlanCol, styles.compPlanColCaregiver]}>
           <Text style={styles.compPlanLabel}>Caregiver</Text>
-          <Text style={styles.compPlanPrice}>{caregiverPrice}<Text style={styles.compPlanPer}>/mo</Text></Text>
+          <Text style={styles.compPlanPrice}>{caregiverPrice}<Text style={styles.compPlanPer}>/wk</Text></Text>
         </View>
         <View style={[styles.compPlanCol, styles.compPlanColCompanion]}>
           <Text style={[styles.compPlanLabel, styles.compPlanLabelCompanion]}>Companion</Text>
-          <Text style={[styles.compPlanPrice, styles.compPlanPriceCompanion]}>{companionPrice}<Text style={styles.compPlanPer}>/mo</Text></Text>
+          <Text style={[styles.compPlanPrice, styles.compPlanPriceCompanion]}>{companionPrice}<Text style={styles.compPlanPer}>/wk</Text></Text>
         </View>
       </View>
 
@@ -258,6 +284,8 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const { offerings, isPremium, purchase, restorePurchases, isPurchasing, isRestoring } =
     useSubscription();
+  const { user } = useApp();
+  const userRole = user?.role;
   const { fromPlan } = useLocalSearchParams<{ fromPlan?: string }>();
 
   const isUpgradeFromCaregiver = fromPlan === "caregiver";
@@ -339,12 +367,14 @@ export default function PaywallScreen() {
       >
         {/* Hero */}
         <Text style={styles.heroTitle}>
-          {isUpgradeFromCaregiver ? "Unlock Ragna AI" : "Upgrade Hospice Roadmap"}
+          {isUpgradeFromCaregiver
+            ? "Unlock Ragna AI"
+            : (ROLE_HERO_COPY[userRole ?? ""] ?? DEFAULT_HERO_COPY).title}
         </Text>
         <Text style={styles.heroSub}>
           {isUpgradeFromCaregiver
             ? "You're already getting the most out of Caregiver. Add AI-powered guidance to go further."
-            : "Get the tools and guidance you need — right when you need them most."}
+            : (ROLE_HERO_COPY[userRole ?? ""] ?? DEFAULT_HERO_COPY).sub}
         </Text>
 
         {isPremium && !isUpgradeFromCaregiver && (
@@ -384,7 +414,7 @@ export default function PaywallScreen() {
                 <Text style={[styles.planName, styles.companionPlanName]}>Companion</Text>
                 <Text style={[styles.planPrice, styles.companionPrice]}>
                   {companionPkg?.product.priceString ?? "$9.99"}
-                  <Text style={styles.planPeriod}>/mo</Text>
+                  <Text style={styles.planPeriod}>/wk</Text>
                 </Text>
               </View>
               <Text style={styles.planDesc}>
@@ -414,7 +444,7 @@ export default function PaywallScreen() {
                 <Text style={[styles.planName, styles.planNameDimmed]}>Caregiver</Text>
                 <Text style={[styles.planPrice, styles.planPriceDimmed]}>
                   {caregiverPkg?.product.priceString ?? "$4.99"}
-                  <Text style={styles.planPeriod}>/mo</Text>
+                  <Text style={styles.planPeriod}>/wk</Text>
                 </Text>
               </View>
               <Text style={styles.planDesc}>Your current plan.</Text>
@@ -437,7 +467,7 @@ export default function PaywallScreen() {
                 <Text style={styles.planName}>Caregiver</Text>
                 <Text style={styles.planPrice}>
                   {caregiverPkg?.product.priceString ?? "$4.99"}
-                  <Text style={styles.planPeriod}>/mo</Text>
+                  <Text style={styles.planPeriod}>/wk</Text>
                 </Text>
               </View>
               <Text style={styles.planDesc}>
@@ -469,7 +499,7 @@ export default function PaywallScreen() {
                 <Text style={[styles.planName, styles.companionPlanName]}>Companion</Text>
                 <Text style={[styles.planPrice, styles.companionPrice]}>
                   {companionPkg?.product.priceString ?? "$9.99"}
-                  <Text style={styles.planPeriod}>/mo</Text>
+                  <Text style={styles.planPeriod}>/wk</Text>
                 </Text>
               </View>
               <Text style={styles.planDesc}>
@@ -513,7 +543,7 @@ export default function PaywallScreen() {
         </Pressable>
 
         <Text style={styles.legalNote}>
-          Subscriptions renew automatically. Cancel anytime in your{" "}
+          Billed weekly. Subscriptions renew automatically. Cancel anytime in your{" "}
           {Platform.OS === "ios" ? "App Store" : "Play Store"} account settings.
         </Text>
       </ScrollView>

@@ -17,10 +17,17 @@ import Constants from "expo-constants";
 import { ENTITLEMENT_IDENTIFIER } from "@/constants/subscriptionProducts";
 
 /**
- * Beta override — set EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM=true in the EAS
- * build profile (e.g. "preview") to give all TestFlight testers full premium
- * access without a real subscription. NEVER set this in the "production"
- * profile — it would bypass the paywall for all App Store users.
+ * Mobile-side beta override — set EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM=true in
+ * the EAS build profile (e.g. "preview") to give all TestFlight testers full
+ * premium access client-side without a real subscription. Already set in
+ * eas.json "preview" profile.
+ *
+ * The API server also requires REVENUECAT_BETA_BYPASS=true to unblock
+ * premium endpoints server-side (e.g. Ragna AI). Set this env var on the
+ * API server backing TestFlight builds. See requirePremium.ts for details.
+ *
+ * NEVER set either flag on the production build profile or production server —
+ * doing so would grant free access to all App Store users.
  */
 const BETA_OVERRIDE = process.env.EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM === "true";
 
