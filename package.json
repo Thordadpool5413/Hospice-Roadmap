@@ -27,11 +27,10 @@
     "@replit/revenuecat-sdk": "^4.2.0",
     "@solana/web3.js": "^1.98.4",
     "expo": "~54.0.34",
-    "expo-dev-client": "^56.0.19",
     "expo-updates": "~29.0.18",
-    "react": "~18.3.1",
-    "react-dom": "~18.3.1",
-    "react-native-web": "~0.19.13"
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-native-web": "catalog:"
   },
   "optionalDependencies": {
     "@esbuild/win32-x64": "0.27.3",

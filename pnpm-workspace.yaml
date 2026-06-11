@@ -52,6 +52,10 @@ catalog:
   react: 19.1.0
   # Must be this exact version because expo requires it
   react-dom: 19.1.0
+  # Keep root and mobile in lockstep on the React 19-compatible line (0.21.x).
+  # A drift between root (0.19) and mobile (0.21) previously caused a React
+  # 18/19 element-type mismatch crash on web.
+  react-native-web: ^0.21.0
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
   tsx: ^4.21.0
