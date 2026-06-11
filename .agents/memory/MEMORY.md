@@ -7,3 +7,4 @@
 - [Testing db-importing modules under vitest](vitest-db-module-testing.md) — mock the `db` instance (hoisted) AND add a `@workspace/db/schema` subpath alias before the bare one; new route files need a workflow restart to stop 404ing.
 - [Ragna context privacy gating](ragna-context-privacy-gating.md) — every Ragna context block must be gated by its matching RagnaPrivacySettings flag (e.g. reminder labels → includeMedicationAndEquipment), not just personalizationEnabled.
 - [React dual-version web crash](react-monorepo-dual-version-web-crash.md) — root package.json pinning react/react-dom/react-native-web to a different major than the apps crashes web ($$typeof element mismatch); catalog all three so they can't drift.
+- [Drizzle migration workflow](drizzle-migration-workflow.md) — lib/db uses `push` not `migrate`; snapshots have drifted (ragna_memory), so `drizzle-kit generate` goes interactive — hand-write SQL + snapshot + journal instead.

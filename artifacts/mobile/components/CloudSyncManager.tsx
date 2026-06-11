@@ -60,6 +60,7 @@ import {
 } from "@/services/pendingDeletes";
 import {
   fetchServerData,
+  journalServerWon,
   mergeGoalsOfCare,
   mergeJournalEntries,
   mergeReminderEntries,
@@ -67,7 +68,9 @@ import {
   mergeWellnessEntries,
   readSyncLastSuccess,
   recordSyncSuccess,
+  remindersServerWon,
   runOnceLocalMigration,
+  symptomsServerWon,
   uploadCaregiverWellness,
   uploadGoals,
   uploadJournal,
@@ -76,6 +79,7 @@ import {
   uploadRagnaMemory,
   uploadReminders,
   uploadSymptoms,
+  wellnessServerWon,
 } from "@/services/syncService";
 import { mergeSavedList } from "@/services/savedListsMerge";
 import type { GoalsOfCare } from "@/types";
@@ -105,6 +109,14 @@ interface CloudSyncContextValue {
    * at the start of every new sync attempt and after a successful sync.
    */
   syncError: string | null;
+  /**
+   * Updated to a new Date() each time a sync completes in which at least one
+   * server record was newer than (and therefore overwrote) the local copy —
+   * i.e. an offline edit on another device won the last-write-wins merge.
+   * Consumers (SyncConflictBanner) watch this to surface a one-time, dismissible
+   * notice so the user knows their local data was replaced from the cloud.
+   */
+  conflictDetectedAt: Date | null;
 }
 
 const CloudSyncContext = createContext<CloudSyncContextValue>({
@@ -112,6 +124,7 @@ const CloudSyncContext = createContext<CloudSyncContextValue>({
   isSyncing: false,
   syncSucceededAt: null,
   syncError: null,
+  conflictDetectedAt: null,
 });
 
 export function useCloudSync(): CloudSyncContextValue {
@@ -172,6 +185,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   // next sync start and cleared again on success.
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  // Updated to a new Date() when a completed sync overwrote at least one local
+  // record with a newer server copy (LWW resolved in the server's favour).
+  const [conflictDetectedAt, setConflictDetectedAt] = useState<Date | null>(null);
+
   // All six local stores must have finished loading from AsyncStorage before
   // we attempt any sync or hydration. This prevents pushing stale empty-state
   // or missing a restore because any context was still null at sync time.
@@ -226,15 +243,25 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // For scalar stores (goals, living profile): LWW by comparing updatedAt
       // timestamps between local and server — the newer version wins.
 
+      // Tracks whether any record was overwritten by a newer server copy during
+      // this sync (i.e. an offline edit on another device beat the local copy in
+      // last-write-wins). When true at the end we surface a one-time conflict
+      // banner so the user knows their local data was replaced from the cloud.
+      // Only genuine OVERWRITES count — restores onto empty/new devices and pure
+      // additions from another device are not conflicts and are excluded below.
+      let serverWon = false;
+
       // ── Symptoms (per-record merge) ──────────────────────────────────────
       // Use filteredServerSymptoms — pending-deleted IDs have been removed so
       // the union merge cannot restore records the user already removed offline.
+      serverWon = serverWon || symptomsServerWon(symptoms, filteredServerSymptoms);
       const mergedSymptoms = mergeSymptomEntries(symptoms, filteredServerSymptoms);
       // Always hydrate: if mergedSymptoms === symptoms (no new data), the write
       // is idempotent and inexpensive. This also handles the restore case.
       await hydrateSymptoms(mergedSymptoms);
 
       // ── Journal (per-record merge) ───────────────────────────────────────
+      serverWon = serverWon || journalServerWon(journal, filteredServerJournal);
       const mergedJournal = mergeJournalEntries(journal, filteredServerJournal);
       await hydrateJournal(mergedJournal);
 
@@ -260,6 +287,18 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         serverGoalsTs,
       );
 
+      // Conflict detection (doc-level proxy): if the user already had goals
+      // locally and the server's goals row is strictly newer, a server edit
+      // won the merge. Field-level wins are approximated by the document
+      // timestamp, which reflects the most recent winning field.
+      if (
+        localGoals?.updatedAt &&
+        serverGoalsTs &&
+        new Date(serverGoalsTs) > new Date(localGoals.updatedAt)
+      ) {
+        serverWon = true;
+      }
+
       // Apply the merged result to local state only when it differs from what
       // the local closure already holds. This covers three cases:
       //   1. Local was empty → restore from server.
@@ -284,6 +323,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           new Date(serverTs) > new Date(livingProfileUpdatedAt)
         );
         const profileIsEmpty = !livingProfile;
+        // A non-empty local profile replaced by a strictly-newer server copy
+        // is a genuine overwrite — not a first-time restore onto an empty store.
+        if (!profileIsEmpty && serverIsNewer) serverWon = true;
         if (profileIsEmpty || serverIsNewer) {
           // Pass the server's own updatedAt so the local copy stores the correct
           // LWW version and doesn't immediately re-upload as "newer on next sync"
@@ -317,6 +359,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         );
         const ragnaIsEmpty = ragnaMemories.length === 0 && ragnaTiles.length === 0;
 
+        // A non-empty local memory store replaced by a strictly-newer server
+        // copy is a genuine overwrite — not a first-time restore.
+        if (!ragnaIsEmpty && serverIsNewer) serverWon = true;
+
         if (ragnaIsEmpty || serverIsNewer) {
           const serverMemories = serverData.ragnaMemory.memories as import("@/types").RagnaMemory[];
           const serverTiles = serverData.ragnaMemory.tiles as string[];
@@ -338,6 +384,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // Always hydrate: when mergedReminders === reminders (no new data) the
       // write is idempotent and inexpensive, but it covers the restore case
       // (new device / reinstall) without a separate empty-guard branch.
+      serverWon = serverWon || remindersServerWon(reminders, filteredServerReminders);
       const mergedReminders = mergeReminderEntries(reminders, filteredServerReminders);
       await hydrateReminders(mergedReminders as Parameters<typeof hydrateReminders>[0]);
 
@@ -350,6 +397,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const filteredServerWellness = pendingDeletes.wellness.length > 0
         ? (serverData.caregiverWellness ?? []).filter((e) => !pendingDeletes.wellness.includes(e.id))
         : (serverData.caregiverWellness ?? []);
+      serverWon = serverWon || wellnessServerWon(wellnessEntries, filteredServerWellness);
       const mergedWellness = mergeWellnessEntries(wellnessEntries, filteredServerWellness);
       await hydrateWellness(mergedWellness);
 
@@ -413,6 +461,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         );
         const isNewDevice = !user?.onboardingComplete;
 
+        // An onboarded device whose local profile is replaced by a strictly-newer
+        // server copy is a genuine overwrite. New-device restores are excluded.
+        if (serverIsNewer && !isNewDevice && localProfileTs) serverWon = true;
+
         if (serverIsNewer || isNewDevice) {
           // Inject the union-merged saved lists so hydrateProfileFromServer
           // persists them rather than restoring the server's raw (possibly
@@ -453,6 +505,15 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         if (savedListsChanged) {
           await hydrateSavedListsFromSync(filteredResources, filteredProviders);
         }
+      }
+
+      // Surface a one-time conflict notice when at least one local record was
+      // overwritten by a newer server copy during the merges above. The local
+      // store has already been re-hydrated at this point, so the overwrite is
+      // real regardless of whether the subsequent push succeeds. Updating this
+      // signal once per sync (not per record) drives the dismissible banner.
+      if (serverWon) {
+        setConflictDetectedAt(new Date());
       }
 
       // Step 3: push current local state to server with stored LWW timestamps.
@@ -704,7 +765,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   }, [isSignedIn, isOnline, runSync]);
 
   return (
-    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt, syncError }}>
+    <CloudSyncContext.Provider value={{ triggerSync: runSync, isSyncing, syncSucceededAt, syncError, conflictDetectedAt }}>
       {children}
     </CloudSyncContext.Provider>
   );

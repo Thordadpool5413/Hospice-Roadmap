@@ -140,7 +140,7 @@ describe("mergeSavedList", () => {
     });
 
     it("is stable: re-running with the same inputs produces identical results", () => {
-      const args = [["a", "b"], ["b", "c"], ["x"]] as const;
+      const args: [string[], string[], string[]] = [["a", "b"], ["b", "c"], ["x"]];
       expect(mergeSavedList(...args)).toEqual(mergeSavedList(...args));
     });
   });

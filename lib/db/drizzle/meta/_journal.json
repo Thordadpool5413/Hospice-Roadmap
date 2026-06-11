@@ -50,6 +50,13 @@
       "when": 1781147122778,
       "tag": "0006_add_push_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781147222778,
+      "tag": "0007_drop_users_table",
+      "breakpoints": true
     }
   ]
 }

@@ -305,6 +305,58 @@ export function mergeReminderEntries(
 
 export { mergeGoalsOfCare } from "@workspace/goc-merge";
 
+// ─── Server-wins (conflict) detection ─────────────────────────────────────────
+//
+// These mirror the per-record LWW merge logic but answer a single question:
+// did the server's copy of any record that ALSO exists locally beat the local
+// copy (server.updatedAt strictly newer than local.updatedAt)?
+//
+// "Strictly newer" — not >= — is deliberate: an equal timestamp is a tie that
+// the server wins for storage purposes, but it is not a user-visible overwrite
+// of distinct local data, so it should not trigger the conflict banner.
+//
+// Records that exist only on the server are additions/restores, not conflicts,
+// so they are ignored here (the loop skips IDs absent from the local set).
+
+function anyServerWon<T extends { id: string; updatedAt?: string }>(
+  local: T[],
+  server: T[],
+  fallback: (entry: T) => string,
+): boolean {
+  const byId = new Map<string, T>(local.map((e) => [e.id, e]));
+  for (const serverEntry of server) {
+    const localEntry = byId.get(serverEntry.id);
+    if (!localEntry) continue;
+    const localTs = localEntry.updatedAt ?? fallback(localEntry);
+    const serverTs = serverEntry.updatedAt ?? fallback(serverEntry);
+    if (new Date(serverTs) > new Date(localTs)) return true;
+  }
+  return false;
+}
+
+/** True when any server symptom entry overwrote a newer-losing local copy. */
+export function symptomsServerWon(local: SymptomEntry[], server: SymptomEntry[]): boolean {
+  return anyServerWon(local, server, symptomFallbackUpdatedAt);
+}
+
+/** True when any server journal entry overwrote a newer-losing local copy. */
+export function journalServerWon(local: JournalEntry[], server: JournalEntry[]): boolean {
+  return anyServerWon(local, server, journalFallbackUpdatedAt);
+}
+
+/** True when any server reminder overwrote a newer-losing local copy. */
+export function remindersServerWon(local: Reminder[], server: Reminder[]): boolean {
+  return anyServerWon(local, server, reminderFallbackUpdatedAt);
+}
+
+/** True when any server wellness entry overwrote a newer-losing local copy. */
+export function wellnessServerWon(
+  local: CaregiverWellnessEntry[],
+  server: CaregiverWellnessEntry[],
+): boolean {
+  return anyServerWon(local, server, (e) => new Date(e.timestamp).toISOString());
+}
+
 // ─── Full fetch from server ───────────────────────────────────────────────────
 
 export async function fetchServerData(): Promise<ServerSyncData | null> {

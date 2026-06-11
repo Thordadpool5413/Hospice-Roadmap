@@ -21,6 +21,7 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LockScreen } from "@/components/LockScreen";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SyncConflictBanner } from "@/components/SyncConflictBanner";
 import { SyncSuccessToast } from "@/components/SyncSuccessToast";
 import { AccessibilityProvider } from "@/context/AccessibilityContext";
 import { AppLockProvider, useAppLock } from "@/context/AppLockContext";
@@ -510,6 +511,7 @@ export default function RootLayout() {
                         <LearningSync />
                         <RootLayoutNav />
                         <OfflineBanner />
+                        <SyncConflictBanner />
                         <SyncSuccessToast />
                         <LockOverlay />
                       </View>
