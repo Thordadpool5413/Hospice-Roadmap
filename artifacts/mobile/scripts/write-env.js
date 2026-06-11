@@ -18,6 +18,9 @@ const expoDevDomain = process.env.REPLIT_EXPO_DEV_DOMAIN || devDomain;
 const replId = process.env.REPL_ID || "";
 const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY || "";
 const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || "";
+const rcTestApiKey = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || "";
+const rcIosApiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || "";
+const rcAndroidApiKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || "";
 
 if (!devDomain) {
   console.warn("[write-env] REPLIT_DEV_DOMAIN is not set — using localhost fallback");
@@ -27,6 +30,9 @@ const lines = [
   `EXPO_PUBLIC_REPL_ID=${replId}`,
   `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=${clerkPublishableKey}`,
   `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=${googleMapsApiKey}`,
+  `EXPO_PUBLIC_REVENUECAT_TEST_API_KEY=${rcTestApiKey}`,
+  `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=${rcIosApiKey}`,
+  `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=${rcAndroidApiKey}`,
 ];
 
 if (devDomain) {
