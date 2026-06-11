@@ -24,17 +24,10 @@
   },
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.1",
-    "@replit/revenuecat-sdk": "^4.2.0",
-    "@solana/web3.js": "^1.98.4",
-    "expo": "~54.0.34",
-    "expo-updates": "~29.0.18",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "react-native-web": "catalog:"
+    "@replit/revenuecat-sdk": "^4.2.0"
   },
   "optionalDependencies": {
     "@esbuild/win32-x64": "0.27.3",
     "@rollup/rollup-win32-x64-msvc": "4.59.0"
-  },
-  "main": "index.ts"
+  }
 }
