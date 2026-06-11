@@ -33,6 +33,7 @@ import { CaregiverWellnessProvider } from "@/context/CaregiverWellnessContext";
 import { useRagnaMemory, RagnaMemoryProvider } from "@/context/RagnaMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
+import { registerForPushNotifications } from "@/services/pushRegistration";
 
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
@@ -129,6 +130,26 @@ function AuthTokenBridge() {
   useEffect(() => {
     setAuthTokenGetter(() => getToken());
   }, [getToken]);
+  return null;
+}
+
+/**
+ * PushRegistration — registers this device's Expo push token with the server
+ * once the user is signed in. Rendered AFTER AuthTokenBridge so the Clerk token
+ * getter is already wired up when registerForPushNotifications() calls
+ * getAuthToken(). Registration degrades gracefully (web / Expo Go / denied
+ * permission all no-op silently) and is cached by userId+token to avoid
+ * re-registering on every launch.
+ */
+function PushRegistration() {
+  const { isSignedIn, userId } = useAuth();
+  const registeredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isSignedIn || !userId) return;
+    if (registeredFor.current === userId) return;
+    registeredFor.current = userId;
+    registerForPushNotifications(userId).catch(() => {});
+  }, [isSignedIn, userId]);
   return null;
 }
 
@@ -483,6 +504,7 @@ export default function RootLayout() {
                   <AppLockProvider>
                   <GestureHandlerRootView style={{ flex: 1 }}>
                     <AuthTokenBridge />
+                    <PushRegistration />
                     <CloudSyncProvider>
                       <View style={{ flex: 1 }}>
                         <LearningSync />

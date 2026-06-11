@@ -12,6 +12,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@workspace/db/schema": path.resolve(__dirname, "lib/db/src/schema/index.ts"),
       "@workspace/db": path.resolve(__dirname, "lib/db/src/index.ts"),
     },
   },

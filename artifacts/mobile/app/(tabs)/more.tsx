@@ -25,6 +25,7 @@ import { PlanBadge } from "@/components/PlanBadge";
 import { ENTITLEMENT_IDENTIFIER, getPlanName } from "@/constants/subscriptionProducts";
 import { LockTimeout, useAppLock } from "@/context/AppLockContext";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { unregisterForPushNotifications } from "@/services/pushRegistration";
 
 const roleLabels: Record<UserRole, string> = {
   patient: "Patient",
@@ -98,7 +99,14 @@ export default function MoreScreen() {
         {
           text: "Sign Out",
           style: "destructive",
-          onPress: () => signOut().then(() => router.replace("/(auth)/sign-in" as any)),
+          // Unregister the push token first (while the auth token is still
+          // valid), then sign out regardless of the unregister outcome.
+          onPress: () =>
+            unregisterForPushNotifications()
+              .catch(() => {})
+              .finally(() =>
+                signOut().then(() => router.replace("/(auth)/sign-in" as any)),
+              ),
         },
       ]
     );

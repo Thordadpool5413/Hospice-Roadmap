@@ -21,6 +21,7 @@ import { Colors } from "@/constants/colors";
 import { ENTITLEMENT_IDENTIFIER, getPlanName } from "@/constants/subscriptionProducts";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { usePaywall } from "@/hooks/usePaywall";
+import { unregisterForPushNotifications } from "@/services/pushRegistration";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -105,8 +106,14 @@ export default function AccountScreen() {
       {
         text: "Sign Out",
         style: "destructive",
+        // Unregister the push token first (while the auth token is still valid),
+        // then sign out regardless of the unregister outcome.
         onPress: () =>
-          signOut().then(() => router.replace("/(auth)/sign-in" as any)),
+          unregisterForPushNotifications()
+            .catch(() => {})
+            .finally(() =>
+              signOut().then(() => router.replace("/(auth)/sign-in" as any)),
+            ),
       },
     ]);
   };

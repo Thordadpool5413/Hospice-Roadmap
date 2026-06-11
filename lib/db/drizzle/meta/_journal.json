@@ -43,6 +43,13 @@
       "when": 1780297413365,
       "tag": "0005_slow_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781147122778,
+      "tag": "0006_add_push_tokens",
+      "breakpoints": true
     }
   ]
 }
