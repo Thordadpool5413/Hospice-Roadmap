@@ -5,6 +5,13 @@ import multer from "multer";
 import { HOSPICE_SYSTEM_PROMPT } from "./anthropic/systemPrompt.js";
 import { MODELS } from "../config/models.js";
 import { synthesizeElevenLabsSpeech } from "../lib/elevenlabsTts.js";
+import { requireEntitlement } from "../middlewares/requirePremium.js";
+
+// Companion-tier gate for Ragna voice generation. Applied to the live voice
+// routes below. The voice preview (/preview) and cached-audio playback
+// (/speak/:audioId) are intentionally left open so non-subscribers can sample
+// Ragna's voice and so already-generated clips remain retrievable.
+const requireCompanion = requireEntitlement("companion");
 
 const router: IRouter = Router();
 const upload = multer({
@@ -122,7 +129,7 @@ router.head("/speak/:audioId", (req: Request, res: Response) => {
   res.status(200).end();
 });
 
-router.post("/realtime/session", async (req: Request, res: Response) => {
+router.post("/realtime/session", requireCompanion, async (req: Request, res: Response) => {
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -183,7 +190,7 @@ router.post("/realtime/session", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, res: Response) => {
+router.post("/mobile-transcribe", requireCompanion, upload.single("audio"), async (req: Request, res: Response) => {
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -228,7 +235,7 @@ router.post("/mobile-transcribe", upload.single("audio"), async (req: Request, r
   }
 });
 
-router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, res: Response) => {
+router.post("/mobile-voice-turn", requireCompanion, upload.single("audio"), async (req: Request, res: Response) => {
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 
@@ -342,7 +349,7 @@ router.post("/mobile-voice-turn", upload.single("audio"), async (req: Request, r
   }
 });
 
-router.post("/speak", async (req: Request, res: Response) => {
+router.post("/speak", requireCompanion, async (req: Request, res: Response) => {
   const apiKey = getOpenAiApiKey(res);
   if (!apiKey) return;
 

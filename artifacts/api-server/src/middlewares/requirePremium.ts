@@ -1,5 +1,10 @@
 /**
- * requirePremium — server-side RevenueCat entitlement gate.
+ * requireEntitlement — server-side RevenueCat tiered entitlement gate.
+ *
+ * Two paid tiers map to two RevenueCat entitlement IDs:
+ *   • "caregiver"  – basic cross-device data sync features.
+ *   • "companion"  – Ragna AI + voice (the higher tier). A companion
+ *                    subscriber implicitly satisfies any "caregiver" gate.
  *
  * Environment variables (both must be set in production):
  *   REVENUECAT_PROJECT_ID     – enables the check; absent → dev bypass
@@ -13,35 +18,40 @@
  *
  * Behaviour on error: FAIL CLOSED.
  *   • 503 when the API key is missing or RevenueCat is unreachable.
- *   • 402 when the user has no active premium entitlement.
+ *   • 402 when the user lacks the required tier. The response distinguishes
+ *     "no subscription at all" from "wrong tier / upgrade needed".
  *   • Dev bypass when REVENUECAT_PROJECT_ID is absent (local development).
  */
 
 import type { NextFunction, Request, Response } from "express";
 import { getAuth } from "@clerk/express";
 
-const ENTITLEMENT_ID = "premium";
+export type Entitlement = "caregiver" | "companion";
+
+const CAREGIVER_ENTITLEMENT_ID = "caregiver";
+const COMPANION_ENTITLEMENT_ID = "companion";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 
 interface CacheEntry {
-  isPremium: boolean;
+  /** Active entitlement IDs the user currently holds. */
+  entitlements: string[];
   expiresAt: number;
 }
 
 const cache = new Map<string, CacheEntry>();
 
-function getCached(userId: string): boolean | null {
+function getCached(userId: string): string[] | null {
   const entry = cache.get(userId);
   if (!entry) return null;
   if (Date.now() > entry.expiresAt) {
     cache.delete(userId);
     return null;
   }
-  return entry.isPremium;
+  return entry.entitlements;
 }
 
-function setCached(userId: string, isPremium: boolean): void {
-  cache.set(userId, { isPremium, expiresAt: Date.now() + CACHE_TTL_MS });
+function setCached(userId: string, entitlements: string[]): void {
+  cache.set(userId, { entitlements, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 interface RcEntitlement {
@@ -78,7 +88,14 @@ function isEntitlementActive(e: RcEntitlement): boolean {
   return false;
 }
 
-async function checkEntitlement(userId: string, secretKey: string): Promise<boolean> {
+/**
+ * Fetches the subscriber from RevenueCat and returns the set of tier
+ * entitlement IDs ("caregiver" / "companion") that are currently active.
+ */
+async function fetchActiveEntitlements(
+  userId: string,
+  secretKey: string,
+): Promise<string[]> {
   const url = `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`;
   const response = await fetch(url, {
     headers: {
@@ -94,84 +111,133 @@ async function checkEntitlement(userId: string, secretKey: string): Promise<bool
   const data = (await response.json()) as RcSubscriberResponse;
   const entitlements = data?.subscriber?.entitlements ?? {};
 
-  const entitlement = entitlements[ENTITLEMENT_ID];
-  if (!entitlement) return false;
-
-  return isEntitlementActive(entitlement);
+  const active: string[] = [];
+  for (const id of [CAREGIVER_ENTITLEMENT_ID, COMPANION_ENTITLEMENT_ID]) {
+    const e = entitlements[id];
+    if (e && isEntitlementActive(e)) active.push(id);
+  }
+  return active;
 }
 
-export async function requirePremium(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  // Beta bypass — REVENUECAT_BETA_BYPASS=true unlocks premium for TestFlight builds.
-  // Set this env var on the API server that backs TestFlight; never on the production server.
-  if (process.env["REVENUECAT_BETA_BYPASS"] === "true") {
-    req.log.debug("requirePremium: beta bypass active — skipping entitlement check");
-    next();
-    return;
+/**
+ * Returns true if the set of active entitlements satisfies the required tier.
+ * "companion" implicitly grants "caregiver" access.
+ */
+function satisfies(active: string[], required: Entitlement): boolean {
+  if (active.includes(COMPANION_ENTITLEMENT_ID)) return true;
+  if (required === CAREGIVER_ENTITLEMENT_ID) {
+    return active.includes(CAREGIVER_ENTITLEMENT_ID);
   }
+  return false;
+}
 
-  // Dev bypass — REVENUECAT_PROJECT_ID not set means local development
-  const projectId = process.env["REVENUECAT_PROJECT_ID"];
-  if (!projectId) {
-    next();
-    return;
-  }
+/** Builds the 402 body, distinguishing "no subscription" from "wrong tier". */
+function buildDeniedBody(active: string[], required: Entitlement) {
+  const hasAnySubscription = active.length > 0;
 
-  // Fail closed: secret key must be present in production
-  const secretKey = process.env["REVENUECAT_SECRET_API_KEY"];
-  if (!secretKey) {
-    req.log.error(
-      "REVENUECAT_SECRET_API_KEY is not set but REVENUECAT_PROJECT_ID is — premium check cannot run",
-    );
-    res.status(503).json({
-      error: "Service unavailable",
-      message: "Subscription verification is temporarily unavailable. Please try again shortly.",
-    });
-    return;
-  }
-
-  const userId = getAuth(req).userId;
-  if (!userId) {
-    res.status(401).json({ error: "Authentication required" });
-    return;
-  }
-
-  // Cache hit
-  const cached = getCached(userId);
-  if (cached === true) {
-    next();
-    return;
-  }
-  if (cached === false) {
-    res.status(402).json({
+  if (!hasAnySubscription) {
+    return {
       error: "Subscription required",
+      reason: "no_subscription" as const,
+      requiredEntitlement: required,
       message:
-        "An active Hospice Roadmap subscription is required to use Ragna AI. Open the app and tap 'See Plans' to subscribe.",
-    });
-    return;
+        required === COMPANION_ENTITLEMENT_ID
+          ? "An active Hospice Roadmap subscription is required to use Ragna AI and voice. Open the app and tap 'See Plans' to subscribe."
+          : "An active Hospice Roadmap subscription is required to sync your data across devices. Open the app and tap 'See Plans' to subscribe.",
+    };
   }
 
-  // Live check — fail closed on any error
-  try {
-    const isPremium = await checkEntitlement(userId, secretKey);
-    setCached(userId, isPremium);
-    if (isPremium) {
+  // Has a subscription, but not the right tier (e.g. Caregiver hitting a
+  // Companion-only Ragna AI endpoint).
+  return {
+    error: "Upgrade required",
+    reason: "wrong_tier" as const,
+    requiredEntitlement: required,
+    currentEntitlements: active,
+    message:
+      "Ragna AI and voice are part of the Companion plan. You currently have the Caregiver plan — upgrade in the app to unlock Ragna.",
+  };
+}
+
+/**
+ * Factory returning an Express middleware that enforces the given tier.
+ * Defaults to "companion" so existing callers keep their previous behaviour.
+ */
+export function requireEntitlement(
+  requiredEntitlement: Entitlement = COMPANION_ENTITLEMENT_ID,
+) {
+  return async function entitlementGate(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    // Beta bypass — REVENUECAT_BETA_BYPASS=true unlocks all tiers for TestFlight
+    // builds. Set this env var on the API server that backs TestFlight; never on
+    // the production server.
+    if (process.env["REVENUECAT_BETA_BYPASS"] === "true") {
+      req.log.debug("requireEntitlement: beta bypass active — skipping entitlement check");
       next();
-    } else {
-      res.status(402).json({
-        error: "Subscription required",
-        message:
-          "An active Hospice Roadmap subscription is required to use Ragna AI. Open the app and tap 'See Plans' to subscribe.",
+      return;
+    }
+
+    // Dev bypass — REVENUECAT_PROJECT_ID not set means local development
+    const projectId = process.env["REVENUECAT_PROJECT_ID"];
+    if (!projectId) {
+      next();
+      return;
+    }
+
+    // Fail closed: secret key must be present in production
+    const secretKey = process.env["REVENUECAT_SECRET_API_KEY"];
+    if (!secretKey) {
+      req.log.error(
+        "REVENUECAT_SECRET_API_KEY is not set but REVENUECAT_PROJECT_ID is — entitlement check cannot run",
+      );
+      res.status(503).json({
+        error: "Service unavailable",
+        message: "Subscription verification is temporarily unavailable. Please try again shortly.",
+      });
+      return;
+    }
+
+    const userId = getAuth(req).userId;
+    if (!userId) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    // Cache hit
+    const cached = getCached(userId);
+    if (cached !== null) {
+      if (satisfies(cached, requiredEntitlement)) {
+        next();
+      } else {
+        res.status(402).json(buildDeniedBody(cached, requiredEntitlement));
+      }
+      return;
+    }
+
+    // Live check — fail closed on any error
+    try {
+      const active = await fetchActiveEntitlements(userId, secretKey);
+      setCached(userId, active);
+      if (satisfies(active, requiredEntitlement)) {
+        next();
+      } else {
+        res.status(402).json(buildDeniedBody(active, requiredEntitlement));
+      }
+    } catch (err: unknown) {
+      req.log.error({ err }, "RevenueCat entitlement check failed — blocking request (fail closed)");
+      res.status(503).json({
+        error: "Service unavailable",
+        message: "Subscription verification is temporarily unavailable. Please try again shortly.",
       });
     }
-  } catch (err: unknown) {
-    req.log.error({ err }, "RevenueCat entitlement check failed — blocking request (fail closed)");
-    res.status(503).json({
-      error: "Service unavailable",
-      message: "Subscription verification is temporarily unavailable. Please try again shortly.",
-    });
-  }
+  };
 }
+
+/**
+ * Backward-compatible middleware for existing callers. Equivalent to
+ * requireEntitlement("companion").
+ */
+export const requirePremium = requireEntitlement(COMPANION_ENTITLEMENT_ID);

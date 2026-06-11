@@ -12,7 +12,7 @@ import {
   type RagnaAction,
 } from "./ragnaActions.js";
 import { MODELS } from "../../config/models.js";
-import { requirePremium } from "../../middlewares/requirePremium.js";
+import { requireEntitlement } from "../../middlewares/requirePremium.js";
 
 const router: IRouter = Router();
 
@@ -149,7 +149,7 @@ router.get("/conversations/:id/messages", async (req: Request, res: Response) =>
   }
 });
 
-router.post("/conversations/:id/messages", requirePremium, async (req: Request, res: Response) => {
+router.post("/conversations/:id/messages", requireEntitlement("companion"), async (req: Request, res: Response) => {
   const userId = getAuth(req).userId!;
   const id = Number(req.params["id"]);
   const { content, patientContext } = req.body as {

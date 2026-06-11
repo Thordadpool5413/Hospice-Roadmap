@@ -1,7 +1,8 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
 import { sql, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
+import { requireEntitlement } from "../middlewares/requirePremium.js";
 import {
   symptomEntries,
   journalEntries,
@@ -15,6 +16,18 @@ import {
 } from "@workspace/db/schema";
 
 const router = Router();
+
+// Cross-device data sync writes require the "caregiver" tier (or higher).
+// GET requests are intentionally left ungated so users can always read back and
+// restore their own data even if their subscription has lapsed.
+const requireCaregiver = requireEntitlement("caregiver");
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method === "GET") {
+    next();
+    return;
+  }
+  requireCaregiver(req, res, next);
+});
 
 // ─── GET /api/sync — fetch all user data in one round-trip ───────────────────
 

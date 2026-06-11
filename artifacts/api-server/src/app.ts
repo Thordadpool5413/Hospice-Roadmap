@@ -30,16 +30,48 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Hosts for which a fallback to the default publishable key is expected and
+// should NOT be warned about: local development and Replit-managed domains.
+function isRecognizedHost(host: string): boolean {
+  const bare = (host.split(":")[0] ?? "").toLowerCase();
+  if (!bare) return true;
+  if (bare === "localhost" || bare === "127.0.0.1" || bare === "0.0.0.0") {
+    return true;
+  }
+  if (
+    bare.endsWith(".replit.dev") ||
+    bare.endsWith(".replit.app") ||
+    bare.endsWith(".repl.co") ||
+    bare.endsWith(".replit.com")
+  ) {
+    return true;
+  }
+  const prodDomains = (process.env.REPLIT_DOMAINS ?? "")
+    .split(",")
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean);
+  return prodDomains.includes(bare);
+}
+
 // Resolve publishable key from incoming request host so the same server
 // can serve multiple Clerk custom domains. Falls back to CLERK_PUBLISHABLE_KEY
-// when the host doesn't map to a custom domain.
+// when the host doesn't map to a custom domain. A silent fallback for an
+// unrecognized host usually signals an auth misconfiguration, so make it
+// visible in the logs.
 app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
-  })),
+  clerkMiddleware((req) => {
+    const host = getClerkProxyHost(req) ?? "";
+    const fallback = process.env.CLERK_PUBLISHABLE_KEY;
+    const publishableKey = publishableKeyFromHost(host, fallback);
+
+    if (publishableKey === fallback && host && !isRecognizedHost(host)) {
+      req.log.warn(
+        `Clerk: unrecognized host ${host}, falling back to default publishable key`,
+      );
+    }
+
+    return { publishableKey };
+  }),
 );
 
 app.use("/api", router);

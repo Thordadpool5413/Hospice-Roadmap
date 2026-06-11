@@ -4,9 +4,33 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { db, familyUpdateLog, smsOptOuts } from "@workspace/db";
 import { eq, desc, inArray } from "drizzle-orm";
 import { MODELS } from "../config/models.js";
+import { logger } from "../lib/logger.js";
 import twilio from "twilio";
 
 const router: IRouter = Router();
+
+// ─── Twilio configuration ─────────────────────────────────────────────────────
+
+/**
+ * True only when all three Twilio environment variables required to send SMS
+ * are present. Used to short-circuit with a clear 503 instead of letting the
+ * lazy client throw an unhandled 500.
+ */
+function isTwilioConfigured(): boolean {
+  return Boolean(
+    process.env["TWILIO_ACCOUNT_SID"] &&
+      process.env["TWILIO_AUTH_TOKEN"] &&
+      process.env["TWILIO_FROM_NUMBER"],
+  );
+}
+
+// Startup-time visibility: surface a warning in the logs if SMS sending will be
+// unavailable, rather than only discovering it on the first failed request.
+if (!isTwilioConfigured()) {
+  logger.warn(
+    "Twilio is not fully configured (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER) — Family Updates SMS sending will be unavailable.",
+  );
+}
 
 // ─── Twilio client (lazy, so missing creds fail at request time not startup) ──
 
@@ -166,6 +190,14 @@ router.post("/send", async (req: Request, res: Response) => {
   const userId = getAuth(req).userId;
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  // Fail fast with a clear 503 if SMS isn't configured, instead of letting the
+  // lazy Twilio client throw an unhandled 500 mid-request.
+  if (!isTwilioConfigured()) {
+    req.log.warn("Family update send attempted but Twilio is not configured");
+    res.status(503).json({ error: "SMS delivery is not configured on this server" });
     return;
   }
 
