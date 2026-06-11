@@ -12,7 +12,7 @@ import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -194,26 +194,66 @@ function LockOverlay() {
 }
 
 /**
- * DeviceRegistration — fires once per (userId, sessionId) pair, recording
- * this device's active Clerk session on the server. The server revokes all
- * OTHER sessions for the same userId, enforcing one active device per account.
+ * DeviceRegistration — fires on sign-in AND on every app foreground (with a
+ * 5-minute debounce). On each call, the server upserts this device's active
+ * Clerk session and revokes all OTHER sessions for the same userId, enforcing
+ * one active device per account.
  *
- * Keyed by userId:sessionId so it re-fires only when a genuinely new session
- * is established (e.g. sign out → sign in again). Placed AFTER AuthTokenBridge
- * so getAuthToken() is wired before the first API call.
+ * Two triggers:
+ *   1. Sign-in / new session: useEffect on (isSignedIn, userId, sessionId)
+ *   2. App foreground: AppState "change" → "active" listener
+ *
+ * Debounce: skips the API call if the same (userId:sessionId) key was
+ * registered within the last 5 minutes, preventing excessive calls during
+ * rapid background/foreground cycles.
+ *
+ * Placed AFTER AuthTokenBridge so getAuthToken() is wired before the first
+ * API call.
  */
 function DeviceRegistration() {
   const { isSignedIn, userId, sessionId } = useAuth();
-  const registeredFor = useRef<string | null>(null);
-  useEffect(() => {
+
+  // Keep a ref to the latest auth state so the AppState listener always reads
+  // current values without needing to be re-registered on every render.
+  const authStateRef = useRef({ isSignedIn, userId, sessionId });
+  authStateRef.current = { isSignedIn, userId, sessionId };
+
+  const lastRegisteredKey = useRef<string | null>(null);
+  const lastRegisteredAt = useRef<number>(0);
+  const DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes
+
+  const doRegister = () => {
+    const { isSignedIn, userId, sessionId } = authStateRef.current;
     if (!isSignedIn || !userId || !sessionId) return;
     const key = `${userId}:${sessionId}`;
-    if (registeredFor.current === key) return;
-    registeredFor.current = key;
+    const now = Date.now();
+    // Allow immediate re-registration on a new session; debounce same session.
+    if (lastRegisteredKey.current === key && now - lastRegisteredAt.current < DEBOUNCE_MS) return;
+    lastRegisteredKey.current = key;
+    lastRegisteredAt.current = now;
     registerDevice().catch((err) => {
       console.debug("[device-registration] failed:", err);
     });
+  };
+
+  // Trigger 1: sign-in or new Clerk session
+  useEffect(() => {
+    doRegister();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, userId, sessionId]);
+
+  // Trigger 2: app foreground — re-registers to kick any device that signed
+  // in while this device was backgrounded, and refreshes lastSeenAt.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        doRegister();
+      }
+    });
+    return () => subscription.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return null;
 }
 

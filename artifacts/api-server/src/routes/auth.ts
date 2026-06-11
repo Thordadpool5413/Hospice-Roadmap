@@ -70,11 +70,15 @@ router.post("/register-device", async (req, res) => {
       return;
     }
 
-    // 3. Revoke their Clerk sessions (best-effort) and remove from our table.
-    //    The row deletion is unconditional — even if Clerk revocation fails,
-    //    we stop tracking the stale session to prevent phantom rows accumulating.
+    // 3. Revoke their Clerk sessions and remove rows from our table only when
+    //    revocation succeeds (or the session is already gone). On transient
+    //    Clerk API failures the row is kept so the next device registration
+    //    automatically retries. This prevents phantom "active" sessions that
+    //    aren't actually revoked from being silently dropped.
+    let revokedCount = 0;
     await Promise.allSettled(
       others.map(async (other) => {
+        let revoked = false;
         try {
           const r = await fetch(
             `https://api.clerk.com/v1/sessions/${encodeURIComponent(other.clerkSessionId)}/revoke`,
@@ -86,35 +90,42 @@ router.post("/register-device", async (req, res) => {
               },
             },
           );
-          if (!r.ok) {
+          if (r.ok || r.status === 404) {
+            // ok → revoked; 404 → session already expired/gone — both are success
+            revoked = true;
+            revokedCount++;
+          } else {
             req.log.warn(
               { clerkSessionId: other.clerkSessionId, status: r.status },
-              "register-device: Clerk session revocation returned non-OK",
+              "register-device: Clerk session revocation returned non-OK — row kept for retry",
             );
           }
         } catch (err) {
           req.log.warn(
             { err, clerkSessionId: other.clerkSessionId },
-            "register-device: Clerk session revocation request failed",
+            "register-device: Clerk session revocation request failed — row kept for retry",
           );
         }
-        await db
-          .delete(deviceSessions)
-          .where(
-            and(
-              eq(deviceSessions.userId, userId),
-              eq(deviceSessions.deviceId, other.deviceId),
-            ),
-          );
+        // Delete the tracking row only after confirmed revocation.
+        if (revoked) {
+          await db
+            .delete(deviceSessions)
+            .where(
+              and(
+                eq(deviceSessions.userId, userId),
+                eq(deviceSessions.deviceId, other.deviceId),
+              ),
+            );
+        }
       }),
     );
 
     req.log.info(
-      { userId, deviceId, revokedCount: others.length },
-      "register-device: session upserted, other device sessions revoked",
+      { userId, deviceId, revokedCount, totalOthers: others.length },
+      "register-device: session upserted, other device sessions processed",
     );
 
-    res.json({ ok: true, revokedCount: others.length });
+    res.json({ ok: true, revokedCount });
   } catch (err) {
     req.log.error({ err }, "register-device: unexpected error");
     res.status(500).json({ error: "Failed to register device" });
