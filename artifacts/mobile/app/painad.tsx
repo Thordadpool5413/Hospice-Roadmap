@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CosmicBackground } from "@/components/CosmicBackground";
 import { Colors } from "@/constants/colors";
 import { useJournal } from "@/context/JournalContext";
+import { useSymptoms } from "@/context/SymptomContext";
 
 interface Category {
   key: string;
@@ -101,6 +102,11 @@ function scoreDesc(total: number): string {
 export default function PainAdScreen() {
   const insets = useSafeAreaInsets();
   const { addEntry } = useJournal();
+  const {
+    addEntry: addSymptomEntry,
+    updateEntry: updateSymptomEntry,
+    getTodayEntry,
+  } = useSymptoms();
   const [scores, setScores] = useState<Record<string, 0 | 1 | 2>>({});
 
   const total = CATEGORIES.reduce((sum, cat) => sum + (scores[cat.key] ?? 0), 0);
@@ -132,6 +138,49 @@ export default function PainAdScreen() {
     Alert.alert("Saved", "Assessment saved to your Caregiver Journal.", [
       { text: "OK", onPress: () => router.back() },
     ]);
+  };
+
+  const handleSaveToSymptomTracker = async () => {
+    if (!allAnswered) {
+      Alert.alert("Complete Assessment", "Please answer all 5 categories before saving.");
+      return;
+    }
+    const pain = Math.max(0, Math.min(10, total));
+    const painadNote = `From PAINAD assessment (${pain}/10 — ${scoreLabel(total)})`;
+    const existing = getTodayEntry();
+
+    if (existing) {
+      // Symptom Tracker uses one entry per day — merge the PAINAD pain score into
+      // today's entry, replacing any prior PAINAD note line so re-saves stay clean.
+      const base = (existing.notes ?? "")
+        .split("\n")
+        .filter((line) => !line.startsWith("From PAINAD assessment"))
+        .join("\n")
+        .trim();
+      const notes = base ? `${base}\n${painadNote}` : painadNote;
+      await updateSymptomEntry(existing.id, { pain, notes });
+    } else {
+      const now = new Date();
+      const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      await addSymptomEntry({
+        date: now.toISOString().slice(0, 10),
+        time,
+        pain,
+        breathlessness: 0,
+        nausea: 0,
+        agitation: 0,
+        restlessness: false,
+        appetite: 2,
+        notes: painadNote,
+      });
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert(
+      "Saved to Symptom Tracker",
+      `Today's pain level was recorded as ${pain}/10 from this PAINAD assessment.`,
+      [{ text: "View Symptom Tracker", onPress: () => router.push("/symptom-tracker") }]
+    );
   };
 
   const handleAskRagna = () => {
@@ -245,6 +294,18 @@ export default function PainAdScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
+          <Pressable
+            onPress={handleSaveToSymptomTracker}
+            style={({ pressed }) => [
+              styles.symptomBtn,
+              !allAnswered && styles.btnDisabled,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Feather name="activity" size={17} color="#fff" />
+            <Text style={styles.symptomBtnText}>Save to Symptom Tracker</Text>
+          </Pressable>
+
           <Pressable
             onPress={handleSaveToJournal}
             style={({ pressed }) => [
@@ -375,6 +436,14 @@ const styles = StyleSheet.create({
   optionDesc: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#5A78A8", lineHeight: 17 },
 
   actions: { gap: 10 },
+  symptomBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 9, backgroundColor: Colors.accentSymptom, borderRadius: 15,
+    paddingVertical: 15,
+    shadowColor: Colors.accentSymptom, shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
+  },
+  symptomBtnText: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
   saveBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 9, backgroundColor: "#4A5E38", borderRadius: 15,

@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -15,8 +16,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { InteractionModal } from "@/components/InteractionModal";
 import { Colors } from "@/constants/colors";
 import { fetchFdaLabel } from "@/services/fdaService";
+import { useAppNetwork } from "@/hooks/useAppNetwork";
 import { RxNormResult, ttyLabel, useRxNorm } from "@/hooks/useRxNorm";
 
 // ─── Hospice clinical context ─────────────────────────────────────────────────
@@ -232,7 +235,17 @@ function FdaInteractionsCard({ drugName }: { drugName: string }) {
   );
 }
 
-function ResultCard({ result, onTap }: { result: RxNormResult; onTap: () => void }) {
+function ResultCard({
+  result,
+  onTap,
+  inMyMeds,
+  onToggleMyMed,
+}: {
+  result: RxNormResult;
+  onTap: () => void;
+  inMyMeds: boolean;
+  onToggleMyMed: () => void;
+}) {
   const hospice = getHospiceNote(result.name);
   const [expanded, setExpanded] = useState(false);
 
@@ -296,6 +309,26 @@ function ResultCard({ result, onTap }: { result: RxNormResult; onTap: () => void
       )}
 
       {expanded && <FdaInteractionsCard drugName={result.name} />}
+
+      {expanded && (
+        <Pressable
+          onPress={onToggleMyMed}
+          style={({ pressed }) => [
+            styles.addMedBtn,
+            inMyMeds && styles.addMedBtnActive,
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <Feather
+            name={inMyMeds ? "check" : "plus"}
+            size={14}
+            color={inMyMeds ? Colors.success : Colors.primary}
+          />
+          <Text style={[styles.addMedBtnText, inMyMeds && { color: Colors.success }]}>
+            {inMyMeds ? "Added to My Medications" : "Add to My Medications"}
+          </Text>
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -319,8 +352,56 @@ function CommonMedChip({ label, onPress }: { label: string; onPress: () => void 
 export default function MedicationLookupScreen() {
   const insets = useSafeAreaInsets();
   const { results, loading, search, clear } = useRxNorm();
+  const { isOnline } = useAppNetwork();
   const [query, setQuery] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [myMeds, setMyMeds] = useState<string[]>([]);
+  const [interactionVisible, setInteractionVisible] = useState(false);
+
+  const isInMyMeds = useCallback(
+    (name: string) => myMeds.some((m) => m.toLowerCase() === name.toLowerCase()),
+    [myMeds]
+  );
+
+  const toggleMyMed = useCallback(
+    (name: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const exists = myMeds.some((m) => m.toLowerCase() === name.toLowerCase());
+      if (!exists && myMeds.length >= 8) {
+        Alert.alert("Limit reached", "You can compare up to 8 medications at once.");
+        return;
+      }
+      setMyMeds((prev) =>
+        exists
+          ? prev.filter((m) => m.toLowerCase() !== name.toLowerCase())
+          : [...prev, name]
+      );
+    },
+    [myMeds]
+  );
+
+  const removeMyMed = useCallback((name: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setMyMeds((prev) => prev.filter((m) => m !== name));
+  }, []);
+
+  const handleCheckInteractions = useCallback(() => {
+    if (myMeds.length < 2 || !isOnline) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setInteractionVisible(true);
+  }, [myMeds.length, isOnline]);
+
+  const handleAskRagnaInteractions = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: "/(tabs)/help",
+      params: {
+        initialMessage: `I'm caring for someone who takes these medications: ${myMeds.join(
+          ", "
+        )}. Can you explain any important interactions between them and what I should watch for?`,
+      },
+    } as any);
+  }, [myMeds]);
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
@@ -400,6 +481,82 @@ export default function MedicationLookupScreen() {
           </Text>
         </View>
 
+        {/* My Medications (session-level multi-select) */}
+        {myMeds.length > 0 && (
+          <View style={styles.myMedsCard}>
+            <View style={styles.myMedsHeader}>
+              <Feather name="shield" size={15} color={Colors.primary} />
+              <Text style={styles.myMedsTitle}>My Medications</Text>
+              <View style={styles.myMedsCount}>
+                <Text style={styles.myMedsCountText}>{myMeds.length}</Text>
+              </View>
+            </View>
+            <Text style={styles.myMedsSub}>
+              A session list of medications to check together. Cleared when you leave this screen.
+            </Text>
+
+            <View style={styles.myMedsChips}>
+              {myMeds.map((m) => (
+                <View key={m} style={styles.myMedChip}>
+                  <Text style={styles.myMedChipText} numberOfLines={1}>
+                    {m}
+                  </Text>
+                  <Pressable onPress={() => removeMyMed(m)} hitSlop={8}>
+                    <Feather name="x" size={13} color={Colors.textMuted} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+
+            {myMeds.length < 2 ? (
+              <Text style={styles.myMedsHint}>
+                Add at least 2 medications to check interactions.
+              </Text>
+            ) : (
+              <View style={styles.myMedsActions}>
+                <Pressable
+                  onPress={handleCheckInteractions}
+                  disabled={!isOnline}
+                  style={({ pressed }) => [
+                    styles.checkBtn,
+                    !isOnline && styles.checkBtnDisabled,
+                    pressed && isOnline && { opacity: 0.85 },
+                  ]}
+                >
+                  <Feather
+                    name="shield"
+                    size={15}
+                    color={isOnline ? "#fff" : Colors.textMuted}
+                  />
+                  <Text style={[styles.checkBtnText, !isOnline && { color: Colors.textMuted }]}>
+                    Check Interactions
+                  </Text>
+                  <View style={styles.checkBtnBadge}>
+                    <Text style={styles.checkBtnBadgeText}>{myMeds.length} meds</Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={handleAskRagnaInteractions}
+                  style={({ pressed }) => [styles.askRagnaBtn, pressed && { opacity: 0.8 }]}
+                >
+                  <Feather name="message-circle" size={15} color={Colors.primary} />
+                  <Text style={styles.askRagnaBtnText}>Ask Ragna</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {myMeds.length >= 2 && !isOnline && (
+              <View style={styles.offlineNote}>
+                <Feather name="wifi-off" size={12} color={Colors.textSubtle} />
+                <Text style={styles.offlineNoteText}>
+                  Interaction check requires a connection.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Common hospice medications */}
         {showCommon && (
           <View style={styles.section}>
@@ -457,7 +614,13 @@ export default function MedicationLookupScreen() {
             )}
 
             {results.map((r) => (
-              <ResultCard key={r.rxcui} result={r} onTap={() => {}} />
+              <ResultCard
+                key={r.rxcui}
+                result={r}
+                onTap={() => {}}
+                inMyMeds={isInMyMeds(r.name)}
+                onToggleMyMed={() => toggleMyMed(r.name)}
+              />
             ))}
           </View>
         )}
@@ -470,6 +633,12 @@ export default function MedicationLookupScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <InteractionModal
+        visible={interactionVisible}
+        onClose={() => setInteractionVisible(false)}
+        medicationNames={myMeds}
+      />
     </View>
   );
 }
@@ -786,5 +955,159 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#3A5080",
     lineHeight: 16,
+  },
+
+  // ─── Add to My Medications (per result) ──────────────────────────────────
+  addMedBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 11,
+    backgroundColor: "rgba(60,120,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(60,120,255,0.30)",
+  },
+  addMedBtnActive: {
+    backgroundColor: "rgba(120,180,120,0.12)",
+    borderColor: "rgba(120,180,120,0.35)",
+  },
+  addMedBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+  },
+
+  // ─── My Medications panel ────────────────────────────────────────────────
+  myMedsCard: {
+    backgroundColor: "rgba(12,20,55,0.90)",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(60,120,255,0.28)",
+    gap: 12,
+  },
+  myMedsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  myMedsTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#DDE8FF",
+    letterSpacing: -0.25,
+  },
+  myMedsCount: {
+    minWidth: 24,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9,
+    backgroundColor: "rgba(60,120,255,0.18)",
+    alignItems: "center",
+  },
+  myMedsCountText: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: Colors.primary,
+  },
+  myMedsSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#7A90B8",
+    lineHeight: 17,
+  },
+  myMedsChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  myMedChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    maxWidth: "100%",
+    paddingLeft: 12,
+    paddingRight: 9,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: "rgba(40,70,160,0.25)",
+    borderWidth: 1,
+    borderColor: "rgba(60,90,170,0.30)",
+  },
+  myMedChipText: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "#DDE8FF",
+  },
+  myMedsHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  myMedsActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  checkBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 13,
+    backgroundColor: Colors.primary,
+  },
+  checkBtnDisabled: {
+    backgroundColor: "rgba(40,55,95,0.55)",
+  },
+  checkBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  checkBtnBadge: {
+    backgroundColor: "rgba(255,255,255,0.20)",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  checkBtnBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
+  askRagnaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 13,
+    backgroundColor: "rgba(60,120,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(60,120,255,0.30)",
+  },
+  askRagnaBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.primary,
+  },
+  offlineNote: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  offlineNoteText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textSubtle,
   },
 });
