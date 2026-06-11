@@ -30,8 +30,6 @@ import { StateLegalRegistry } from "@/content/legal/types";
 
 const FILTER_OPTIONS: FilterChipOption[] = [
   { key: "all", label: "All States" },
-  { key: "reviewed", label: "Reviewed" },
-  { key: "pending", label: "Pending Review" },
   { key: "saved", label: "Saved" },
 ];
 
@@ -69,12 +67,14 @@ export default function LegalHomeScreen() {
       ? searchStatesAndDocuments(query)
       : FULL_STATE_LEGAL_REGISTRY;
 
-    if (filter === "reviewed") list = list.filter((r) => r.review.reviewStatus === "reviewed");
-    else if (filter === "pending") list = list.filter((r) => r.review.reviewStatus === "pending_review");
-    else if (filter === "saved") list = list.filter((r) => savedStates.includes(r.stateCode));
+    if (filter === "saved") list = list.filter((r) => savedStates.includes(r.stateCode));
 
     return list;
   }, [query, filter, savedStates]);
+
+  const comingSoonCount = STATE_DIRECTORY.length - REVIEWED_STATE_CODES.length;
+  const showComingSoon =
+    query.trim().length === 0 && filter === "all" && comingSoonCount > 0;
 
   return (
     <View style={s.container}>
@@ -134,77 +134,46 @@ export default function LegalHomeScreen() {
         {filtered.length === 0 ? (
           <View style={s.empty}>
             <Feather name="search" size={28} color={Colors.textSubtle} />
-            <Text style={s.emptyText}>No states match "{query}"</Text>
+            <Text style={s.emptyText}>
+              {filter === "saved" && query.trim().length === 0
+                ? "No saved states yet"
+                : `No reviewed states match "${query}"`}
+            </Text>
             <Pressable onPress={() => { setQuery(""); setFilter("all"); }}>
               <Text style={s.emptyReset}>Clear search</Text>
             </Pressable>
           </View>
         ) : (
           <View style={s.list}>
-            {filter === "all" ? (
-              <>
-                {/* Reviewed section */}
-                {filtered.filter((r) => r.review.reviewStatus === "reviewed").length > 0 && (
-                  <>
-                    <View style={s.sectionHeader}>
-                      <Text style={s.sectionLabel}>Reviewed States</Text>
-                      <ReviewBadge status="reviewed" size="sm" />
-                    </View>
-                    {filtered
-                      .filter((r) => r.review.reviewStatus === "reviewed")
-                      .map((registry) => (
-                        <StateRowCard
-                          key={registry.stateCode}
-                          registry={registry}
-                          saved={isStateSaved(registry.stateCode)}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            router.push(`/legal/state/${registry.stateCode}` as any);
-                          }}
-                          onToggleSave={() => toggleState(registry.stateCode)}
-                        />
-                      ))}
-                  </>
-                )}
-                {/* Pending section */}
-                {filtered.filter((r) => r.review.reviewStatus !== "reviewed").length > 0 && (
-                  <>
-                    <View style={s.sectionHeader}>
-                      <Text style={s.sectionLabel}>All Other States</Text>
-                      <ReviewBadge status="pending_review" size="sm" />
-                    </View>
-                    {filtered
-                      .filter((r) => r.review.reviewStatus !== "reviewed")
-                      .map((registry) => (
-                        <StateRowCard
-                          key={registry.stateCode}
-                          registry={registry}
-                          saved={isStateSaved(registry.stateCode)}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            router.push(`/legal/state/${registry.stateCode}` as any);
-                          }}
-                          onToggleSave={() => toggleState(registry.stateCode)}
-                        />
-                      ))}
-                  </>
-                )}
-              </>
-            ) : (
-              /* For reviewed / pending / saved filters — flat list */
-              filtered.map((registry) => (
-                <StateRowCard
-                  key={registry.stateCode}
-                  registry={registry}
-                  saved={isStateSaved(registry.stateCode)}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push(`/legal/state/${registry.stateCode}` as any);
-                  }}
-                  onToggleSave={() => toggleState(registry.stateCode)}
-                />
-              ))
-            )}
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionLabel}>Reviewed States</Text>
+              <ReviewBadge status="reviewed" size="sm" />
+            </View>
+            {filtered.map((registry) => (
+              <StateRowCard
+                key={registry.stateCode}
+                registry={registry}
+                saved={isStateSaved(registry.stateCode)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push(`/legal/state/${registry.stateCode}` as any);
+                }}
+                onToggleSave={() => toggleState(registry.stateCode)}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* More states coming soon */}
+        {showComingSoon && (
+          <View style={s.comingSoon}>
+            <View style={s.comingSoonIcon}>
+              <Feather name="clock" size={18} color="#D59A32" />
+            </View>
+            <Text style={s.comingSoonTitle}>More states coming soon</Text>
+            <Text style={s.comingSoonText}>
+              We only publish advance directive guidance once it has been verified by our legal review. Reviewed guidance for the remaining {comingSoonCount} states and DC is on the way.
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -282,4 +251,23 @@ const s = StyleSheet.create({
   empty: { alignItems: "center", paddingVertical: 40, gap: 10 },
   emptyText: { fontSize: 14, fontFamily: "Inter_500Medium", color: "#5A78A8" },
   emptyReset: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.primary },
+  comingSoon: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(213,154,50,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(213,154,50,0.22)",
+    borderRadius: 14,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+  },
+  comingSoonIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: "rgba(213,154,50,0.14)",
+    alignItems: "center", justifyContent: "center",
+  },
+  comingSoonTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#EEF4FF", letterSpacing: -0.2 },
+  comingSoonText: { fontSize: 12.5, fontFamily: "Inter_400Regular", color: "#8FA0C4", lineHeight: 19, textAlign: "center" },
 });

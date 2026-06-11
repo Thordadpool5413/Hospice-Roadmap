@@ -7,15 +7,35 @@ import {
   GuidanceStage,
 } from "./types";
 
-// ─── Default governance placeholder ─────────────────────────────────────────
-// Replace "Unassigned" with real clinical owners when review workflow is ready.
+// ─── Default governance ──────────────────────────────────────────────────────
+// Owner is assigned per-category via getOwnerForCategory below.
 const DEFAULT_GOVERNANCE: GuidanceGovernance = {
-  owner: "Unassigned",
+  owner: "Care Coordination Team",
   reviewDate: null,
   approved: true,
   version: "1.0.0",
   sourceType: "clinical_editorial",
 };
+
+// Map each guidance category to the clinical team responsible for its content.
+function getOwnerForCategory(categoryId: GuidanceCategoryId): string {
+  switch (categoryId) {
+    case "symptoms":
+    case "medications":
+      return "Symptom Management Team";
+    case "emotional":
+    case "advocacy":
+      return "Communication & Family Team";
+    case "end-of-life":
+      return "End-of-Life Care Team";
+    case "caregiving":
+    case "equipment":
+    case "hospice-services":
+    case "unsure":
+    default:
+      return "Care Coordination Team";
+  }
+}
 
 // Helper: assign appropriate stages by category
 function getStagesForCategory(categoryId: GuidanceCategoryId): GuidanceStage[] {
@@ -3024,6 +3044,7 @@ export const guidanceItems: GuidanceContentItem[] = guidanceCategories.flatMap((
     keywords: s.tags,
     governance: {
       ...DEFAULT_GOVERNANCE,
+      owner: getOwnerForCategory(s.categoryId),
       sourceType:
         s.categoryId === "hospice-services"
           ? ("operational" as const)

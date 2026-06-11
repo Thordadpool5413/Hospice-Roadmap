@@ -4,7 +4,7 @@
  * Triggers on:
  *   - Initial sign-in (after ALL contexts finish loading from AsyncStorage —
  *     uses isLoading flags from AppContext, SymptomContext, JournalContext,
- *     RemindersContext, and VeraMemoryContext)
+ *     RemindersContext, and RagnaMemoryContext)
  *   - App foreground (AppState "active")
  *   - Network reconnect (isOnline transitions false → true via useAppNetwork)
  *   - Manual user tap via triggerSync() from CloudSyncContext
@@ -51,7 +51,7 @@ import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useJournal } from "@/context/JournalContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
-import { useVeraMemory } from "@/context/VeraMemoryContext";
+import { useRagnaMemory } from "@/context/RagnaMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
 import { clearRetryQueue, drainRetryQueue } from "@/services/retryQueue";
 import {
@@ -149,7 +149,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     isLoading: veraLoading,
     updateLivingProfile,
     hydrateFromServer: hydrateRagnaMemory,
-  } = useVeraMemory();
+  } = useRagnaMemory();
   const {
     entries: wellnessEntries,
     isLoading: wellnessLoading,
@@ -318,7 +318,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         const ragnaIsEmpty = ragnaMemories.length === 0 && ragnaTiles.length === 0;
 
         if (ragnaIsEmpty || serverIsNewer) {
-          const serverMemories = serverData.ragnaMemory.memories as import("@/types").VeraMemory[];
+          const serverMemories = serverData.ragnaMemory.memories as import("@/types").RagnaMemory[];
           const serverTiles = serverData.ragnaMemory.tiles as string[];
           const effectiveTs = serverTs ?? new Date().toISOString();
           // Pass the server's own updatedAt so local LWW is set correctly and
@@ -652,7 +652,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   ]);
 
   // Initial sync — runs once per sign-in, but only after ALL contexts have
-  // finished loading from AsyncStorage (including VeraMemoryContext)
+  // finished loading from AsyncStorage (including RagnaMemoryContext)
   useEffect(() => {
     if (!isSignedIn || !contextsReady || initialized.current) return;
     initialized.current = true;

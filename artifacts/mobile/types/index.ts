@@ -31,7 +31,7 @@ export interface PatientProfile {
 }
 
 // Legacy compatibility name retained for now. This type powers Ragna's emotional tone tracking and can be renamed in a later migration pass.
-export type VeraEmotionalTone =
+export type RagnaEmotionalTone =
   | "distressed"
   | "calm"
   | "seeking-info"
@@ -40,13 +40,13 @@ export type VeraEmotionalTone =
   | "mixed";
 
 // Legacy compatibility name retained for now. This interface powers Ragna's conversational memory and can be renamed in a later migration pass.
-export interface VeraMemory {
+export interface RagnaMemory {
   id: string;
   date: string;
   conversationId: number;
   summary: string;
   keyFacts: string[];
-  emotionalTone: VeraEmotionalTone;
+  emotionalTone: RagnaEmotionalTone;
   mainTopics: string[];
 }
 

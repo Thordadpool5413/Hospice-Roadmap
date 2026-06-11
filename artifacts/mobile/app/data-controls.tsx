@@ -21,7 +21,7 @@ import { useJournal } from "@/context/JournalContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
-import { useVeraMemory } from "@/context/VeraMemoryContext";
+import { useRagnaMemory } from "@/context/RagnaMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
 import { clearPendingDeletesForStore } from "@/services/pendingDeletes";
 import {
@@ -105,7 +105,7 @@ export default function DataControlsScreen() {
   const { entries: journalEntries, clearEntries: clearJournal } = useJournal();
   const { entries: symptomEntries, clearEntries: clearSymptoms } = useSymptoms();
   const { reminders, clearReminders } = useReminders();
-  const { memories, livingProfile, recentTiles, clearMemories } = useVeraMemory();
+  const { memories, livingProfile, recentTiles, clearMemories } = useRagnaMemory();
   const { observations, clearObservations } = useRagnaLearning();
 
   const { triggerSync, isSyncing, syncSucceededAt, syncError } = useCloudSync();

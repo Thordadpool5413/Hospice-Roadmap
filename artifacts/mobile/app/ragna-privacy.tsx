@@ -19,7 +19,7 @@ import { useApp } from "@/context/AppContext";
 import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useJournal } from "@/context/JournalContext";
 import { useSymptoms } from "@/context/SymptomContext";
-import { useVeraMemory } from "@/context/VeraMemoryContext";
+import { useRagnaMemory } from "@/context/RagnaMemoryContext";
 import {
   getHideReplyPreview,
   setHideReplyPreview,
@@ -32,7 +32,7 @@ export default function RagnaPrivacyScreen() {
   const { ragnaPrivacy, updateRagnaPrivacy, resetRagnaPrivacy, buildPatientContext, user } = useApp();
   const { getRecentSummary } = useSymptoms();
   const { entries: journalEntries } = useJournal();
-  const { getMemorySummary, clearMemories } = useVeraMemory();
+  const { getMemorySummary, clearMemories } = useRagnaMemory();
   const { getWellnessSummary } = useCaregiverWellness();
 
   const isCaregiverRole = user?.role === "caregiver" || user?.role === "other";

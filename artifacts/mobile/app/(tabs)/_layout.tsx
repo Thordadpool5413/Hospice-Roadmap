@@ -274,10 +274,6 @@ export default function TabLayout() {
         name="providers"
         options={{ href: null }}
       />
-      <Tabs.Screen
-        name="resources"
-        options={{ href: null }}
-      />
     </Tabs>
   );
 }

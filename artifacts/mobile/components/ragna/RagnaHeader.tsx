@@ -8,9 +8,10 @@ interface RagnaHeaderProps {
   hasMessages: boolean;
   memoryCount: number;
   onNewConversation: () => void;
+  onVoicePress: () => void;
 }
 
-export function RagnaHeader({ hasMessages, memoryCount, onNewConversation }: RagnaHeaderProps) {
+export function RagnaHeader({ hasMessages, memoryCount, onNewConversation, onVoicePress }: RagnaHeaderProps) {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -35,6 +36,15 @@ export function RagnaHeader({ hasMessages, memoryCount, onNewConversation }: Rag
         </View>
       </View>
       <View style={styles.headerRight}>
+        <Pressable
+          onPress={onVoicePress}
+          accessibilityRole="button"
+          accessibilityLabel="Talk to Ragna with voice"
+          hitSlop={8}
+          style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+        >
+          <Feather name="mic" size={18} color={Colors.navySub} />
+        </Pressable>
         {hasMessages && (
           <Pressable
             onPress={onNewConversation}

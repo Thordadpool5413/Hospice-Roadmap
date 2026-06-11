@@ -17,7 +17,7 @@ import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useSymptoms } from "@/context/SymptomContext";
-import { useVeraMemory } from "@/context/VeraMemoryContext";
+import { useRagnaMemory } from "@/context/RagnaMemoryContext";
 import {
   createConversation,
   saveVoiceExchange,
@@ -91,7 +91,7 @@ export default function VoiceScreen() {
   const { buildPatientContext, ragnaPrivacy } = useApp();
   const { getRecentSummary } = useSymptoms();
   const { entries: journalEntries } = useJournal();
-  const { getMemorySummary } = useVeraMemory();
+  const { getMemorySummary } = useRagnaMemory();
   const { getObservationContext } = useRagnaLearning();
 
   const [voiceStatus, setVoiceStatus] = useState<OpenAiVoiceStatus>("idle");

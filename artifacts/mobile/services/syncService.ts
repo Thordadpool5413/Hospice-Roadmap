@@ -37,7 +37,7 @@ import { getAuthToken } from "@workspace/api-client-react";
 import { apiBase, makeRequestTimeoutSignal, mergeJsonHeaders } from "./apiClient";
 import { GOC_FIELDS, mergeGoalsOfCare } from "@workspace/goc-merge";
 import type { GoalsOfCare, GoalsOfCareField } from "@workspace/goc-merge";
-import type { CaregiverWellnessEntry, JournalEntry, Reminder, SymptomEntry, VeraMemory } from "@/types";
+import type { CaregiverWellnessEntry, JournalEntry, Reminder, SymptomEntry, RagnaMemory } from "@/types";
 
 // ─── Last-success timestamp key ───────────────────────────────────────────────
 
@@ -185,7 +185,7 @@ export interface ServerSyncData {
   userProfile: { data: Record<string, unknown>; updatedAt?: string } | null;
   /**
    * The full DB row for Ragna AI memory — includes `updatedAt` (ISO string)
-   * alongside `memories` (VeraMemory[]) and `tiles` (string[]).
+   * alongside `memories` (RagnaMemory[]) and `tiles` (string[]).
    * Null when the user has no synced memory yet.
    */
   ragnaMemory: { memories: unknown[]; tiles: unknown[]; updatedAt?: string } | null;
@@ -408,14 +408,14 @@ export async function deleteAllServerData(): Promise<boolean> {
 
 /**
  * Upload Ragna's full memory state (memories array + tile history) to the server.
- * @param memories      The current VeraMemory[] array (capped at MAX_MEMORIES).
+ * @param memories      The current RagnaMemory[] array (capped at MAX_MEMORIES).
  * @param tiles         The current recent tile/topic labels (capped at MAX_TILES).
  * @param updatedAt     The ISO timestamp of the most recent local write —
  *                      used as the LWW version key so a stale device cannot
  *                      overwrite fresher data from another device.
  */
 export async function uploadRagnaMemory(
-  memories: VeraMemory[],
+  memories: RagnaMemory[],
   tiles: string[],
   updatedAt: string,
 ): Promise<boolean> {
@@ -691,7 +691,7 @@ export async function runOnceLocalMigration(serverData: ServerSyncData): Promise
           AsyncStorage.getItem(AS_RAGNA_MEMORIES),
           AsyncStorage.getItem(AS_RAGNA_TILES),
         ]);
-        const localMemories: VeraMemory[] = memoriesRaw ? JSON.parse(memoriesRaw) : [];
+        const localMemories: RagnaMemory[] = memoriesRaw ? JSON.parse(memoriesRaw) : [];
         const localTiles: string[] = tilesRaw ? JSON.parse(tilesRaw) : [];
         if (localMemories.length === 0 && localTiles.length === 0) {
           // Nothing to migrate

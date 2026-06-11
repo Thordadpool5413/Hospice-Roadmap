@@ -20,7 +20,8 @@ import { ReviewBadge } from "@/components/legal/ReviewBadge";
 import { SavedItemButton } from "@/components/legal/SavedItemButton";
 import { StateOverviewCard } from "@/components/legal/StateOverviewCard";
 import { Colors } from "@/constants/colors";
-import { getStateRegistry, getStateSourceBanner } from "@/content/legal";
+import { getStateRegistry, getStateSourceBanner, isStateComingSoon } from "@/content/legal";
+import { STATE_DIRECTORY } from "@/content/legal/stateDirectory";
 import { useLegalBookmarks } from "@/hooks/useLegalBookmarks";
 import { StateLegalRegistry, StateCode } from "@/content/legal/types";
 
@@ -36,11 +37,26 @@ export default function StateLegalDetailScreen() {
   }, [code]);
 
   if (!registry) {
+    const comingSoon = code ? isStateComingSoon(code as StateCode) : false;
+    const stateName = code
+      ? STATE_DIRECTORY.find((s2) => s2.code === code)?.name
+      : undefined;
     return (
       <View style={s.notFound}>
         <CosmicBackground />
-        <Feather name="alert-circle" size={32} color={Colors.textSubtle} />
-        <Text style={s.notFoundText}>State not found: {code}</Text>
+        <Feather
+          name={comingSoon ? "clock" : "alert-circle"}
+          size={32}
+          color={comingSoon ? "#D59A32" : Colors.textSubtle}
+        />
+        <Text style={s.notFoundTitle}>
+          {comingSoon ? `${stateName ?? "This state"} is coming soon` : `State not found: ${code}`}
+        </Text>
+        {comingSoon && (
+          <Text style={s.notFoundText}>
+            Advance directives guidance for this state is coming soon. We only publish guidance once it has been verified by our legal review.
+          </Text>
+        )}
         <Pressable onPress={() => router.back()} style={s.backLink}>
           <Text style={s.backLinkText}>Go Back</Text>
         </Pressable>
@@ -191,8 +207,9 @@ export default function StateLegalDetailScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  notFound: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  notFoundText: { fontSize: 16, fontFamily: "Inter_500Medium", color: Colors.textMuted },
+  notFound: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32 },
+  notFoundTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center", letterSpacing: -0.2 },
+  notFoundText: { fontSize: 13.5, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", lineHeight: 20 },
   backLink: { paddingHorizontal: 16, paddingVertical: 8 },
   backLinkText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.primary },
   header: {

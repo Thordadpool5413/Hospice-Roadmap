@@ -489,7 +489,7 @@ export default function GoalsOfCareScreen() {
           </Pressable>
         </View>
 
-        {/* Vera context preview */}
+        {/* Ragna context preview */}
         {hasAnyContent && (
           <View style={styles.previewCard}>
             <View style={styles.previewHeader}>

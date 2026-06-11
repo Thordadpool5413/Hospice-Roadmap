@@ -1,5 +1,4 @@
 // Powers Ragna's conversational memory, living profile, and tile history.
-// File name retained as VeraMemoryContext for storage compatibility — safe to rename in a later migration pass.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
@@ -10,8 +9,8 @@ import React, {
   useState,
 } from "react";
 
-// Legacy compatibility name retained for now. This type powers Ragna memory and can be renamed in a later migration pass.
-import { VeraMemory } from "@/types";
+// This type powers Ragna memory.
+import { RagnaMemory } from "@/types";
 import { uploadRagnaMemory } from "@/services/syncService";
 
 // AsyncStorage keys are frozen — renaming would lose existing user data.
@@ -26,9 +25,9 @@ const RAGNA_MEMORY_UPDATED_AT_KEY = "@ragna_memory_updated_at_v1";
 const MAX_MEMORIES = 5;
 const MAX_TILES = 20;
 
-// Legacy compatibility name retained for now. Powers Ragna memory context.
-interface VeraMemoryContextType {
-  memories: VeraMemory[];
+// Powers Ragna memory context.
+interface RagnaMemoryContextType {
+  memories: RagnaMemory[];
   livingProfile: string;
   /** ISO timestamp of the last local write to livingProfile — used as LWW version key for sync. */
   livingProfileUpdatedAt: string;
@@ -37,7 +36,7 @@ interface VeraMemoryContextType {
   recentTiles: string[];
   /** True while the initial AsyncStorage load is still in flight. */
   isLoading: boolean;
-  addMemory: (memory: VeraMemory) => Promise<void>;
+  addMemory: (memory: RagnaMemory) => Promise<void>;
   clearMemories: () => Promise<void>;
   updateLivingProfile: (profile: string, updatedAt?: string) => Promise<void>;
   recordTile: (label: string) => void;
@@ -51,25 +50,25 @@ interface VeraMemoryContextType {
    *   LWW version so the next sync doesn't immediately re-upload as "newer".
    */
   hydrateFromServer: (
-    serverMemories: VeraMemory[],
+    serverMemories: RagnaMemory[],
     serverTiles: string[],
     serverUpdatedAt: string,
   ) => Promise<void>;
 }
 
-// Legacy compatibility name retained for now. Powers Ragna memory context.
-const VeraMemoryContext = createContext<VeraMemoryContextType | null>(null);
+// Powers Ragna memory context.
+const RagnaMemoryContext = createContext<RagnaMemoryContextType | null>(null);
 
-// Legacy compatibility name retained for now. Hook that provides Ragna's memory to consumers.
-export function useVeraMemory(): VeraMemoryContextType {
-  const ctx = useContext(VeraMemoryContext);
-  if (!ctx) throw new Error("useVeraMemory must be inside VeraMemoryProvider");
+// Hook that provides Ragna's memory to consumers.
+export function useRagnaMemory(): RagnaMemoryContextType {
+  const ctx = useContext(RagnaMemoryContext);
+  if (!ctx) throw new Error("useRagnaMemory must be inside RagnaMemoryProvider");
   return ctx;
 }
 
-// Legacy compatibility name retained for now. Provides Ragna's memory state to the tree.
-export function VeraMemoryProvider({ children }: { children: React.ReactNode }) {
-  const [memories, setMemories] = useState<VeraMemory[]>([]);
+// Provides Ragna's memory state to the tree.
+export function RagnaMemoryProvider({ children }: { children: React.ReactNode }) {
+  const [memories, setMemories] = useState<RagnaMemory[]>([]);
   const [livingProfile, setLivingProfile] = useState<string>("");
   const [livingProfileUpdatedAt, setLivingProfileUpdatedAt] = useState<string>("");
   const [ragnaMemoryUpdatedAt, setRagnaMemoryUpdatedAt] = useState<string>("");
@@ -78,7 +77,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
 
   // Refs so upload callbacks always see the current value without being listed
   // in every useCallback dependency array.
-  const memoriesRef = useRef<VeraMemory[]>([]);
+  const memoriesRef = useRef<RagnaMemory[]>([]);
   const tilesRef = useRef<string[]>([]);
   const ragnaMemoryUpdatedAtRef = useRef<string>("");
 
@@ -92,7 +91,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
     ])
       .then(([memoriesRaw, profileRaw, profileUpdatedAtRaw, tilesRaw, ragnaUpdatedAtRaw]) => {
         if (memoriesRaw) {
-          const parsed = JSON.parse(memoriesRaw) as VeraMemory[];
+          const parsed = JSON.parse(memoriesRaw) as RagnaMemory[];
           setMemories(parsed);
           memoriesRef.current = parsed;
         }
@@ -112,7 +111,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
       .finally(() => setIsLoading(false));
   }, []);
 
-  const persistMemories = useCallback(async (updated: VeraMemory[]) => {
+  const persistMemories = useCallback(async (updated: RagnaMemory[]) => {
     setMemories(updated);
     memoriesRef.current = updated;
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -131,7 +130,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const addMemory = useCallback(
-    async (memory: VeraMemory) => {
+    async (memory: RagnaMemory) => {
       const deduped = memoriesRef.current.filter(
         (m) => m.conversationId !== memory.conversationId,
       );
@@ -204,7 +203,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
    * Does NOT fire a write-through upload — the data came from the server.
    */
   const hydrateFromServer = useCallback(
-    async (serverMemories: VeraMemory[], serverTiles: string[], serverUpdatedAt: string) => {
+    async (serverMemories: RagnaMemory[], serverTiles: string[], serverUpdatedAt: string) => {
       setMemories(serverMemories);
       memoriesRef.current = serverMemories;
       setRecentTiles(serverTiles);
@@ -268,7 +267,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
   }, [memories, livingProfile, recentTiles]);
 
   return (
-    <VeraMemoryContext.Provider
+    <RagnaMemoryContext.Provider
       value={{
         memories,
         livingProfile,
@@ -286,7 +285,7 @@ export function VeraMemoryProvider({ children }: { children: React.ReactNode }) 
       }}
     >
       {children}
-    </VeraMemoryContext.Provider>
+    </RagnaMemoryContext.Provider>
   );
 }
 

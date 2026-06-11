@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Speech from "expo-speech";
 import React, {
   useCallback,
@@ -28,7 +28,7 @@ import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
-import { useVeraMemory } from "@/context/VeraMemoryContext";
+import { useRagnaMemory } from "@/context/RagnaMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
 import {
   AiConversation,
@@ -64,7 +64,7 @@ import {
   setHideReplyPreview,
 } from "@/services/ragnaPreviewPreference";
 import { setPreferredVoice } from "@/services/voicePreferences";
-import { RagnaAction, SymptomEntry, VeraEmotionalTone } from "@/types";
+import { RagnaAction, SymptomEntry, RagnaEmotionalTone } from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
 import { RagnaEmptyState } from "@/components/ragna/RagnaEmptyState";
@@ -312,7 +312,7 @@ export default function HelpScreen() {
     updateLivingProfile,
     recentTiles,
     recordTile,
-  } = useVeraMemory();
+  } = useRagnaMemory();
   const { getObservationContext } = useRagnaLearning();
   const { getWellnessSummary } = useCaregiverWellness();
   const { isOnline, issue: networkIssue, statusMessage } = useAppNetwork();
@@ -1195,7 +1195,7 @@ export default function HelpScreen() {
                   summary: newMemory.summary,
                   keyFacts: newMemory.keyFacts,
                   emotionalTone:
-                    (newMemory.emotionalTone as VeraEmotionalTone) ?? "calm",
+                    (newMemory.emotionalTone as RagnaEmotionalTone) ?? "calm",
                   mainTopics: newMemory.mainTopics,
                 });
                 const updatedProfile = await synthesizeProfile(
@@ -1385,6 +1385,10 @@ export default function HelpScreen() {
         hasMessages={hasMessages}
         memoryCount={memoryCount}
         onNewConversation={handleClearConversation}
+        onVoicePress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push("/(tabs)/voice");
+        }}
       />
 
       <ScrollView

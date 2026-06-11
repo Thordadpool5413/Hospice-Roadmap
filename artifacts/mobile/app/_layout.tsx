@@ -30,7 +30,7 @@ import { RagnaLearningProvider, useRagnaLearning } from "@/context/RagnaLearning
 import { RemindersProvider } from "@/context/RemindersContext";
 import { SymptomProvider } from "@/context/SymptomContext";
 import { CaregiverWellnessProvider } from "@/context/CaregiverWellnessContext";
-import { useVeraMemory, VeraMemoryProvider } from "@/context/VeraMemoryContext";
+import { useRagnaMemory, RagnaMemoryProvider } from "@/context/RagnaMemoryContext";
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
 
@@ -132,13 +132,13 @@ function AuthTokenBridge() {
   return null;
 }
 
-// LearningSync bridges RagnaLearningContext and VeraMemoryContext.
+// LearningSync bridges RagnaLearningContext and RagnaMemoryContext.
 // It silently synthesizes the living profile from app-activity observations
 // whenever 3+ significant events have accumulated and 2 hours have passed
 // since the last synthesis — no user action required.
 function LearningSync() {
   const { observations, significantCount, lastSignificantAt } = useRagnaLearning();
-  const { livingProfile, updateLivingProfile } = useVeraMemory();
+  const { livingProfile, updateLivingProfile } = useRagnaMemory();
   const lastSynthesisAt = useRef<number>(0);
 
   useEffect(() => {
@@ -476,7 +476,7 @@ export default function RootLayout() {
                 <RemindersProvider>
                 <SymptomProvider>
                 <CaregiverWellnessProvider>
-                <VeraMemoryProvider>
+                <RagnaMemoryProvider>
                 <RagnaLearningProvider>
                 <QueryClientProvider client={queryClient}>
                   <SubscriptionProvider>
@@ -497,7 +497,7 @@ export default function RootLayout() {
                   </SubscriptionProvider>
                 </QueryClientProvider>
                 </RagnaLearningProvider>
-                </VeraMemoryProvider>
+                </RagnaMemoryProvider>
                 </CaregiverWellnessProvider>
                 </SymptomProvider>
                 </RemindersProvider>
