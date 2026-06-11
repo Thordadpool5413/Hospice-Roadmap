@@ -143,6 +143,7 @@ export default function MoreScreen() {
           { label: "Active Dying — What to Expect", icon: "heart", route: "/active-dying", color: Colors.journeyDuring } as MenuItem,
           { label: "Pain Assessment Tool (PAINAD)", icon: "activity", route: "/painad", color: Colors.amber } as MenuItem,
         ] : []),
+        { label: "Find Hospice Providers", icon: "map-pin", route: "/(tabs)/providers", color: Colors.accentSituation },
         { label: "Hospice Interview Scorecard", icon: "check-square", route: "/hospice-interview", color: Colors.accentGoals },
         { label: "Advance Directives & State Forms", icon: "file-text", route: "/legal", color: Colors.accentJourney },
         { label: "Resource Library", icon: "book-open", route: "/resources", color: Colors.textMuted },
