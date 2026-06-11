@@ -3,6 +3,9 @@ import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import { RagnaAction } from "@/types";
+
+export type RagnaActionState = "pending" | "done" | "skipped";
 
 export interface LocalMessage {
   id: string;
@@ -12,6 +15,10 @@ export interface LocalMessage {
   audioBase64?: string;
   audioMimeType?: string;
   audioUrl?: string;
+  /** Structured action Ragna requested alongside this message, if any. */
+  action?: RagnaAction;
+  /** Lifecycle of the action card for this message. */
+  actionState?: RagnaActionState;
 }
 
 function renderInline(text: string): React.ReactNode {

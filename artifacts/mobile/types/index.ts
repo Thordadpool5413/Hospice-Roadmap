@@ -327,6 +327,37 @@ export interface Reminder {
   updatedAt?: string;
 }
 
+// ─── Ragna Actions (chat write-back) ──────────────────────────────────────────
+
+/**
+ * A structured action Ragna can request from the chat. The mobile app renders a
+ * one-tap confirmation card and, on confirm, calls the matching context method.
+ * Mirrors the `RagnaAction` type on the API server
+ * (artifacts/api-server/src/routes/anthropic/ragnaActions.ts). Create-only.
+ */
+export type RagnaAction =
+  | {
+      action: "create_reminder";
+      label: string;
+      /** Local ISO-8601 datetime, no timezone offset. */
+      datetime: string;
+      reminderType: ReminderType;
+      recurrence: ReminderRecurrence;
+    }
+  | {
+      action: "log_symptom";
+      pain?: number;
+      breathlessness?: number;
+      nausea?: number;
+      notes?: string;
+    }
+  | {
+      action: "add_journal_entry";
+      title: string;
+      body: string;
+      journalType: JournalEntryType;
+    };
+
 // ─── Caregiver Wellness ───────────────────────────────────────────────────────
 
 /** Five mood states for the caregiver daily wellness check-in. */

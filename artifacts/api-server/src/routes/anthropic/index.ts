@@ -6,6 +6,11 @@ import { conversations, messages } from "@workspace/db/schema";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { HOSPICE_SYSTEM_PROMPT } from "./systemPrompt.js";
 import { buildResponsePlan } from "../../intelligence/hospice/planner.js";
+import {
+  buildRagnaActionInstructions,
+  createActionStreamFilter,
+  type RagnaAction,
+} from "./ragnaActions.js";
 import { MODELS } from "../../config/models.js";
 import { requirePremium } from "../../middlewares/requirePremium.js";
 
@@ -158,6 +163,7 @@ router.post("/conversations/:id/messages", requirePremium, async (req: Request, 
   }
 
   let fullResponse = "";
+  let cleanedResponse = "";
 
   try {
     const [conv] = await db
@@ -203,6 +209,7 @@ router.post("/conversations/:id/messages", requirePremium, async (req: Request, 
       responsePlanKnowledge
         ? `\n\n═══════════════════════════════════════\nINTELLIGENCE PACKAGE — FOLLOW THIS PLAN\n═══════════════════════════════════════\n${responsePlanKnowledge}`
         : "",
+      buildRagnaActionInstructions(new Date()),
     ]
       .filter(Boolean)
       .join("");
@@ -220,24 +227,43 @@ router.post("/conversations/:id/messages", requirePremium, async (req: Request, 
         messages: chatMessages,
       });
 
+      const actionFilter = createActionStreamFilter();
+
       for await (const event of stream) {
         if (
           event.type === "content_block_delta" &&
           event.delta.type === "text_delta"
         ) {
           fullResponse += event.delta.text;
-          res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+          const safe = actionFilter.push(event.delta.text);
+          if (safe) {
+            cleanedResponse += safe;
+            res.write(`data: ${JSON.stringify({ content: safe })}\n\n`);
+          }
         }
+      }
+
+      const { trailing, action } = actionFilter.finish();
+      if (trailing) {
+        cleanedResponse += trailing;
+        res.write(`data: ${JSON.stringify({ content: trailing })}\n\n`);
+      }
+      if (action) {
+        res.write(`data: ${JSON.stringify({ action } as { action: RagnaAction })}\n\n`);
       }
 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
     } finally {
-      if (fullResponse) {
+      // Persist the cleaned prose (action block stripped) so reloaded
+      // conversations never show raw JSON. Fall back to the raw response if the
+      // stream errored before the filter could flush.
+      const toSave = (cleanedResponse.trim() || fullResponse.trim());
+      if (toSave) {
         await db.insert(messages).values({
           conversationId: id,
           role: "assistant",
-          content: fullResponse,
+          content: toSave,
         });
       }
     }

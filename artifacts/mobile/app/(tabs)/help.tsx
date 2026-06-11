@@ -26,6 +26,7 @@ import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
 import { useCaregiverWellness } from "@/context/CaregiverWellnessContext";
 import { useRagnaLearning } from "@/context/RagnaLearningContext";
+import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useVeraMemory } from "@/context/VeraMemoryContext";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
@@ -63,11 +64,12 @@ import {
   setHideReplyPreview,
 } from "@/services/ragnaPreviewPreference";
 import { setPreferredVoice } from "@/services/voicePreferences";
-import { VeraEmotionalTone } from "@/types";
+import { RagnaAction, SymptomEntry, VeraEmotionalTone } from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
 import { RagnaEmptyState } from "@/components/ragna/RagnaEmptyState";
 import { RagnaHeader } from "@/components/ragna/RagnaHeader";
+import { RagnaActionToast } from "@/components/ragna/RagnaActionToast";
 import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
 import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
 import { PremiumGate } from "@/components/PremiumGate";
@@ -296,8 +298,11 @@ export default function HelpScreen() {
     entries: symptomEntries,
     getTodayEntry,
     getRecentSummary,
+    addEntry: addSymptomEntry,
+    updateEntry: updateSymptomEntry,
   } = useSymptoms();
-  const { entries: journalEntries } = useJournal();
+  const { entries: journalEntries, addEntry: addJournalEntry } = useJournal();
+  const { addReminder } = useReminders();
   const {
     memories,
     addMemory,
@@ -315,6 +320,7 @@ export default function HelpScreen() {
     initialMessage?: string;
   }>();
   const lastInitialRef = useRef("");
+  const actionInFlightRef = useRef<Set<string>>(new Set());
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
   const liveSpeechQueueRef = useRef<string[]>([]);
@@ -346,6 +352,11 @@ export default function HelpScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [actionToast, setActionToast] = useState<{
+    signal: number;
+    message: string;
+    tone: "success" | "error";
+  }>({ signal: 0, message: "", tone: "success" });
   const [knowsExpanded, setKnowsExpanded] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState("marin");
   const [isVoiceBusy, setIsVoiceBusy] = useState(false);
@@ -859,6 +870,7 @@ export default function HelpScreen() {
 
       const patientContext = buildRagnaPatientContext();
       let streamedAssistantText = "";
+      let streamedAction: RagnaAction | null = null;
       let lockScreenSummaryTimer: ReturnType<typeof setTimeout> | null = null;
       const flushLockScreenSummary = (finalText?: string) => {
         if (lockScreenSummaryTimer) {
@@ -907,7 +919,14 @@ export default function HelpScreen() {
           setLocalMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId
-                ? { ...m, content: parsedText, isStreaming: false }
+                ? {
+                    ...m,
+                    content: parsedText,
+                    isStreaming: false,
+                    ...(streamedAction
+                      ? { action: streamedAction, actionState: "pending" as const }
+                      : {}),
+                  }
                 : m,
             ),
           );
@@ -946,6 +965,9 @@ export default function HelpScreen() {
           setIsStreaming(false);
           setTimeout(() => inputRef.current?.focus(), 300);
         },
+        (action) => {
+          streamedAction = action;
+        },
       );
     },
     [
@@ -961,6 +983,117 @@ export default function HelpScreen() {
       synthesizeAssistantVoice,
     ],
   );
+
+  const handleConfirmAction = useCallback(
+    async (messageId: string) => {
+      const msg = localMessages.find((m) => m.id === messageId);
+      if (!msg || !msg.action || msg.actionState !== "pending") return;
+      // Synchronous guard against a double-tap creating duplicate records:
+      // setState is async, so two rapid taps can both pass the check above.
+      if (actionInFlightRef.current.has(messageId)) return;
+      actionInFlightRef.current.add(messageId);
+      const action = msg.action;
+
+      const markDone = () =>
+        setLocalMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, actionState: "done" as const } : m,
+          ),
+        );
+
+      try {
+        if (action.action === "create_reminder") {
+          await addReminder({
+            type: action.reminderType,
+            label: action.label,
+            datetime: action.datetime,
+            recurrence: action.recurrence,
+          });
+          markDone();
+          setActionToast({
+            signal: Date.now(),
+            message: "Reminder added",
+            tone: "success",
+          });
+        } else if (action.action === "log_symptom") {
+          const existing = getTodayEntry();
+          if (existing) {
+            const updates: Partial<Omit<SymptomEntry, "id">> = {};
+            if (action.pain !== undefined) updates.pain = action.pain;
+            if (action.breathlessness !== undefined)
+              updates.breathlessness = action.breathlessness;
+            if (action.nausea !== undefined) updates.nausea = action.nausea;
+            if (action.notes) {
+              updates.notes = [existing.notes, action.notes]
+                .filter(Boolean)
+                .join(" · ");
+            }
+            await updateSymptomEntry(existing.id, updates);
+          } else {
+            const d = new Date();
+            await addSymptomEntry({
+              date: d.toISOString().slice(0, 10),
+              time: `${String(d.getHours()).padStart(2, "0")}:${String(
+                d.getMinutes(),
+              ).padStart(2, "0")}`,
+              pain: action.pain ?? 0,
+              breathlessness: action.breathlessness ?? 0,
+              nausea: action.nausea ?? 0,
+              agitation: 0,
+              restlessness: false,
+              appetite: 0,
+              notes: action.notes,
+            });
+          }
+          markDone();
+          setActionToast({
+            signal: Date.now(),
+            message: "Symptoms logged",
+            tone: "success",
+          });
+        } else {
+          await addJournalEntry({
+            type: action.journalType,
+            title: action.title,
+            body: action.body,
+            date: new Date().toISOString(),
+          });
+          markDone();
+          setActionToast({
+            signal: Date.now(),
+            message: "Journal entry added",
+            tone: "success",
+          });
+        }
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        // Leave the card in "pending" so the user can retry.
+        setActionToast({
+          signal: Date.now(),
+          message: "Couldn't save — please try again",
+          tone: "error",
+        });
+      } finally {
+        actionInFlightRef.current.delete(messageId);
+      }
+    },
+    [
+      localMessages,
+      addReminder,
+      getTodayEntry,
+      updateSymptomEntry,
+      addSymptomEntry,
+      addJournalEntry,
+    ],
+  );
+
+  const handleSkipAction = useCallback((messageId: string) => {
+    setLocalMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, actionState: "skipped" as const } : m,
+      ),
+    );
+  }, []);
 
   const handleVoiceSelect = useCallback(async (voiceId: string) => {
     setSelectedVoice(voiceId);
@@ -1298,6 +1431,10 @@ export default function HelpScreen() {
               void sendMessage(text);
             }}
             onPlayAudio={handlePlayAudio}
+            onConfirmAction={(id) => {
+              void handleConfirmAction(id);
+            }}
+            onSkipAction={handleSkipAction}
           />
         )}
       </ScrollView>
@@ -1351,6 +1488,11 @@ export default function HelpScreen() {
             : undefined
         }
         onReplyPreviewLongPress={handleReplyPreviewLongPress}
+      />
+      <RagnaActionToast
+        signal={actionToast.signal}
+        message={actionToast.message}
+        tone={actionToast.tone}
       />
     </KeyboardAvoidingView>
     </PremiumGate>

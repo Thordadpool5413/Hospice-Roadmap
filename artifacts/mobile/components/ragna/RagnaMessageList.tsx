@@ -11,6 +11,7 @@ import {
 
 import { Colors } from "@/constants/colors";
 
+import { RagnaActionCard } from "./RagnaActionCard";
 import { LocalMessage, RagnaMessageBubble } from "./RagnaMessageBubble";
 
 interface RagnaMessageListProps {
@@ -21,6 +22,8 @@ interface RagnaMessageListProps {
   onShareMessage: (content: string) => void;
   onSuggestionPress: (text: string) => void;
   onPlayAudio?: (message: LocalMessage) => void;
+  onConfirmAction?: (messageId: string) => void;
+  onSkipAction?: (messageId: string) => void;
 }
 
 export function RagnaMessageList({
@@ -31,26 +34,37 @@ export function RagnaMessageList({
   onShareMessage,
   onSuggestionPress,
   onPlayAudio,
+  onConfirmAction,
+  onSkipAction,
 }: RagnaMessageListProps) {
   return (
     <View style={styles.messagesContainer}>
       {localMessages.map((msg) => (
-        <RagnaMessageBubble
-          key={msg.id}
-          message={msg}
-          onLongPress={
-            msg.role === "assistant" && msg.content
-              ? () => onShareMessage(msg.content)
-              : undefined
-          }
-          onPlayAudio={
-            msg.role === "assistant" &&
-            (msg.audioBase64 || msg.audioUrl) &&
-            onPlayAudio
-              ? () => onPlayAudio(msg)
-              : undefined
-          }
-        />
+        <React.Fragment key={msg.id}>
+          <RagnaMessageBubble
+            message={msg}
+            onLongPress={
+              msg.role === "assistant" && msg.content
+                ? () => onShareMessage(msg.content)
+                : undefined
+            }
+            onPlayAudio={
+              msg.role === "assistant" &&
+              (msg.audioBase64 || msg.audioUrl) &&
+              onPlayAudio
+                ? () => onPlayAudio(msg)
+                : undefined
+            }
+          />
+          {msg.role === "assistant" && msg.action && !msg.isStreaming && (
+            <RagnaActionCard
+              action={msg.action}
+              state={msg.actionState ?? "pending"}
+              onConfirm={() => onConfirmAction?.(msg.id)}
+              onSkip={() => onSkipAction?.(msg.id)}
+            />
+          )}
+        </React.Fragment>
       ))}
       {isLoading && (
         <View style={styles.loadingBubble}>

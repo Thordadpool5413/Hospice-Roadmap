@@ -1,5 +1,7 @@
 import { getAuthToken } from "@workspace/api-client-react";
 
+import { RagnaAction } from "@/types";
+
 import { apiBase, fetchJson, mergeJsonHeaders } from "./apiClient";
 
 // ─── Internal header helpers ─────────────────────────────────────────────────
@@ -180,7 +182,8 @@ function parseSseText(
   raw: string,
   onChunk: (t: string) => void,
   onDone: () => void,
-  onError: (e: string) => void
+  onError: (e: string) => void,
+  onAction?: (action: RagnaAction) => void
 ) {
   const lines = raw.split("\n");
   for (const line of lines) {
@@ -190,8 +193,10 @@ function parseSseText(
         content?: string;
         done?: boolean;
         error?: string;
+        action?: RagnaAction;
       };
       if (data.error) { onError(data.error); return; }
+      if (data.action && onAction) onAction(data.action);
       if (data.done) { onDone(); return; }
       if (data.content) onChunk(data.content);
     } catch {
@@ -206,7 +211,8 @@ export async function streamMessage(
   patientContext: string,
   onChunk: (text: string) => void,
   onDone: () => void,
-  onError: (err: string) => void
+  onError: (err: string) => void,
+  onAction?: (action: RagnaAction) => void
 ): Promise<void> {
   try {
     // Streaming requires a long-lived connection — no timeout signal here.
@@ -241,7 +247,7 @@ export async function streamMessage(
     // React Native native may not support ReadableStream — fall back to full text.
     if (!res.body) {
       const raw = await res.text();
-      parseSseText(raw, onChunk, onDone, onError);
+      parseSseText(raw, onChunk, onDone, onError, onAction);
       onDone();
       return;
     }
@@ -265,8 +271,10 @@ export async function streamMessage(
             content?: string;
             done?: boolean;
             error?: string;
+            action?: RagnaAction;
           };
           if (data.error) { onError(data.error); return; }
+          if (data.action && onAction) onAction(data.action);
           if (data.done) { onDone(); return; }
           if (data.content) onChunk(data.content);
         } catch {
