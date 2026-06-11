@@ -23,6 +23,8 @@ import type {
   AnthropicMessage,
   CreateAnthropicConversationBody,
   HealthStatus,
+  RegisterDeviceBody,
+  RegisterDeviceResponse,
   SendAnthropicMessageBody,
 } from "./api.schemas";
 
@@ -631,4 +633,92 @@ export const useSendAnthropicMessage = <
   TContext
 > => {
   return useMutation(getSendAnthropicMessageMutationOptions(options));
+};
+
+/**
+ * Upserts the calling device's (deviceId, clerkSessionId) pair into the server's device_sessions table, then revokes all OTHER active Clerk sessions for the same userId, enforcing one active device per account.
+
+ * @summary Register this device and revoke sessions on all other devices
+ */
+export const getRegisterDeviceUrl = () => {
+  return `/api/auth/register-device`;
+};
+
+export const registerDevice = async (
+  registerDeviceBody: RegisterDeviceBody,
+  options?: RequestInit,
+): Promise<RegisterDeviceResponse> => {
+  return customFetch<RegisterDeviceResponse>(getRegisterDeviceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(registerDeviceBody),
+  });
+};
+
+export const getRegisterDeviceMutationOptions = <
+  TError = ErrorType<AnthropicError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerDevice>>,
+    TError,
+    { data: BodyType<RegisterDeviceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerDevice>>,
+  TError,
+  { data: BodyType<RegisterDeviceBody> },
+  TContext
+> => {
+  const mutationKey = ["registerDevice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerDevice>>,
+    { data: BodyType<RegisterDeviceBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerDevice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterDeviceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerDevice>>
+>;
+export type RegisterDeviceMutationBody = BodyType<RegisterDeviceBody>;
+export type RegisterDeviceMutationError = ErrorType<AnthropicError>;
+
+/**
+ * @summary Register this device and revoke sessions on all other devices
+ */
+export const useRegisterDevice = <
+  TError = ErrorType<AnthropicError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerDevice>>,
+    TError,
+    { data: BodyType<RegisterDeviceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerDevice>>,
+  TError,
+  { data: BodyType<RegisterDeviceBody> },
+  TContext
+> => {
+  return useMutation(getRegisterDeviceMutationOptions(options));
 };

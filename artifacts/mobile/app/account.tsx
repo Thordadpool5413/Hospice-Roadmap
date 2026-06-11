@@ -22,6 +22,7 @@ import { ENTITLEMENT_IDENTIFIER, getPlanName } from "@/constants/subscriptionPro
 import { useSubscription } from "@/context/SubscriptionContext";
 import { usePaywall } from "@/hooks/usePaywall";
 import { unregisterForPushNotifications } from "@/services/pushRegistration";
+import { markExplicitSignOut } from "@/services/signOutState";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -111,9 +112,10 @@ export default function AccountScreen() {
         onPress: () =>
           unregisterForPushNotifications()
             .catch(() => {})
-            .finally(() =>
-              signOut().then(() => router.replace("/(auth)/sign-in" as any)),
-            ),
+            .finally(() => {
+              markExplicitSignOut();
+              return signOut().then(() => router.replace("/(auth)/sign-in" as any));
+            }),
       },
     ]);
   };

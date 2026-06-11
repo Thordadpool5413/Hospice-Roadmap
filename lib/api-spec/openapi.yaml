@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: anthropic
     description: Anthropic AI chat operations
+  - name: auth
+    description: Device session management
 paths:
   /healthz:
     get:
@@ -141,6 +143,46 @@ paths:
           description: SSE stream of assistant response chunks
           content:
             text/event-stream: {}
+  /auth/register-device:
+    post:
+      operationId: registerDevice
+      tags: [auth]
+      summary: Register this device and revoke sessions on all other devices
+      description: >
+        Upserts the calling device's (deviceId, clerkSessionId) pair into the
+        server's device_sessions table, then revokes all OTHER active Clerk
+        sessions for the same userId, enforcing one active device per account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceBody"
+      responses:
+        "200":
+          description: Device registered, other sessions revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterDeviceResponse"
+        "400":
+          description: Missing or invalid deviceId
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnthropicError"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnthropicError"
+        "503":
+          description: CLERK_SECRET_KEY not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnthropicError"
 components:
   schemas:
     HealthStatus:
@@ -226,3 +268,22 @@ components:
           type: string
       required:
         - error
+    RegisterDeviceBody:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          description: Stable per-installation identifier from clientIdentity.ts
+      required:
+        - deviceId
+    RegisterDeviceResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        revokedCount:
+          type: integer
+          description: Number of other device sessions revoked (0 if only device)
+      required:
+        - ok
+        - revokedCount

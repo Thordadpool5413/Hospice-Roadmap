@@ -11,8 +11,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
-import React, { useEffect, useRef } from "react";
-import { Platform, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -35,6 +35,8 @@ import { useRagnaMemory, RagnaMemoryProvider } from "@/context/RagnaMemoryContex
 import { initializeRevenueCat, SubscriptionProvider } from "@/context/SubscriptionContext";
 import { synthesizeFromActivity } from "@/services/aiService";
 import { registerForPushNotifications } from "@/services/pushRegistration";
+import { registerDevice } from "@/services/deviceRegistration";
+import { consumeExplicitSignOut } from "@/services/signOutState";
 
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
@@ -190,6 +192,116 @@ function LockOverlay() {
   if (!isLockEnabled || !isLocked) return null;
   return <LockScreen onUnlock={unlock} />;
 }
+
+/**
+ * DeviceRegistration — fires once per (userId, sessionId) pair, recording
+ * this device's active Clerk session on the server. The server revokes all
+ * OTHER sessions for the same userId, enforcing one active device per account.
+ *
+ * Keyed by userId:sessionId so it re-fires only when a genuinely new session
+ * is established (e.g. sign out → sign in again). Placed AFTER AuthTokenBridge
+ * so getAuthToken() is wired before the first API call.
+ */
+function DeviceRegistration() {
+  const { isSignedIn, userId, sessionId } = useAuth();
+  const registeredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isSignedIn || !userId || !sessionId) return;
+    const key = `${userId}:${sessionId}`;
+    if (registeredFor.current === key) return;
+    registeredFor.current = key;
+    registerDevice().catch((err) => {
+      console.debug("[device-registration] failed:", err);
+    });
+  }, [isSignedIn, userId, sessionId]);
+  return null;
+}
+
+/**
+ * RevocationGuard — detects when the user's Clerk session is revoked by a
+ * second device signing in. When isSignedIn transitions true → false without a
+ * user-initiated sign-out (tracked via markExplicitSignOut /
+ * consumeExplicitSignOut), it shows a dismissible banner then navigates to the
+ * sign-in screen after a 2.5-second delay so the user can read the message.
+ */
+function RevocationGuard() {
+  const { isSignedIn } = useAuth();
+  const prevIsSignedIn = useRef<boolean>(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const was = prevIsSignedIn.current;
+    prevIsSignedIn.current = isSignedIn === true;
+
+    if (was && !isSignedIn) {
+      if (!consumeExplicitSignOut()) {
+        setVisible(true);
+        setTimeout(() => {
+          try {
+            router.replace("/(auth)/sign-in" as any);
+          } catch {}
+        }, 2500);
+      }
+    }
+  }, [isSignedIn]);
+
+  if (!visible) return null;
+
+  return (
+    <View style={revocationBanner.overlay} pointerEvents="box-none">
+      <View style={revocationBanner.card}>
+        <Text style={revocationBanner.message}>
+          Your account was signed in on another device. Please sign in again.
+        </Text>
+        <Pressable onPress={() => setVisible(false)} hitSlop={8}>
+          <Text style={revocationBanner.dismiss}>✕</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const revocationBanner = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    alignItems: "center",
+    paddingTop: 52,
+    paddingHorizontal: 16,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#1a2c4e",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#C8541A",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    maxWidth: 380,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  message: {
+    flex: 1,
+    fontSize: 13,
+    color: "#EEF4FF",
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
+  },
+  dismiss: {
+    fontSize: 16,
+    color: "#90A8CC",
+    paddingLeft: 4,
+  },
+});
 
 function RootLayoutNav() {
   return (
@@ -506,6 +618,7 @@ export default function RootLayout() {
                   <GestureHandlerRootView style={{ flex: 1 }}>
                     <AuthTokenBridge />
                     <PushRegistration />
+                    <DeviceRegistration />
                     <CloudSyncProvider>
                       <View style={{ flex: 1 }}>
                         <LearningSync />
@@ -514,6 +627,7 @@ export default function RootLayout() {
                         <SyncConflictBanner />
                         <SyncSuccessToast />
                         <LockOverlay />
+                        <RevocationGuard />
                       </View>
                     </CloudSyncProvider>
                   </GestureHandlerRootView>

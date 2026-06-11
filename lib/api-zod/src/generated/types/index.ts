@@ -12,4 +12,6 @@ export * from "./anthropicError";
 export * from "./anthropicMessage";
 export * from "./createAnthropicConversationBody";
 export * from "./healthStatus";
+export * from "./registerDeviceBody";
+export * from "./registerDeviceResponse";
 export * from "./sendAnthropicMessageBody";

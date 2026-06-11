@@ -26,6 +26,7 @@ import { ENTITLEMENT_IDENTIFIER, getPlanName } from "@/constants/subscriptionPro
 import { LockTimeout, useAppLock } from "@/context/AppLockContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { unregisterForPushNotifications } from "@/services/pushRegistration";
+import { markExplicitSignOut } from "@/services/signOutState";
 
 const roleLabels: Record<UserRole, string> = {
   patient: "Patient",
@@ -104,9 +105,10 @@ export default function MoreScreen() {
           onPress: () =>
             unregisterForPushNotifications()
               .catch(() => {})
-              .finally(() =>
-                signOut().then(() => router.replace("/(auth)/sign-in" as any)),
-              ),
+              .finally(() => {
+                markExplicitSignOut();
+                return signOut().then(() => router.replace("/(auth)/sign-in" as any));
+              }),
         },
       ]
     );

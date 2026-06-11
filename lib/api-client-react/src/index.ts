@@ -1,3 +1,8 @@
 export * from "./generated/api";
 export * from "./generated/api.schemas";
-export { setAuthTokenGetter, getAuthToken, setBaseUrl, getBaseUrl } from "./custom-fetch";
+export {
+  setAuthTokenGetter,
+  getAuthToken,
+  setBaseUrl,
+  getBaseUrl,
+} from "./custom-fetch";

@@ -92,3 +92,21 @@ export const SendAnthropicMessageBody = zod.object({
   content: zod.string(),
   patientContext: zod.string().optional(),
 });
+
+/**
+ * Upserts the calling device's (deviceId, clerkSessionId) pair into the server's device_sessions table, then revokes all OTHER active Clerk sessions for the same userId, enforcing one active device per account.
+
+ * @summary Register this device and revoke sessions on all other devices
+ */
+export const RegisterDeviceBody = zod.object({
+  deviceId: zod
+    .string()
+    .describe("Stable per-installation identifier from clientIdentity.ts"),
+});
+
+export const RegisterDeviceResponse = zod.object({
+  ok: zod.boolean(),
+  revokedCount: zod
+    .number()
+    .describe("Number of other device sessions revoked (0 if only device)"),
+});

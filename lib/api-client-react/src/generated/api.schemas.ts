@@ -42,3 +42,14 @@ export interface AnthropicConversationWithMessages {
 export interface AnthropicError {
   error: string;
 }
+
+export interface RegisterDeviceBody {
+  /** Stable per-installation identifier from clientIdentity.ts */
+  deviceId: string;
+}
+
+export interface RegisterDeviceResponse {
+  ok: boolean;
+  /** Number of other device sessions revoked (0 if only device) */
+  revokedCount: number;
+}

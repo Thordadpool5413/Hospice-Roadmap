@@ -8,3 +8,4 @@
 - [Ragna context privacy gating](ragna-context-privacy-gating.md) — every Ragna context block must be gated by its matching RagnaPrivacySettings flag (e.g. reminder labels → includeMedicationAndEquipment), not just personalizationEnabled.
 - [React dual-version web crash](react-monorepo-dual-version-web-crash.md) — root package.json pinning react/react-dom/react-native-web to a different major than the apps crashes web ($$typeof element mismatch); catalog all three so they can't drift.
 - [Drizzle migration workflow](drizzle-migration-workflow.md) — lib/db uses `push` not `migrate`; snapshots have drifted (ragna_memory), so `drizzle-kit generate` goes interactive — hand-write SQL + snapshot + journal instead.
+- [Device session revocation pattern](device-session-revocation.md) — Clerk session revocation uses the REST API directly (no @clerk/backend package needed); sessionId comes from getAuth(req), not from the client body.
