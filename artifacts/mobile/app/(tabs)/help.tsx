@@ -64,7 +64,14 @@ import {
   setHideReplyPreview,
 } from "@/services/ragnaPreviewPreference";
 import { setPreferredVoice } from "@/services/voicePreferences";
-import { RagnaAction, SymptomEntry, RagnaEmotionalTone } from "@/types";
+import {
+  JournalEntry,
+  RagnaAction,
+  RagnaActionTarget,
+  Reminder,
+  SymptomEntry,
+  RagnaEmotionalTone,
+} from "@/types";
 
 import { RagnaComposer } from "@/components/ragna/RagnaComposer";
 import { RagnaEmptyState } from "@/components/ragna/RagnaEmptyState";
@@ -300,9 +307,16 @@ export default function HelpScreen() {
     getRecentSummary,
     addEntry: addSymptomEntry,
     updateEntry: updateSymptomEntry,
+    deleteEntry: deleteSymptomEntry,
   } = useSymptoms();
-  const { entries: journalEntries, addEntry: addJournalEntry } = useJournal();
-  const { addReminder } = useReminders();
+  const {
+    entries: journalEntries,
+    addEntry: addJournalEntry,
+    updateEntry: updateJournalEntry,
+    deleteEntry: deleteJournalEntry,
+  } = useJournal();
+  const { reminders, addReminder, updateReminder, deleteReminder } =
+    useReminders();
   const {
     memories,
     addMemory,
@@ -564,7 +578,7 @@ export default function HelpScreen() {
       ? (() => {
           const recentJournal = journalEntries.slice(0, 3);
           return recentJournal.length > 0
-            ? `--- Recent Caregiver Journal Entries ---\n${recentJournal
+            ? `--- Recent Caregiver Journal Entries (you may update or cancel these by id) ---\n${recentJournal
                 .map((entry) => {
                   const dateStr =
                     entry.date ||
@@ -572,7 +586,7 @@ export default function HelpScreen() {
                       month: "short",
                       day: "numeric",
                     });
-                  return `[${dateStr} · ${entry.type}] ${entry.title}: ${entry.body.slice(0, 200)}${entry.body.length > 200 ? "…" : ""}`;
+                  return `[id: ${entry.id}] [${dateStr} · ${entry.type}] ${entry.title}: ${entry.body.slice(0, 200)}${entry.body.length > 200 ? "…" : ""}`;
                 })
                 .join("\n")}`
             : "";
@@ -586,12 +600,60 @@ export default function HelpScreen() {
         ? getWellnessSummary(7)
         : "";
 
+    // Id-tagged lists so Ragna can target a specific existing record for an
+    // update_*/cancel_* action. Gated by the same privacy flags as the summaries.
+    const symptomRecordsContext = ragnaPrivacy.includeRecentSymptoms
+      ? (() => {
+          const recent = [...symptomEntries]
+            .sort((a, b) =>
+              `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`),
+            )
+            .slice(0, 7);
+          if (recent.length === 0) return "";
+          const lines = recent.map((e) => {
+            const note = e.notes
+              ? ` · "${e.notes.slice(0, 60)}${e.notes.length > 60 ? "…" : ""}"`
+              : "";
+            return `[id: ${e.id}] ${e.date} ${e.time} · Pain ${e.pain}, Breathlessness ${e.breathlessness}, Nausea ${e.nausea}${note}`;
+          });
+          return `--- Existing Symptom Logs (you may update or cancel these by id) ---\n${lines.join("\n")}`;
+        })()
+      : "";
+
+    // Reminder labels routinely carry medication names, so this list is gated
+    // by the same flag that controls medication/equipment disclosure.
+    const remindersContext = (() => {
+      if (!ragnaPrivacy.includeMedicationAndEquipment) return "";
+      if (reminders.length === 0) return "";
+      const lines = reminders.slice(0, 15).map((r) => {
+        const when = new Date(r.datetime);
+        const whenStr = Number.isNaN(when.getTime())
+          ? r.datetime
+          : when.toLocaleString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            });
+        const rec =
+          r.recurrence && r.recurrence !== "none"
+            ? ` · repeats ${r.recurrence}`
+            : "";
+        const status = r.enabled ? "" : " · disabled";
+        return `[id: ${r.id}] ${r.label} · ${r.type} · ${whenStr}${rec}${status}`;
+      });
+      return `--- Existing Reminders (you may update or cancel these by id) ---\n${lines.join("\n")}`;
+    })();
+
     return [
       baseContext,
       symptomSummary
         ? `--- Recent Symptom Tracking ---\n${symptomSummary}`
         : "",
+      symptomRecordsContext,
       journalContext,
+      remindersContext,
       wellnessSummary,
       getObservationContext(),
       memorySummary,
@@ -608,10 +670,13 @@ export default function HelpScreen() {
     journalEntries,
     ragnaPrivacy.includeCaregiverWellness,
     ragnaPrivacy.includeConversationMemory,
+    ragnaPrivacy.includeMedicationAndEquipment,
     ragnaPrivacy.includeRecentJournal,
     ragnaPrivacy.includeRecentSymptoms,
     ragnaPrivacy.includeTimeContext,
     ragnaPrivacy.personalizationEnabled,
+    reminders,
+    symptomEntries,
     user?.role,
   ]);
 
@@ -984,6 +1049,31 @@ export default function HelpScreen() {
     ],
   );
 
+  const resolveActionTarget = useCallback(
+    (action: RagnaAction): RagnaActionTarget | null => {
+      switch (action.action) {
+        case "update_reminder":
+        case "cancel_reminder": {
+          const reminder = reminders.find((r) => r.id === action.id);
+          return reminder ? { kind: "reminder", reminder } : null;
+        }
+        case "update_symptom":
+        case "cancel_symptom": {
+          const symptom = symptomEntries.find((e) => e.id === action.id);
+          return symptom ? { kind: "symptom", symptom } : null;
+        }
+        case "update_journal_entry":
+        case "cancel_journal_entry": {
+          const journal = journalEntries.find((e) => e.id === action.id);
+          return journal ? { kind: "journal", journal } : null;
+        }
+        default:
+          return null;
+      }
+    },
+    [reminders, symptomEntries, journalEntries],
+  );
+
   const handleConfirmAction = useCallback(
     async (messageId: string) => {
       const msg = localMessages.find((m) => m.id === messageId);
@@ -1001,69 +1091,185 @@ export default function HelpScreen() {
           ),
         );
 
+      const notFound = () =>
+        setActionToast({
+          signal: Date.now(),
+          message: "That item is no longer available",
+          tone: "error",
+        });
+
       try {
-        if (action.action === "create_reminder") {
-          await addReminder({
-            type: action.reminderType,
-            label: action.label,
-            datetime: action.datetime,
-            recurrence: action.recurrence,
-          });
-          markDone();
-          setActionToast({
-            signal: Date.now(),
-            message: "Reminder added",
-            tone: "success",
-          });
-        } else if (action.action === "log_symptom") {
-          const existing = getTodayEntry();
-          if (existing) {
+        switch (action.action) {
+          case "create_reminder":
+            await addReminder({
+              type: action.reminderType,
+              label: action.label,
+              datetime: action.datetime,
+              recurrence: action.recurrence,
+            });
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Reminder added",
+              tone: "success",
+            });
+            break;
+          case "log_symptom": {
+            const existing = getTodayEntry();
+            if (existing) {
+              const updates: Partial<Omit<SymptomEntry, "id">> = {};
+              if (action.pain !== undefined) updates.pain = action.pain;
+              if (action.breathlessness !== undefined)
+                updates.breathlessness = action.breathlessness;
+              if (action.nausea !== undefined) updates.nausea = action.nausea;
+              if (action.notes) {
+                updates.notes = [existing.notes, action.notes]
+                  .filter(Boolean)
+                  .join(" · ");
+              }
+              await updateSymptomEntry(existing.id, updates);
+            } else {
+              const d = new Date();
+              await addSymptomEntry({
+                date: d.toISOString().slice(0, 10),
+                time: `${String(d.getHours()).padStart(2, "0")}:${String(
+                  d.getMinutes(),
+                ).padStart(2, "0")}`,
+                pain: action.pain ?? 0,
+                breathlessness: action.breathlessness ?? 0,
+                nausea: action.nausea ?? 0,
+                agitation: 0,
+                restlessness: false,
+                appetite: 0,
+                notes: action.notes,
+              });
+            }
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Symptoms logged",
+              tone: "success",
+            });
+            break;
+          }
+          case "add_journal_entry":
+            await addJournalEntry({
+              type: action.journalType,
+              title: action.title,
+              body: action.body,
+              date: new Date().toISOString(),
+            });
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Journal entry added",
+              tone: "success",
+            });
+            break;
+          case "update_reminder": {
+            if (!reminders.some((r) => r.id === action.id)) {
+              notFound();
+              return;
+            }
+            const updates: Partial<
+              Pick<Reminder, "label" | "datetime" | "recurrence" | "type">
+            > = {};
+            if (action.label !== undefined) updates.label = action.label;
+            if (action.datetime !== undefined) updates.datetime = action.datetime;
+            if (action.recurrence !== undefined)
+              updates.recurrence = action.recurrence;
+            if (action.reminderType !== undefined)
+              updates.type = action.reminderType;
+            await updateReminder(action.id, updates);
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Reminder updated",
+              tone: "success",
+            });
+            break;
+          }
+          case "cancel_reminder": {
+            if (!reminders.some((r) => r.id === action.id)) {
+              notFound();
+              return;
+            }
+            await deleteReminder(action.id);
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Reminder removed",
+              tone: "success",
+            });
+            break;
+          }
+          case "update_symptom": {
+            if (!symptomEntries.some((e) => e.id === action.id)) {
+              notFound();
+              return;
+            }
             const updates: Partial<Omit<SymptomEntry, "id">> = {};
             if (action.pain !== undefined) updates.pain = action.pain;
             if (action.breathlessness !== undefined)
               updates.breathlessness = action.breathlessness;
             if (action.nausea !== undefined) updates.nausea = action.nausea;
-            if (action.notes) {
-              updates.notes = [existing.notes, action.notes]
-                .filter(Boolean)
-                .join(" · ");
-            }
-            await updateSymptomEntry(existing.id, updates);
-          } else {
-            const d = new Date();
-            await addSymptomEntry({
-              date: d.toISOString().slice(0, 10),
-              time: `${String(d.getHours()).padStart(2, "0")}:${String(
-                d.getMinutes(),
-              ).padStart(2, "0")}`,
-              pain: action.pain ?? 0,
-              breathlessness: action.breathlessness ?? 0,
-              nausea: action.nausea ?? 0,
-              agitation: 0,
-              restlessness: false,
-              appetite: 0,
-              notes: action.notes,
+            if (action.notes !== undefined) updates.notes = action.notes;
+            await updateSymptomEntry(action.id, updates);
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Symptom log updated",
+              tone: "success",
             });
+            break;
           }
-          markDone();
-          setActionToast({
-            signal: Date.now(),
-            message: "Symptoms logged",
-            tone: "success",
-          });
-        } else {
-          await addJournalEntry({
-            type: action.journalType,
-            title: action.title,
-            body: action.body,
-            date: new Date().toISOString(),
-          });
-          markDone();
-          setActionToast({
-            signal: Date.now(),
-            message: "Journal entry added",
-            tone: "success",
-          });
+          case "cancel_symptom": {
+            if (!symptomEntries.some((e) => e.id === action.id)) {
+              notFound();
+              return;
+            }
+            await deleteSymptomEntry(action.id);
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Symptom log deleted",
+              tone: "success",
+            });
+            break;
+          }
+          case "update_journal_entry": {
+            if (!journalEntries.some((e) => e.id === action.id)) {
+              notFound();
+              return;
+            }
+            const updates: Partial<Omit<JournalEntry, "id" | "timestamp">> = {};
+            if (action.title !== undefined) updates.title = action.title;
+            if (action.body !== undefined) updates.body = action.body;
+            if (action.journalType !== undefined)
+              updates.type = action.journalType;
+            await updateJournalEntry(action.id, updates);
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Journal entry updated",
+              tone: "success",
+            });
+            break;
+          }
+          case "cancel_journal_entry": {
+            if (!journalEntries.some((e) => e.id === action.id)) {
+              notFound();
+              return;
+            }
+            await deleteJournalEntry(action.id);
+            markDone();
+            setActionToast({
+              signal: Date.now(),
+              message: "Journal entry deleted",
+              tone: "success",
+            });
+            break;
+          }
         }
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
@@ -1080,10 +1286,18 @@ export default function HelpScreen() {
     [
       localMessages,
       addReminder,
+      updateReminder,
+      deleteReminder,
+      reminders,
       getTodayEntry,
-      updateSymptomEntry,
       addSymptomEntry,
+      updateSymptomEntry,
+      deleteSymptomEntry,
+      symptomEntries,
       addJournalEntry,
+      updateJournalEntry,
+      deleteJournalEntry,
+      journalEntries,
     ],
   );
 
@@ -1439,6 +1653,7 @@ export default function HelpScreen() {
               void handleConfirmAction(id);
             }}
             onSkipAction={handleSkipAction}
+            resolveActionTarget={resolveActionTarget}
           />
         )}
       </ScrollView>

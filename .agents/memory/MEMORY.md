@@ -4,4 +4,5 @@
 - [pnpm version + expo config-plugins import](replit-workflow-pnpm-expo-config.md) — packageManager field must match installed pnpm; expo/config-plugins.js needs namespace import not default import.
 - [Replit ElevenLabs integration pattern](replit-elevenlabs-integration.md) — use ReplitConnectors proxy, not raw API key; ELEVENLABS_API_KEY never appears in env; add @replit/connectors-sdk to artifact dependencies.
 - [EAS Build pnpm workspace detection](eas-build-pnpm-detection.md) — committed package-lock.json at workspace root causes EAS to pick npm over pnpm; fix via artifacts/mobile/.easignore.
+- [Ragna context privacy gating](ragna-context-privacy-gating.md) — every Ragna context block must be gated by its matching RagnaPrivacySettings flag (e.g. reminder labels → includeMedicationAndEquipment), not just personalizationEnabled.
 - [React dual-version web crash](react-monorepo-dual-version-web-crash.md) — root package.json pinning react/react-dom/react-native-web to a different major than the apps crashes web ($$typeof element mismatch); catalog all three so they can't drift.

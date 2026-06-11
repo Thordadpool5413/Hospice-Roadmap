@@ -333,7 +333,9 @@ export interface Reminder {
  * A structured action Ragna can request from the chat. The mobile app renders a
  * one-tap confirmation card and, on confirm, calls the matching context method.
  * Mirrors the `RagnaAction` type on the API server
- * (artifacts/api-server/src/routes/anthropic/ragnaActions.ts). Create-only.
+ * (artifacts/api-server/src/routes/anthropic/ragnaActions.ts). Supports
+ * creating, updating, and cancelling reminders, symptom logs, and journal
+ * entries. Update/cancel actions reference an existing record by its `id`.
  */
 export type RagnaAction =
   | {
@@ -356,7 +358,54 @@ export type RagnaAction =
       title: string;
       body: string;
       journalType: JournalEntryType;
+    }
+  | {
+      action: "update_reminder";
+      /** Id of an existing reminder. */
+      id: string;
+      label?: string;
+      /** Local ISO-8601 datetime, no timezone offset. */
+      datetime?: string;
+      reminderType?: ReminderType;
+      recurrence?: ReminderRecurrence;
+    }
+  | {
+      action: "cancel_reminder";
+      id: string;
+    }
+  | {
+      action: "update_symptom";
+      id: string;
+      pain?: number;
+      breathlessness?: number;
+      nausea?: number;
+      notes?: string;
+    }
+  | {
+      action: "cancel_symptom";
+      id: string;
+    }
+  | {
+      action: "update_journal_entry";
+      id: string;
+      title?: string;
+      body?: string;
+      journalType?: JournalEntryType;
+    }
+  | {
+      action: "cancel_journal_entry";
+      id: string;
     };
+
+/**
+ * The existing record an update or cancel {@link RagnaAction} refers to,
+ * resolved by id from local context. Used to render before/after on the
+ * confirmation card. `null` when no matching record exists (stale id).
+ */
+export type RagnaActionTarget =
+  | { kind: "reminder"; reminder: Reminder }
+  | { kind: "symptom"; symptom: SymptomEntry }
+  | { kind: "journal"; journal: JournalEntry };
 
 // ─── Caregiver Wellness ───────────────────────────────────────────────────────
 

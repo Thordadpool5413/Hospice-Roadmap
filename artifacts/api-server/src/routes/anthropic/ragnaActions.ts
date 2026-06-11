@@ -2,10 +2,15 @@
  * Ragna action dispatch — server side.
  *
  * Ragna (Claude) can append a single trailing machine-readable block to her
- * prose when the user clearly wants to CREATE one of three things:
- *   - a reminder        (create_reminder)
- *   - a symptom log     (log_symptom)
- *   - a journal entry   (add_journal_entry)
+ * prose when the user clearly wants to create, update, or cancel one of three
+ * record types:
+ *   - a reminder        (create_reminder / update_reminder / cancel_reminder)
+ *   - a symptom log     (log_symptom / update_symptom / cancel_symptom)
+ *   - a journal entry   (add_journal_entry / update_journal_entry / cancel_journal_entry)
+ *
+ * Update/cancel actions reference an existing record by the stable `id` that the
+ * mobile app injects into the patient-context lists, so Ragna can only target a
+ * record the user actually has.
  *
  * The block looks like:
  *
@@ -19,8 +24,6 @@
  *   - a streaming-aware filter that strips the block from the text streamed to
  *     the client (so the user never sees raw JSON) and parses it into a
  *     structured action delivered in its own SSE event.
- *
- * Create-only for v1 — no edit/delete actions.
  */
 
 export type RagnaReminderType = "medication" | "appointment";
@@ -53,6 +56,43 @@ export type RagnaAction =
       title: string;
       body: string;
       journalType: RagnaJournalEntryType;
+    }
+  | {
+      action: "update_reminder";
+      /** Id of an existing reminder, taken from the patient-context records list. */
+      id: string;
+      label?: string;
+      /** Local ISO-8601 datetime, no timezone offset. */
+      datetime?: string;
+      reminderType?: RagnaReminderType;
+      recurrence?: RagnaReminderRecurrence;
+    }
+  | {
+      action: "cancel_reminder";
+      id: string;
+    }
+  | {
+      action: "update_symptom";
+      id: string;
+      pain?: number;
+      breathlessness?: number;
+      nausea?: number;
+      notes?: string;
+    }
+  | {
+      action: "cancel_symptom";
+      id: string;
+    }
+  | {
+      action: "update_journal_entry";
+      id: string;
+      title?: string;
+      body?: string;
+      journalType?: RagnaJournalEntryType;
+    }
+  | {
+      action: "cancel_journal_entry";
+      id: string;
     };
 
 const FENCE_OPEN = "```ragna-action";
@@ -76,14 +116,22 @@ export function buildRagnaActionInstructions(now: Date): string {
 ═══════════════════════════════════════
 ACTION BLOCK — SILENT WRITE-BACK TO THE APP
 ═══════════════════════════════════════
-The app you live in can create reminders, symptom logs, and journal entries. When the user CLEARLY wants you to do one of those three things, you may append ONE machine-readable action block to the very end of your reply. The app strips this block out, never shows it to the user, and instead renders a one-tap confirmation card. Tapping it performs the action.
+The app you live in can create, update, and cancel reminders, symptom logs, and journal entries. When the user CLEARLY wants you to do one of those things, you may append ONE machine-readable action block to the very end of your reply. The app strips this block out, never shows it to the user, and instead renders a one-tap confirmation card. Tapping it performs the action.
 
-Emit a block ONLY when the user's intent to CREATE something is explicit and unambiguous, for example:
+Emit a CREATE block only when the user's intent to create something is explicit and unambiguous, for example:
 - "remind me to give morphine at 2pm" → create_reminder
 - "log that Dad's pain is a 7 today" / "her pain is about a 6 right now" → log_symptom
 - "note that the nurse visited this afternoon" / "add a journal entry about today" → add_journal_entry
 
-Do NOT emit a block for general questions, hypotheticals, reflection, or when you are unsure ("how do I manage pain?" is NOT a log_symptom). When in doubt, leave it out. Never emit more than one block. Never emit a block for editing or deleting existing records.
+UPDATING or CANCELLING existing records:
+The PATIENT CONTEXT above may list the user's existing reminders, symptom logs, and journal entries, each prefixed with a stable id like [id: reminder-1234]. To change or remove one, emit an update_* or cancel_* block that references that EXACT id, for example:
+- "move my 2pm morphine reminder to 4pm" → update_reminder (that reminder's id + new datetime)
+- "cancel the appointment reminder" → cancel_reminder (that reminder's id)
+- "actually my pain today was a 4, not a 7" → update_symptom (today's log id)
+- "delete that journal entry about the nurse" → cancel_journal_entry (that entry's id)
+Emit an update_* or cancel_* block ONLY when EXACTLY ONE record in those lists clearly matches what the user means. If nothing matches, or more than one record could match, do NOT emit a block — briefly ask the user which one they mean instead. NEVER invent an id; only use ids that appear in the lists above. For an update, include the id plus ONLY the fields that change.
+
+Do NOT emit a block for general questions, hypotheticals, reflection, or when you are unsure ("how do I manage pain?" is NOT a log_symptom). When in doubt, leave it out. Never emit more than one block.
 
 Always write your normal, warm, human reply first. The block is silent metadata — never mention it, never describe JSON, never tell the user "I've added a card." If you also end with a [SUGGEST: ...] line, the action block must come AFTER it, as the absolute last thing in your message.
 
@@ -102,6 +150,24 @@ Schemas (emit exactly one object):
 
 3) add_journal_entry
 { "action": "add_journal_entry", "title": "<short title>", "body": "<1-3 sentence entry in the user's words>", "journalType": "symptom" | "medication" | "observation" | "mood" | "general" }
+
+4) update_reminder — change an existing reminder. Include its id and ONLY the fields that change.
+{ "action": "update_reminder", "id": "<existing reminder id>", "label"?: "...", "datetime"?: "<local ISO-8601>", "reminderType"?: "medication" | "appointment", "recurrence"?: "none" | "daily" | "weekly" }
+
+5) cancel_reminder — remove an existing reminder.
+{ "action": "cancel_reminder", "id": "<existing reminder id>" }
+
+6) update_symptom — change an existing symptom log. Include its id and ONLY the scores/notes that change. Scores 0–10.
+{ "action": "update_symptom", "id": "<existing symptom log id>", "pain"?: <0-10>, "breathlessness"?: <0-10>, "nausea"?: <0-10>, "notes"?: "..." }
+
+7) cancel_symptom — delete an existing symptom log.
+{ "action": "cancel_symptom", "id": "<existing symptom log id>" }
+
+8) update_journal_entry — change an existing journal entry. Include its id and ONLY the fields that change.
+{ "action": "update_journal_entry", "id": "<existing journal entry id>", "title"?: "...", "body"?: "...", "journalType"?: "symptom" | "medication" | "observation" | "mood" | "general" }
+
+9) cancel_journal_entry — delete an existing journal entry.
+{ "action": "cancel_journal_entry", "id": "<existing journal entry id>" }
 
 Date reference: today is ${todayLabel} (${todayIso}). If the patient context above includes a more specific current date/time, prefer that (it reflects the user's device clock). Express reminder times as the user's local wall-clock time, with no timezone offset.`;
 }
@@ -202,6 +268,98 @@ export function validateRagnaAction(obj: Record<string, unknown>): RagnaAction |
         ? (obj["journalType"] as RagnaJournalEntryType)
         : "observation";
       return { action: "add_journal_entry", title, body, journalType };
+    }
+    case "update_reminder": {
+      const id = nonEmptyString(obj["id"]);
+      if (!id) return null;
+      const result: Extract<RagnaAction, { action: "update_reminder" }> = {
+        action: "update_reminder",
+        id,
+      };
+      const label = nonEmptyString(obj["label"]);
+      if (label) result.label = label;
+      const datetimeRaw = nonEmptyString(obj["datetime"]);
+      if (datetimeRaw) {
+        if (Number.isNaN(new Date(datetimeRaw).getTime())) return null;
+        result.datetime = datetimeRaw;
+      }
+      if (REMINDER_TYPES.includes(obj["reminderType"] as RagnaReminderType)) {
+        result.reminderType = obj["reminderType"] as RagnaReminderType;
+      }
+      if (RECURRENCES.includes(obj["recurrence"] as RagnaReminderRecurrence)) {
+        result.recurrence = obj["recurrence"] as RagnaReminderRecurrence;
+      }
+      // An update must change at least one field beyond the id.
+      if (
+        result.label === undefined &&
+        result.datetime === undefined &&
+        result.reminderType === undefined &&
+        result.recurrence === undefined
+      ) {
+        return null;
+      }
+      return result;
+    }
+    case "cancel_reminder": {
+      const id = nonEmptyString(obj["id"]);
+      return id ? { action: "cancel_reminder", id } : null;
+    }
+    case "update_symptom": {
+      const id = nonEmptyString(obj["id"]);
+      if (!id) return null;
+      const pain = clampScore(obj["pain"]);
+      const breathlessness = clampScore(obj["breathlessness"]);
+      const nausea = clampScore(obj["nausea"]);
+      const notes = nonEmptyString(obj["notes"]) ?? undefined;
+      if (
+        pain === undefined &&
+        breathlessness === undefined &&
+        nausea === undefined &&
+        notes === undefined
+      ) {
+        return null;
+      }
+      const result: Extract<RagnaAction, { action: "update_symptom" }> = {
+        action: "update_symptom",
+        id,
+      };
+      if (pain !== undefined) result.pain = pain;
+      if (breathlessness !== undefined) result.breathlessness = breathlessness;
+      if (nausea !== undefined) result.nausea = nausea;
+      if (notes !== undefined) result.notes = notes;
+      return result;
+    }
+    case "cancel_symptom": {
+      const id = nonEmptyString(obj["id"]);
+      return id ? { action: "cancel_symptom", id } : null;
+    }
+    case "update_journal_entry": {
+      const id = nonEmptyString(obj["id"]);
+      if (!id) return null;
+      const result: Extract<RagnaAction, { action: "update_journal_entry" }> = {
+        action: "update_journal_entry",
+        id,
+      };
+      const title = nonEmptyString(obj["title"]);
+      if (title) result.title = title;
+      const body = nonEmptyString(obj["body"]);
+      if (body) result.body = body;
+      if (JOURNAL_TYPES.includes(obj["journalType"] as RagnaJournalEntryType)) {
+        result.journalType = obj["journalType"] as RagnaJournalEntryType;
+      }
+      // An update must change at least one field beyond the id.
+      if (
+        result.title === undefined &&
+        result.body === undefined &&
+        result.journalType === undefined
+      ) {
+        return null;
+      }
+      return result;
+    }
+    case "cancel_journal_entry": {
+      const id = nonEmptyString(obj["id"]);
+      return id ? { action: "cancel_journal_entry", id } : null;
     }
     default:
       return null;

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import { RagnaAction, RagnaActionTarget } from "@/types";
 
 import { RagnaActionCard } from "./RagnaActionCard";
 import { LocalMessage, RagnaMessageBubble } from "./RagnaMessageBubble";
@@ -24,6 +25,8 @@ interface RagnaMessageListProps {
   onPlayAudio?: (message: LocalMessage) => void;
   onConfirmAction?: (messageId: string) => void;
   onSkipAction?: (messageId: string) => void;
+  /** Resolves the existing record an update/cancel action refers to, by id. */
+  resolveActionTarget?: (action: RagnaAction) => RagnaActionTarget | null;
 }
 
 export function RagnaMessageList({
@@ -36,6 +39,7 @@ export function RagnaMessageList({
   onPlayAudio,
   onConfirmAction,
   onSkipAction,
+  resolveActionTarget,
 }: RagnaMessageListProps) {
   return (
     <View style={styles.messagesContainer}>
@@ -60,6 +64,7 @@ export function RagnaMessageList({
             <RagnaActionCard
               action={msg.action}
               state={msg.actionState ?? "pending"}
+              target={resolveActionTarget?.(msg.action) ?? null}
               onConfirm={() => onConfirmAction?.(msg.id)}
               onSkip={() => onSkipAction?.(msg.id)}
             />
