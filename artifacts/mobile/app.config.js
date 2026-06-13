@@ -10,6 +10,10 @@ module.exports = ({ config }) => {
       ...(config.ios || {}),
       bundleIdentifier: "com.thordadpool.hospiceroadmap",
       supportsTablet: true,
+      infoPlist: {
+        ...(config.ios?.infoPlist || {}),
+        ITSAppUsesNonExemptEncryption: false,
+      },
     },
 
     updates: {
