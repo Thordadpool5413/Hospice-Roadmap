@@ -26,7 +26,10 @@
       "pnpm": "10.26.1",
       "distribution": "store",
       "environment": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "false"
+      }
     }
   },
   "submit": {

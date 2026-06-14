@@ -1,9 +1,12 @@
 module.exports = ({ config }) => {
+  const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
+  const revenueCatIosKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || "";
+
   return {
     ...config,
 
-    name: config.name || "mobile",
-    slug: "mobile",
+    name: "Hospice Roadmap",
+    slug: "hospice-roadmap",
     version: config.version || "0.0.0",
 
     ios: {
@@ -13,8 +16,20 @@ module.exports = ({ config }) => {
       infoPlist: {
         ...(config.ios?.infoPlist || {}),
         ITSAppUsesNonExemptEncryption: false,
+        UIBackgroundModes: ["fetch", "remote-notification"],
       },
     },
+
+    plugins: [
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          locationAlwaysAndWhenInUsePermission: "Allow Hospice Roadmap to access your location for care coordination, reminders, and emergency features.",
+        },
+      ],
+      // Add more plugins here as needed, e.g. for maps or local auth if explicit config required
+    ],
 
     updates: {
       url: "https://u.expo.dev/e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc",
@@ -25,6 +40,8 @@ module.exports = ({ config }) => {
     },
 
     extra: {
+      clerkPublishableKey,
+      revenueCatIosKey,
       ...(config.extra || {}),
       eas: {
         ...(config.extra?.eas || {}),
