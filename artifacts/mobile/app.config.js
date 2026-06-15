@@ -9,13 +9,14 @@ module.exports = ({ config }) => {
     slug: "hospice-roadmap",
     version: config.version || "0.0.0",
 
-    // Custom icon and splash are temporarily disabled until you add the PNG files
-    // icon: "./assets/ragna.png",
-    // splash: {
-    //   image: "./assets/hospice-roadmap.png",
-    //   resizeMode: "contain",
-    //   backgroundColor: "#030A18"
-    // },
+    extra: {
+      clerkPublishableKey,
+      revenueCatIosKey,
+      ...(config.extra || {}),
+      eas: {
+        projectId: "e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc"
+      }
+    },
 
     ios: {
       ...(config.ios || {}),
@@ -23,37 +24,16 @@ module.exports = ({ config }) => {
       supportsTablet: true,
       infoPlist: {
         ...(config.ios?.infoPlist || {}),
-        ITSAppUsesNonExemptEncryption: false,
-        UIBackgroundModes: ["fetch", "remote-notification"],
-      },
+        ITSAppUsesNonExemptEncryption: false
+      }
     },
 
-    plugins: [
-      "expo-notifications",
-      [
-        "expo-location",
-        {
-          locationAlwaysAndWhenInUsePermission: "Allow Hospice Roadmap to access your location for care coordination, reminders, and emergency features.",
-        },
-      ],
-    ],
-
     updates: {
-      url: "https://u.expo.dev/e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc",
+      url: "https://u.expo.dev/e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc"
     },
 
     runtimeVersion: {
-      policy: "appVersion",
-    },
-
-    extra: {
-      clerkPublishableKey,
-      revenueCatIosKey,
-      ...(config.extra || {}),
-      eas: {
-        ...(config.extra?.eas || {}),
-        projectId: "e7ae5f0d-bf17-4a80-bd14-de95a58a7cdc",
-      },
-    },
+      policy: "appVersion"
+    }
   };
 };
