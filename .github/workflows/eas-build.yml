@@ -9,33 +9,33 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: 'Build profile'
+        description: 'Build Profile'
         required: false
         default: 'preview'
         type: choice
-        options: [development, preview, production]
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+        options:
+          - development
+          - preview
+          - production
 
 jobs:
   build:
-    name: Build Mobile App
+    name: EAS iOS Build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.26.1
+          version: '10'
 
       - name: Install dependencies
         working-directory: artifacts/mobile
@@ -47,18 +47,11 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Debug Info
-        working-directory: artifacts/mobile
-        run: |
-          echo "Node version: $(node -v)"
-          echo "pnpm version: $(pnpm -v)"
-          eas whoami || echo "EAS not authenticated or token issue"
-
       - name: Build
         working-directory: artifacts/mobile
         run: |
           eas build \
+            --non-interactive \
             --platform ios \
             --profile ${{ github.event.inputs.profile || 'preview' }} \
-            --non-interactive \
-            --verbose
+            --verbose-logs
