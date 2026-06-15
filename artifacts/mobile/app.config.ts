@@ -1,9 +1,7 @@
 import type { ExpoConfig } from "expo/config";
-import {
-  AndroidConfig,
-  withAndroidManifest,
-  withDangerousMod,
-} from "expo/config-plugins";
+import * as ConfigPlugins from "expo/config-plugins.js";
+
+const { AndroidConfig, withAndroidManifest, withDangerousMod } = ConfigPlugins;
 import * as fs from "node:fs";
 import * as path from "node:path";
 
