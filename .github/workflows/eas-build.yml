@@ -60,6 +60,7 @@ jobs:
         if: github.event_name == 'push'
         working-directory: .
         run: |
+          pnpm run typecheck:libs
           pnpm run repo:mobile:typecheck
           pnpm run repo:api:typecheck
 
