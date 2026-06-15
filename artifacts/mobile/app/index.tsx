@@ -2,7 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@clerk/expo";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants/colors";
@@ -11,18 +12,6 @@ import { claimDevice } from "@/services/aiService";
 const DEVICE_CLAIMED_KEY = "@device_claimed";
 const CLIENT_ID_STORAGE_KEY = "ragna_client_id";
 
-/**
- * Runs once per device after the user first signs in.
- *
- * Reads the locally-stored device client_id from AsyncStorage and, if it
- * hasn't been claimed yet, sends a claim request to the server so that any
- * conversation history created before auth was required is linked to the
- * authenticated Clerk userId.
- *
- * Returns true when the claim succeeded or was not needed (safe to navigate).
- * Returns false only if the network call failed — in that case the
- * @device_claimed flag is NOT written so the next sign-in will retry.
- */
 async function runDeviceClaimIfNeeded(): Promise<boolean> {
   try {
     const alreadyClaimed = await AsyncStorage.getItem(DEVICE_CLAIMED_KEY);
@@ -49,8 +38,28 @@ export default function IndexScreen() {
   const claimAttempted = useRef(false);
   const [claimReady, setClaimReady] = useState(false);
 
+  // Video intro state
+  const [showVideo, setShowVideo] = useState(true);
+
+  const player = useVideoPlayer(
+    require("@/assets/HospiceRoadmap_SplashScreen.mp4"),
+    (player) => {
+      player.loop = false;
+      player.play();
+    }
+  );
+
+  const handleVideoEnd = () => {
+    setShowVideo(false);
+  };
+
+  const handleSkip = () => {
+    player.pause();
+    setShowVideo(false);
+  };
+
   useEffect(() => {
-    if (!isClerkLoaded || isLoading) return;
+    if (!isClerkLoaded || isLoading || showVideo) return;
 
     if (!isSignedIn) {
       setClaimReady(true);
@@ -62,10 +71,10 @@ export default function IndexScreen() {
       void runDeviceClaimIfNeeded().then(() => setClaimReady(true));
       return;
     }
-  }, [isSignedIn, isClerkLoaded, isOnboarded, isLoading]);
+  }, [isSignedIn, isClerkLoaded, isOnboarded, isLoading, showVideo]);
 
   useEffect(() => {
-    if (!claimReady || !isClerkLoaded || isLoading) return;
+    if (!claimReady || !isClerkLoaded || isLoading || showVideo) return;
 
     if (!isSignedIn) {
       router.replace("/(auth)/sign-in");
@@ -74,8 +83,37 @@ export default function IndexScreen() {
     } else {
       router.replace("/onboarding");
     }
-  }, [claimReady, isSignedIn, isClerkLoaded, isOnboarded, isLoading]);
+  }, [claimReady, isSignedIn, isClerkLoaded, isOnboarded, isLoading, showVideo]);
 
+  // Show video intro first
+  if (showVideo) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#000" }}>
+        <VideoView
+          player={player}
+          style={{ flex: 1 }}
+          contentFit="cover"
+          nativeControls={false}
+        />
+        <Pressable
+          onPress={handleSkip}
+          style={{
+            position: "absolute",
+            top: 60,
+            right: 20,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 20,
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 14 }}>Skip</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Normal loading / redirect screen
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center" }}>
       <ActivityIndicator size="large" color={Colors.primary} />

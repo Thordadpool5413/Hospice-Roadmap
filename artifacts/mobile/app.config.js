@@ -9,9 +9,7 @@ module.exports = ({ config }) => {
     slug: "hospice-roadmap",
     version: config.version || "0.0.0",
 
-    // Using your provided splash screens
-    // Hospice Roadmap (path/compass) as main splash
-    // RAGNA (boat logo) as app icon
+    // Static splash (use a good frame from your HospiceRoadmap_SplashScreen.mp4)
     icon: "./assets/ragna.png",
     splash: {
       image: "./assets/hospice-roadmap.png",
