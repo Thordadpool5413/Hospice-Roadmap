@@ -1,0 +1,19 @@
+artifacts/mobile/eas.json
+  s_93ca52e64603b2::t_e52d2f6450e16f 7-8,14-15,25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "e64fed732eae2895ca459ba5907082f251121484",
+  "prompts": {},
+  "sessions": {
+    "s_93ca52e64603b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9a2f-a557-7ac1-8077-1d53d01e0648",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}

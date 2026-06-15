@@ -1,0 +1,66 @@
+artifacts/mobile/app/(tabs)/resources.tsx
+  s_93ca52e64603b2::t_79ce05514119da 37
+  s_93ca52e64603b2::t_3db22d35e2a52e 75,77,130,132,138,174,177,188-189,191,193,212,214,216,251
+artifacts/mobile/app/(tabs)/more.tsx
+  s_93ca52e64603b2::t_13052a8ee48d49 110,123-135,152,162-163,229-230,235,246-247,341-385
+artifacts/mobile/components/ui/Button.tsx
+  s_93ca52e64603b2::t_172518148dacb3 43-45,73,75,111
+artifacts/mobile/components/ragna/RagnaHeader.tsx
+  s_93ca52e64603b2::t_e4a4bb32a998b2 10,14-19,23-32,40,43-45,49,75,77-78,83-95,108-111,113,116,121,126,132-136,138,143-144,150,156,159-160
+artifacts/mobile/components/ragna/RagnaMessageBubble.tsx
+  s_93ca52e64603b2::t_ee906df3daf709 157-158,162,165-166,168,206-208,210,215
+artifacts/mobile/components/ui/Card.tsx
+  s_93ca52e64603b2::t_172518148dacb3 50,53,57-60,63-64
+artifacts/mobile/app/(tabs)/journey.tsx
+  s_93ca52e64603b2::t_4edfdfbc6b17ff 82,98,100,157-171,176,230,236-237,240,307,317-333,344-345,347,357
+artifacts/mobile/components/ragna/RagnaEmptyState.tsx
+  s_93ca52e64603b2::t_0dcc32783a0cc7 53-55,71,73-74,116,118,136-151,154,217,222,224,229,241,258,262,270,273,276,286,308,312,322,326,356,360,419,434,436,469-485
+  s_93ca52e64603b2::t_12bf7f9b1f62d3 377,381-382,384-385,402,409
+artifacts/mobile/components/ui/SectionHeader.tsx
+  s_93ca52e64603b2::t_172518148dacb3 38,42,45,48,54,67
+artifacts/mobile/app/(tabs)/_layout.tsx
+  s_93ca52e64603b2::t_66b30fd285f6cb 230
+artifacts/mobile/app/(tabs)/index.tsx
+  s_93ca52e64603b2::t_c368ef58e70739 312
+  s_93ca52e64603b2::t_edda7c5fb848d4 368,371-376,379,404-405,407,409-436,439,442-443,453,481-562,565-580
+  s_93ca52e64603b2::t_c3c1a67e8b72e2 212,214-216,218,221,223,227,230,235,238-239,271-272,274,279,290,326,335-336,1104,1113-1114
+  s_93ca52e64603b2::t_f24f2508263c0d 586,588-592,601,603,605,608-613
+  s_93ca52e64603b2::t_0f1ffc9221d601 598-599,614
+  s_93ca52e64603b2::t_4ad5bb7e5cc739 940-942,966,985
+  s_93ca52e64603b2::t_9cec36112e7c82 1046,1071,1074-1075
+artifacts/mobile/app/(tabs)/help.tsx
+  s_93ca52e64603b2::t_a781b3b1328fa5 47,357-360,372-375,428,1172
+  s_93ca52e64603b2::t_c582f4bf188d02 670
+  s_93ca52e64603b2::t_7685025f0b1a4c 647
+  s_93ca52e64603b2::t_9460b3f2900a86 661,685,690,700,719,736,766,786
+  s_93ca52e64603b2::t_b89e2ff6ddbbfd 2,294,1256
+  s_93ca52e64603b2::t_a5ce7283e0fdeb 423-427
+  s_93ca52e64603b2::t_d92271fa92e0e6 762-764
+artifacts/mobile/components/ui/TextInput.tsx
+  s_93ca52e64603b2::t_172518148dacb3 71-72,74,78-79,94,100
+artifacts/mobile/components/ragna/RagnaMessageList.tsx
+  s_93ca52e64603b2::t_6639a2674cdf11 95,102-108,123,130,136,139,141,146
+artifacts/mobile/components/ui/JourneyBadge.tsx
+  s_93ca52e64603b2::t_172518148dacb3 46-47
+artifacts/mobile/components/CosmicBackground.tsx
+  s_93ca52e64603b2::t_c32b0f200abc89 22,29-30,66,72,83,85,90,92,97,99,104,106
+artifacts/mobile/components/ragna/RagnaComposer.tsx
+  s_93ca52e64603b2::t_2e02107dbbfe25 151-154,159,343-352
+  s_93ca52e64603b2::t_26ee1fb0358754 264,266,268-269,280,286-291,336-339,341,365-368,370,378,390,392,394
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "2a263ce26180ee62086344b49bf60e47d2cf712d",
+  "prompts": {},
+  "sessions": {
+    "s_93ca52e64603b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9a2f-a557-7ac1-8077-1d53d01e0648",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}

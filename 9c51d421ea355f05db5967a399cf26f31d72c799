@@ -1,0 +1,23 @@
+artifacts/mobile/components/CosmicBackground.tsx
+  s_93ca52e64603b2::t_f6f1280cb781d5 29,66,72,85,92,99,106
+artifacts/mobile/constants/colors.ts
+  s_93ca52e64603b2::t_3ad7365066ed6d 10-14,18-20,29-31,70
+artifacts/mobile/app/(tabs)/help.tsx
+  s_93ca52e64603b2::t_e4d1ec8d81f566 784,786-788
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "9c51d421ea355f05db5967a399cf26f31d72c799",
+  "prompts": {},
+  "sessions": {
+    "s_93ca52e64603b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9a2f-a557-7ac1-8077-1d53d01e0648",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}

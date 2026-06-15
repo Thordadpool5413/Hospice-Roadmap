@@ -1,0 +1,27 @@
+artifacts/mobile/app.config.ts
+  s_93ca52e64603b2::t_614e383ca90cb4 5-8,48-49,75
+artifacts/mobile/services/savedListsMerge.ts
+  s_93ca52e64603b2::t_3f2f27f7068089 21-23
+artifacts/mobile/app/(tabs)/help.tsx
+  s_93ca52e64603b2::t_1ff43566af6f06 646,668,672,680,699,759
+artifacts/api-server/src/routes/sync.ts
+  s_93ca52e64603b2::t_cdaf248a4cbbd9 15,260,267
+artifacts/mobile/services/nativeOpenAiVoiceService.ts
+  s_93ca52e64603b2::t_f32bd33c3f4606 697-700,766,773,782,792,799
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "a25951ee045846f432e3eb8b9c7aecdea14667d1",
+  "prompts": {},
+  "sessions": {
+    "s_93ca52e64603b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9a2f-a557-7ac1-8077-1d53d01e0648",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+artifacts/mobile/services/openAiVoiceService.ts
+  s_93ca52e64603b2::t_b6ccb2b03e13b9 5,42-49,237
+artifacts/mobile/services/nativeOpenAiVoiceService.ts
+  s_93ca52e64603b2::t_4644c2d7badeb5 17,125-132
+  s_93ca52e64603b2::t_612d89cbb77afd 860,919,1008
+artifacts/mobile/app/hospice-interview.tsx
+  s_93ca52e64603b2::t_7eaeb392eee885 22-23,970,973
+artifacts/mobile/services/aiService.ts
+  s_93ca52e64603b2::t_e0b3b5c237d9d3 3,9-14,39,47,56,70,105,165,216,299
+artifacts/mobile/services/openAiVoicePreviewService.ts
+  s_93ca52e64603b2::t_3abec4f6d40bbf 5,11-18,46
+artifacts/mobile/app/(tabs)/help.tsx
+  s_93ca52e64603b2::t_725c1b9642cf02 827-831,834-836
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "767621fb32bbaa870cf840ba166a5f715295942b",
+  "prompts": {},
+  "sessions": {
+    "s_93ca52e64603b2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9a2f-a557-7ac1-8077-1d53d01e0648",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "Thordadpool5413 <nick.lynch.coaching@outlook.com>"
+    }
+  }
+}
