@@ -45,7 +45,6 @@
     "expo-status-bar": "~15.0.0",
     "expo-symbols": "~15.0.0",
     "expo-system-ui": "~6.0.9",
-    "expo-video": "~2.0.5",
     "expo-web-browser": "~15.0.11",
     "react": "catalog:",
     "react-dom": "catalog:",
