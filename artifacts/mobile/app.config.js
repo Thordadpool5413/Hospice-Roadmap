@@ -9,13 +9,13 @@ module.exports = ({ config }) => {
     slug: "hospice-roadmap",
     version: config.version || "0.0.0",
 
-    // Static splash (use a good frame from your HospiceRoadmap_SplashScreen.mp4)
-    icon: "./assets/ragna.png",
-    splash: {
-      image: "./assets/hospice-roadmap.png",
-      resizeMode: "contain",
-      backgroundColor: "#030A18"
-    },
+    // Custom icon and splash are temporarily disabled until you add the PNG files
+    // icon: "./assets/ragna.png",
+    // splash: {
+    //   image: "./assets/hospice-roadmap.png",
+    //   resizeMode: "contain",
+    //   backgroundColor: "#030A18"
+    // },
 
     ios: {
       ...(config.ios || {}),
