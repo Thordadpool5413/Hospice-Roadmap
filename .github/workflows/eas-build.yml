@@ -2,7 +2,7 @@ name: EAS Build
 
 on:
   push:
-    branches: [main, master]
+    branches: [master, main]
     paths:
       - 'artifacts/mobile/**'
       - '.github/workflows/eas-build.yml'
@@ -17,124 +17,54 @@ on:
           - development
           - preview
           - production
-      api_url:
-        description: 'Optional hosted API URL for manual builds (for example https://example.com/api)'
-        required: false
-        type: string
-      domain:
-        description: 'Optional hosted domain for manual builds when api_url is not provided'
-        required: false
-        type: string
-      clerk_publishable_key:
-        description: 'Optional Clerk publishable key override when the selected EAS environment does not already provide one'
-        required: false
-        type: string
 
 jobs:
   build:
-    name: Mobile CI / EAS Build
+    name: Build Mobile App
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: artifacts/mobile
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.3.0
+          version: '10.26.1'
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        working-directory: .
+        working-directory: artifacts/mobile
         run: pnpm install --frozen-lockfile
 
-      - name: Validate Expo config
-        if: github.event_name == 'push'
-        env:
-          EAS_BUILD_PROFILE: preview
-          EXPO_PUBLIC_API_URL: https://ci-placeholder.invalid/api
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci_placeholder
-        run: pnpm exec expo config --type public > /dev/null
-
-      - name: Setup EAS
-        if: github.event_name == 'workflow_dispatch'
+      - name: Setup EAS CLI
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Validate EAS config
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          PROFILE: ${{ github.event.inputs.profile || 'preview' }}
-          API_URL_OVERRIDE: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
-          DOMAIN_OVERRIDE: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
-          CLERK_PUBLISHABLE_KEY_OVERRIDE: ${{ github.event.inputs.clerk_publishable_key || vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || vars.CLERK_PUBLISHABLE_KEY }}
+      - name: Build with EAS
+        working-directory: artifacts/mobile
         run: |
-          set -euo pipefail
-          pnpm exec eas env:exec --non-interactive "$PROFILE" '
-            set -eu
-
-            if [ -n "${API_URL_OVERRIDE:-}" ]; then
-              export EXPO_PUBLIC_API_URL="$API_URL_OVERRIDE"
-            fi
-
-            if [ -n "${DOMAIN_OVERRIDE:-}" ]; then
-              export EXPO_PUBLIC_DOMAIN="$DOMAIN_OVERRIDE"
-            fi
-
-            if [ -n "${CLERK_PUBLISHABLE_KEY_OVERRIDE:-}" ]; then
-              export EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY_OVERRIDE"
-            fi
-
-            if [ "$PROFILE" = "preview" ] || [ "$PROFILE" = "production" ]; then
-              if [ -z "${EXPO_PUBLIC_API_URL:-}" ] && [ -z "${EXPO_PUBLIC_DOMAIN:-}" ]; then
-                echo "::error::Missing hosted API configuration. Supply workflow input api_url/domain or set EXPO_PUBLIC_API_URL / EXPO_PUBLIC_DOMAIN in the selected EAS environment."
-                exit 1
-              fi
-
-              if [ -z "${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ] && [ -z "${CLERK_PUBLISHABLE_KEY:-}" ]; then
-                echo "::error::Missing Clerk publishable key. Supply workflow input clerk_publishable_key or set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY / CLERK_PUBLISHABLE_KEY in the selected EAS environment."
-                exit 1
-              fi
-            fi
-
-            export EAS_BUILD_PROFILE="$PROFILE"
-            pnpm exec eas config --platform ios --profile "$PROFILE" --non-interactive > /dev/null
-          '
-
-      - name: Build
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          PROFILE: ${{ github.event.inputs.profile || 'preview' }}
-          API_URL_OVERRIDE: ${{ github.event.inputs.api_url || vars.EXPO_PUBLIC_API_URL }}
-          DOMAIN_OVERRIDE: ${{ github.event.inputs.domain || vars.EXPO_PUBLIC_DOMAIN }}
-          CLERK_PUBLISHABLE_KEY_OVERRIDE: ${{ github.event.inputs.clerk_publishable_key || vars.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || vars.CLERK_PUBLISHABLE_KEY }}
-        run: |
-          set -euo pipefail
-          pnpm exec eas env:exec --non-interactive "$PROFILE" '
-            set -eu
-
-            if [ -n "${API_URL_OVERRIDE:-}" ]; then
-              export EXPO_PUBLIC_API_URL="$API_URL_OVERRIDE"
-            fi
-
-            if [ -n "${DOMAIN_OVERRIDE:-}" ]; then
-              export EXPO_PUBLIC_DOMAIN="$DOMAIN_OVERRIDE"
-            fi
-
-            if [ -n "${CLERK_PUBLISHABLE_KEY_OVERRIDE:-}" ]; then
-              export EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY_OVERRIDE"
-            fi
-
-            export EAS_BUILD_PROFILE="$PROFILE"
-            eas build --platform ios --profile "$PROFILE" --non-interactive
-          '
+          eas build \
+            --platform ios \
+            --profile ${{ github.event.inputs.profile || 'preview' }} \
+            --non-interactive
