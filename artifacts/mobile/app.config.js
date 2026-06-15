@@ -9,16 +9,12 @@ module.exports = ({ config }) => {
     slug: "hospice-roadmap",
     version: config.version || "0.0.0",
 
-    // Note: Add icon and splash assets in assets/ (e.g. icon.png, splash.png)
-    // when ready for App Store / full production branding.
-    // Current setup relies on expo defaults + expo-splash-screen for splash behavior.
-    // Example (uncomment when assets exist):
-    // icon: "./assets/icon.png",
-    // splash: {
-    //   image: "./assets/splash.png",
-    //   resizeMode: "contain",
-    //   backgroundColor: "#030A18"
-    // },
+    icon: "./assets/icon.png",
+    splash: {
+      image: "./assets/splash.png",
+      resizeMode: "contain",
+      backgroundColor: "#030A18"
+    },
 
     ios: {
       ...(config.ios || {}),
@@ -39,7 +35,6 @@ module.exports = ({ config }) => {
           locationAlwaysAndWhenInUsePermission: "Allow Hospice Roadmap to access your location for care coordination, reminders, and emergency features.",
         },
       ],
-      // Add more plugins here as needed (e.g. for maps, local-auth, or custom modules)
     ],
 
     updates: {
