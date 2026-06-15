@@ -86,6 +86,14 @@ const config: ExpoConfig = {
       "Guidance for patients and caregivers before, during, and after hospice care.",
   } as ExpoConfig["web"],
   plugins: [
+    [
+      "expo-build-properties",
+      {
+        ios: {
+          useFrameworks: "static",
+        },
+      },
+    ],
     "expo-router",
     "expo-font",
     "expo-web-browser",
