@@ -6,7 +6,7 @@ module.exports = ({ config }) => {
     ...config,
 
     name: "Hospice Roadmap",
-    slug: "hospice-roadmap",
+    slug: "mobile",
     version: config.version || "0.0.0",
 
     extra: {
