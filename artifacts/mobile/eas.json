@@ -15,21 +15,14 @@
       "pnpm": "10.26.1",
       "distribution": "store",
       "environment": "preview",
-      "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "true",
-        "EXPO_DEBUG": "1"
-      }
+      "autoIncrement": true
     },
     "production": {
       "node": "22.22.3",
       "pnpm": "10.26.1",
       "distribution": "store",
       "environment": "production",
-      "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM": "false"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
