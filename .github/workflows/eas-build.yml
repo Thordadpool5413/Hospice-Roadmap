@@ -1,22 +1,14 @@
 name: EAS Build
 
 on:
-  push:
-    branches: [master, main]
-    paths:
-      - 'artifacts/mobile/**'
-      - '.github/workflows/eas-build.yml'
   workflow_dispatch:
     inputs:
       profile:
-        description: 'Build Profile'
+        description: 'Build profile'
         required: false
         default: 'preview'
         type: choice
-        options:
-          - development
-          - preview
-          - production
+        options: [development, preview, production]
 
 jobs:
   build:
@@ -24,34 +16,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 22
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: '10'
+          version: 10
 
       - name: Install dependencies
         working-directory: artifacts/mobile
         run: pnpm install --frozen-lockfile
 
-      - name: Setup EAS
+      - name: Setup EAS CLI
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Debug Info
+        working-directory: artifacts/mobile
+        run: |
+          echo "Node: $(node -v)"
+          echo "pnpm: $(pnpm -v)"
+          eas whoami || echo "EAS auth failed - check EXPO_TOKEN secret"
+
       - name: Build
         working-directory: artifacts/mobile
         run: |
           eas build \
-            --non-interactive \
             --platform ios \
             --profile ${{ github.event.inputs.profile || 'preview' }} \
+            --non-interactive \
             --verbose-logs
