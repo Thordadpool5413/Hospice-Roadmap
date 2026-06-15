@@ -9,12 +9,18 @@
       ],
       "@workspace/api-client-react": [
         "../../lib/api-client-react/src/index.ts"
+      ],
+      "@workspace/goc-merge": [
+        "../../lib/goc-merge/src/index.ts"
       ]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx"
+  ],
+  "exclude": [
+    "__tests__"
   ],
   "references": [
     {

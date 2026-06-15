@@ -13,6 +13,7 @@ import {
   userProfiles,
   ragnaMemory,
   gocContentSchema,
+  type GoalsOfCareContent,
 } from "@workspace/db/schema";
 
 const router = Router();
@@ -275,7 +276,7 @@ router.put("/goals", async (req, res) => {
 
     await db
       .insert(goalsOfCare)
-      .values({ userId, content: parsed.data, updatedAt: clientUpdatedAt })
+      .values({ userId, content: parsed.data as GoalsOfCareContent, updatedAt: clientUpdatedAt })
       .onConflictDoUpdate({
         target: goalsOfCare.userId,
         set: {

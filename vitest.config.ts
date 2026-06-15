@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       "@workspace/db/schema": path.resolve(__dirname, "lib/db/src/schema/index.ts"),
       "@workspace/db": path.resolve(__dirname, "lib/db/src/index.ts"),
+      "@workspace/goc-merge": path.resolve(__dirname, "lib/goc-merge/src/index.ts"),
     },
   },
 });
