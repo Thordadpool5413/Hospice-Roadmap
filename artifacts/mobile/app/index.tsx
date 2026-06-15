@@ -38,28 +38,75 @@ export default function IndexScreen() {
   const claimAttempted = useRef(false);
   const [claimReady, setClaimReady] = useState(false);
 
-  // Video intro state
-  const [showVideo, setShowVideo] = useState(true);
+  // Intro video sequence: hospice -> ragna -> done
+  const [introStage, setIntroStage] = useState<'hospice' | 'ragna' | 'done'>('hospice');
 
-  const player = useVideoPlayer(
+  // Hospice Roadmap video (first intro)
+  const hospicePlayer = useVideoPlayer(
     require("@/assets/HospiceRoadmap_SplashScreen.mp4"),
     (player) => {
       player.loop = false;
-      player.play();
     }
   );
 
-  const handleVideoEnd = () => {
-    setShowVideo(false);
+  // RAGNA video (second intro)
+  const ragnaPlayer = useVideoPlayer(
+    require("@/assets/HospiceRoadMap_Ragan_SplashScreen.mp4"),
+    (player) => {
+      player.loop = false;
+    }
+  );
+
+  const playNext = () => {
+    if (introStage === 'hospice') {
+      hospicePlayer.pause();
+      setIntroStage('ragna');
+      // Small delay to ensure UI updates before playing
+      setTimeout(() => {
+        ragnaPlayer.play();
+      }, 50);
+    } else if (introStage === 'ragna') {
+      ragnaPlayer.pause();
+      setIntroStage('done');
+    }
   };
 
   const handleSkip = () => {
-    player.pause();
-    setShowVideo(false);
+    hospicePlayer.pause();
+    ragnaPlayer.pause();
+    setIntroStage('done');
   };
 
+  // Auto-advance when hospice video ends
   useEffect(() => {
-    if (!isClerkLoaded || isLoading || showVideo) return;
+    const subscription = hospicePlayer.addListener('playToEnd', () => {
+      if (introStage === 'hospice') {
+        playNext();
+      }
+    });
+    return () => subscription?.remove();
+  }, [introStage, hospicePlayer]);
+
+  // Auto-advance when ragna video ends
+  useEffect(() => {
+    const subscription = ragnaPlayer.addListener('playToEnd', () => {
+      if (introStage === 'ragna') {
+        setIntroStage('done');
+      }
+    });
+    return () => subscription?.remove();
+  }, [introStage, ragnaPlayer]);
+
+  // Start playing first video
+  useEffect(() => {
+    if (introStage === 'hospice') {
+      hospicePlayer.play();
+    }
+  }, [introStage, hospicePlayer]);
+
+  // Existing auth logic (only runs after intros are done)
+  useEffect(() => {
+    if (!isClerkLoaded || isLoading || introStage !== 'done') return;
 
     if (!isSignedIn) {
       setClaimReady(true);
@@ -71,10 +118,10 @@ export default function IndexScreen() {
       void runDeviceClaimIfNeeded().then(() => setClaimReady(true));
       return;
     }
-  }, [isSignedIn, isClerkLoaded, isOnboarded, isLoading, showVideo]);
+  }, [isSignedIn, isClerkLoaded, isOnboarded, isLoading, introStage]);
 
   useEffect(() => {
-    if (!claimReady || !isClerkLoaded || isLoading || showVideo) return;
+    if (!claimReady || !isClerkLoaded || isLoading || introStage !== 'done') return;
 
     if (!isSignedIn) {
       router.replace("/(auth)/sign-in");
@@ -83,18 +130,29 @@ export default function IndexScreen() {
     } else {
       router.replace("/onboarding");
     }
-  }, [claimReady, isSignedIn, isClerkLoaded, isOnboarded, isLoading, showVideo]);
+  }, [claimReady, isSignedIn, isClerkLoaded, isOnboarded, isLoading, introStage]);
 
-  // Show video intro first
-  if (showVideo) {
+  // Show intro videos
+  if (introStage !== 'done') {
     return (
       <View style={{ flex: 1, backgroundColor: "#000" }}>
-        <VideoView
-          player={player}
-          style={{ flex: 1 }}
-          contentFit="cover"
-          nativeControls={false}
-        />
+        {introStage === 'hospice' && (
+          <VideoView
+            player={hospicePlayer}
+            style={{ flex: 1 }}
+            contentFit="cover"
+            nativeControls={false}
+          />
+        )}
+        {introStage === 'ragna' && (
+          <VideoView
+            player={ragnaPlayer}
+            style={{ flex: 1 }}
+            contentFit="cover"
+            nativeControls={false}
+          />
+        )}
+
         <Pressable
           onPress={handleSkip}
           style={{
@@ -107,7 +165,7 @@ export default function IndexScreen() {
             borderRadius: 20,
           }}
         >
-          <Text style={{ color: "white", fontSize: 14 }}>Skip</Text>
+          <Text style={{ color: "white", fontSize: 14 }}>Skip Intro</Text>
         </Pressable>
       </View>
     );
