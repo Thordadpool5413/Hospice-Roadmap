@@ -1,9 +1,4 @@
 import type { ExpoConfig } from "expo/config";
-import * as ConfigPlugins from "expo/config-plugins.js";
-
-const { AndroidConfig, withAndroidManifest, withDangerousMod } = ConfigPlugins;
-import * as fs from "node:fs";
-import * as path from "node:path";
 
 const devDomain =
   process.env["REPLIT_DEV_DOMAIN"] ||
@@ -39,52 +34,6 @@ if (requiresHostedApiConfig && !clerkPublishableKey) {
     "[app.config] Missing Clerk publishable key for preview/production build. Set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY.",
   );
 }
-
-const withAndroidAutoMedia = (config: ExpoConfig) => {
-  const withManifest = withAndroidManifest(config, (cfg) => {
-    const application = AndroidConfig.Manifest.getMainApplicationOrThrow(
-      cfg.modResults,
-    );
-
-    application["meta-data"] = application["meta-data"] ?? [];
-
-    const exists = application["meta-data"].some(
-      (entry) =>
-        entry.$?.["android:name"] === "com.google.android.gms.car.application",
-    );
-
-    if (!exists) {
-      application["meta-data"].push({
-        $: {
-          "android:name": "com.google.android.gms.car.application",
-          "android:resource": "@xml/automotive_app_desc",
-        },
-      });
-    }
-
-    return cfg;
-  });
-
-  return withDangerousMod(withManifest, [
-    "android",
-    async (cfg) => {
-      const xmlDir = path.join(
-        cfg.modRequest.platformProjectRoot,
-        "app/src/main/res/xml",
-      );
-
-      await fs.promises.mkdir(xmlDir, { recursive: true });
-
-      await fs.promises.writeFile(
-        path.join(xmlDir, "automotive_app_desc.xml"),
-        `<?xml version="1.0" encoding="utf-8"?>\n<automotiveApp>\n  <uses name="media" />\n</automotiveApp>\n`,
-        "utf-8",
-      );
-
-      return cfg;
-    },
-  ]);
-};
 
 const config: ExpoConfig = {
   name: "Hospice Roadmap",
@@ -149,7 +98,6 @@ const config: ExpoConfig = {
           "Allow Hospice Roadmap to access your location for care coordination, reminders, and emergency features.",
       },
     ],
-    withAndroidAutoMedia as unknown as string,
   ],
   experiments: {
     typedRoutes: true,
