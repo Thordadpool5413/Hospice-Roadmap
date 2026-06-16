@@ -63,7 +63,7 @@ import {
   getHideReplyPreview,
   setHideReplyPreview,
 } from "@/services/ragnaPreviewPreference";
-import { setPreferredVoice } from "@/services/voicePreferences";
+import { RAGNA_VOICE_ID, setPreferredVoice } from "@/services/voicePreferences";
 import {
   JournalEntry,
   RagnaAction,
@@ -81,10 +81,10 @@ import { LocalMessage } from "@/components/ragna/RagnaMessageBubble";
 import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
 import { PremiumGate } from "@/components/PremiumGate";
 
-const VOICE_OPTIONS = [{ id: "marin", label: "Ragna" }] as const;
+const VOICE_OPTIONS = [{ id: RAGNA_VOICE_ID, label: "Ragna" }] as const;
 
 const VOICE_LABELS: Record<string, string> = {
-  marin: "Ragna",
+  [RAGNA_VOICE_ID]: "Ragna",
 };
 
 const GUIDANCE_PROMPTS: {

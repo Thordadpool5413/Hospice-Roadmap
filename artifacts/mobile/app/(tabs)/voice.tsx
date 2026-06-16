@@ -46,6 +46,7 @@ import {
 } from "@/services/openAiVoiceService";
 import {
   getPreferredVoice,
+  RAGNA_VOICE_ID,
   setPreferredVoice,
 } from "@/services/voicePreferences";
 
@@ -60,12 +61,11 @@ const VOICE_STATUS_COPY: Record<OpenAiVoiceStatus, string> = {
 };
 
 const VOICE_OPTIONS = [
-  { id: "marin", label: "Marin", description: "Balanced and natural" },
-  { id: "cedar", label: "Cedar", description: "Calm and grounded" },
-  { id: "alloy", label: "Alloy", description: "Neutral and clear" },
-  { id: "sage", label: "Sage", description: "Warm and steady" },
-  { id: "shimmer", label: "Shimmer", description: "Bright and lighter" },
-  { id: "echo", label: "Echo", description: "Direct and crisp" },
+  {
+    id: RAGNA_VOICE_ID,
+    label: "Ragna",
+    description: "Custom ElevenLabs voice built for Hospice Roadmap",
+  },
 ] as const;
 
 const VOICE_PREVIEW_TEXT =
@@ -95,7 +95,7 @@ export default function VoiceScreen() {
   const { getObservationContext } = useRagnaLearning();
 
   const [voiceStatus, setVoiceStatus] = useState<OpenAiVoiceStatus>("idle");
-  const [selectedVoice, setSelectedVoice] = useState<VoiceOptionId>("marin");
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOptionId>(RAGNA_VOICE_ID);
   const [previewingVoiceId, setPreviewingVoiceId] = useState<VoiceOptionId | null>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null);
@@ -240,11 +240,6 @@ export default function VoiceScreen() {
 
   const handlePreviewVoice = useCallback(async (voiceId: VoiceOptionId) => {
     if (voiceSessionRef.current || isRecordingNative) return;
-
-    if (isNativeVoiceMode) {
-      setSharedThreadStatus("Voice previews are available in the web preview. On iPhone, choose a voice and start recording.");
-      return;
-    }
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -570,11 +565,9 @@ export default function VoiceScreen() {
 
           <View style={styles.voicePickerCard}>
             <View style={styles.voicePickerHeader}>
-              <Text style={styles.voicePickerTitle}>Choose Ragna's voice</Text>
+              <Text style={styles.voicePickerTitle}>Ragna voice</Text>
               <Text style={styles.voicePickerSubtitle}>
-                {isVoiceActive
-                  ? "Voice changes lock while a session or recording is active."
-                  : `Current: ${selectedVoiceMeta.label} · ${selectedVoiceMeta.description}`}
+                {selectedVoiceMeta.description}
               </Text>
             </View>
             <View style={styles.voiceOptionGrid}>
@@ -586,7 +579,7 @@ export default function VoiceScreen() {
                     key={option.id}
                     style={[
                       styles.voiceOption,
-                      selected ? styles.voiceOptionSelected : null,
+                      styles.voiceOptionSelected,
                       isVoiceActive ? styles.voiceOptionDisabled : null,
                     ]}
                   >

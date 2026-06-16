@@ -1,15 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "ragna_preferred_voice";
+export const RAGNA_VOICE_ID = "ragna";
 
-const ALLOWED_VOICE_IDS = new Set([
-  "marin",
-  "cedar",
-  "alloy",
-  "sage",
-  "shimmer",
-  "echo",
-]);
+const ALLOWED_VOICE_IDS = new Set([RAGNA_VOICE_ID]);
 
 let cachedPreferredVoice: string | null | undefined;
 
@@ -20,12 +14,16 @@ export async function getPreferredVoice(): Promise<string | null> {
 
   try {
     const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    if (stored === "marin") {
+      cachedPreferredVoice = RAGNA_VOICE_ID;
+      return cachedPreferredVoice;
+    }
     cachedPreferredVoice =
-      stored && ALLOWED_VOICE_IDS.has(stored) ? stored : null;
+      stored && ALLOWED_VOICE_IDS.has(stored) ? stored : RAGNA_VOICE_ID;
     return cachedPreferredVoice;
   } catch {
-    cachedPreferredVoice = null;
-    return null;
+    cachedPreferredVoice = RAGNA_VOICE_ID;
+    return cachedPreferredVoice;
   }
 }
 

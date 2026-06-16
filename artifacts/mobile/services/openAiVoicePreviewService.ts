@@ -3,6 +3,11 @@ import { Platform } from "react-native";
 import { getAuthToken } from "@workspace/api-client-react";
 
 import { apiBase, mergeJsonHeaders } from "./apiClient";
+import {
+  speakNativeOpenAiVoiceText,
+  stopNativeOpenAiVoice,
+} from "./nativeOpenAiVoiceService";
+import { RAGNA_VOICE_ID } from "./voicePreferences";
 
 let activeAudio: HTMLAudioElement | null = null;
 let activeObjectUrl: string | null = null;
@@ -21,13 +26,27 @@ function cleanupPreviewAudio() {
 }
 
 export function stopOpenAiVoicePreview(): void {
-  if (Platform.OS !== "web") return;
-  cleanupPreviewAudio();
+  if (Platform.OS === "web") {
+    cleanupPreviewAudio();
+    return;
+  }
+  void stopNativeOpenAiVoice();
 }
 
-export async function previewOpenAiVoice(voice: string, text: string): Promise<void> {
-  if (Platform.OS !== "web" || typeof window === "undefined" || typeof Audio === "undefined") {
-    throw new Error("Voice preview currently runs in the web app preview.");
+export async function previewOpenAiVoice(
+  voice: string = RAGNA_VOICE_ID,
+  text: string,
+): Promise<void> {
+  if (Platform.OS !== "web") {
+    await speakNativeOpenAiVoiceText({
+      text,
+      voice,
+    });
+    return;
+  }
+
+  if (typeof window === "undefined" || typeof Audio === "undefined") {
+    throw new Error("Voice preview is unavailable in this environment.");
   }
 
   cleanupPreviewAudio();

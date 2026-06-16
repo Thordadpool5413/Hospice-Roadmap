@@ -65,6 +65,7 @@ function getOpenAiApiKey(res: Response): string | null {
 }
 
 function normalizeVoice(voice: unknown): string {
+  if (voice === "ragna") return "marin";
   return typeof voice === "string" && ALLOWED_VOICES.has(voice) ? voice : "marin";
 }
 

@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -17,8 +17,8 @@ import type { PurchasesPackage } from "react-native-purchases";
 
 import { Colors } from "@/constants/colors";
 import {
-  CAREGIVER_PACKAGE_IDENTIFIER,
   COMPANION_PACKAGE_IDENTIFIER,
+  PRIMARY_PACKAGE_IDENTIFIER,
 } from "@/constants/subscriptionProducts";
 import { useApp } from "@/context/AppContext";
 import { useSubscription } from "@/context/SubscriptionContext";
@@ -286,21 +286,19 @@ export default function PaywallScreen() {
     useSubscription();
   const { user } = useApp();
   const userRole = user?.role;
-  const { fromPlan } = useLocalSearchParams<{ fromPlan?: string }>();
-
-  const isUpgradeFromCaregiver = fromPlan === "caregiver";
-
   const [pendingPackage, setPendingPackage] = useState<PurchasesPackage | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const currentOffering = offerings?.current;
-  const caregiverPkg = currentOffering?.availablePackages.find(
-    (p: PurchasesPackage) => p.identifier === CAREGIVER_PACKAGE_IDENTIFIER,
-  );
-  const companionPkg = currentOffering?.availablePackages.find(
-    (p: PurchasesPackage) => p.identifier === COMPANION_PACKAGE_IDENTIFIER,
-  );
+  const primaryPkg =
+    currentOffering?.availablePackages.find(
+      (p: PurchasesPackage) => p.identifier === PRIMARY_PACKAGE_IDENTIFIER,
+    ) ??
+    currentOffering?.availablePackages.find(
+      (p: PurchasesPackage) => p.identifier === COMPANION_PACKAGE_IDENTIFIER,
+    ) ??
+    currentOffering?.availablePackages[0];
 
   function handleSelectPlan(pkg: PurchasesPackage) {
     setErrorMsg(null);
@@ -355,9 +353,7 @@ export default function PaywallScreen() {
         <Pressable onPress={() => router.back()} style={styles.closeBtn} hitSlop={12}>
           <Feather name="x" size={22} color={Colors.textSecondary} />
         </Pressable>
-        <Text style={styles.headerTitle}>
-          {isUpgradeFromCaregiver ? "Upgrade to Companion" : "Choose a Plan"}
-        </Text>
+        <Text style={styles.headerTitle}>Upgrade</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -367,17 +363,13 @@ export default function PaywallScreen() {
       >
         {/* Hero */}
         <Text style={styles.heroTitle}>
-          {isUpgradeFromCaregiver
-            ? "Unlock Ragna AI"
-            : (ROLE_HERO_COPY[userRole ?? ""] ?? DEFAULT_HERO_COPY).title}
+          {(ROLE_HERO_COPY[userRole ?? ""] ?? DEFAULT_HERO_COPY).title}
         </Text>
         <Text style={styles.heroSub}>
-          {isUpgradeFromCaregiver
-            ? "You're already getting the most out of Caregiver. Add AI-powered guidance to go further."
-            : (ROLE_HERO_COPY[userRole ?? ""] ?? DEFAULT_HERO_COPY).sub}
+          {(ROLE_HERO_COPY[userRole ?? ""] ?? DEFAULT_HERO_COPY).sub}
         </Text>
 
-        {isPremium && !isUpgradeFromCaregiver && (
+        {isPremium && (
           <View style={styles.alreadyPremium}>
             <Feather name="check-circle" size={18} color={Colors.success} />
             <Text style={styles.alreadyPremiumText}>
@@ -400,134 +392,45 @@ export default function PaywallScreen() {
           </View>
         )}
 
-        {isUpgradeFromCaregiver ? (
-          <>
-            {/* Focused upgrade view: what you'll gain */}
-            <WhatYouGainSection companionPrice={companionPkg?.product.priceString} />
+        <RagnaCallout />
 
-            {/* Companion CTA card */}
-            <View style={[styles.card, styles.companionCard]}>
-              <View style={styles.bestValueBadge}>
-                <Text style={styles.bestValueText}>Upgrade</Text>
-              </View>
-              <View style={styles.cardHeader}>
-                <Text style={[styles.planName, styles.companionPlanName]}>Companion</Text>
-                <Text style={[styles.planPrice, styles.companionPrice]}>
-                  {companionPkg?.product.priceString ?? "$9.99"}
-                  <Text style={styles.planPeriod}>/wk</Text>
-                </Text>
-              </View>
-              <Text style={styles.planDesc}>
-                Full access, including Ragna AI for personalized guidance.
+        <View style={[styles.card, styles.companionCard]}>
+          <View style={styles.bestValueBadge}>
+            <Text style={styles.bestValueText}>Full Access</Text>
+          </View>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.planName, styles.companionPlanName]}>Hospice Roadmap Premium</Text>
+            <Text style={[styles.planPrice, styles.companionPrice]}>
+              {primaryPkg?.product.priceString ?? "$9.99"}
+              <Text style={styles.planPeriod}>/wk</Text>
+            </Text>
+          </View>
+          <Text style={styles.planDesc}>
+            One plan with every tool plus Ragna AI for personalized guidance.
+          </Text>
+          {Platform.OS !== "web" && (
+            <Text style={styles.trialNote}>
+              7-day free trial available on App Store &amp; Play Store.
+            </Text>
+          )}
+          <View style={styles.divider} />
+          {COMPANION_FEATURES.map((f) => (
+            <FeatureRow key={f.text} feature={f} />
+          ))}
+          <Pressable
+            style={[styles.ctaBtn, styles.companionBtn, (isBusy || !primaryPkg) && styles.ctaBtnDisabled]}
+            onPress={() => primaryPkg && handleSelectPlan(primaryPkg)}
+            disabled={isBusy || !primaryPkg || isPremium}
+          >
+            {isPurchasing && pendingPackage?.identifier === primaryPkg?.identifier ? (
+              <ActivityIndicator color={Colors.background} size="small" />
+            ) : (
+              <Text style={styles.ctaBtnText}>
+                {isPremium ? "Premium Active" : "Start Premium"}
               </Text>
-              {Platform.OS !== "web" && (
-                <Text style={styles.trialNote}>
-                  7-day free trial available on App Store &amp; Play Store.
-                </Text>
-              )}
-              <Pressable
-                style={[styles.ctaBtn, styles.companionBtn, (isBusy || !companionPkg) && styles.ctaBtnDisabled]}
-                onPress={() => companionPkg && handleSelectPlan(companionPkg)}
-                disabled={isBusy || !companionPkg}
-              >
-                {isPurchasing && pendingPackage?.identifier === COMPANION_PACKAGE_IDENTIFIER ? (
-                  <ActivityIndicator color={Colors.background} size="small" />
-                ) : (
-                  <Text style={styles.ctaBtnText}>Upgrade to Companion</Text>
-                )}
-              </Pressable>
-            </View>
-
-            {/* De-emphasized Caregiver card */}
-            <View style={[styles.card, styles.caregiverCardDimmed]}>
-              <View style={styles.cardHeader}>
-                <Text style={[styles.planName, styles.planNameDimmed]}>Caregiver</Text>
-                <Text style={[styles.planPrice, styles.planPriceDimmed]}>
-                  {caregiverPkg?.product.priceString ?? "$4.99"}
-                  <Text style={styles.planPeriod}>/wk</Text>
-                </Text>
-              </View>
-              <Text style={styles.planDesc}>Your current plan.</Text>
-              <View style={styles.divider} />
-              {CAREGIVER_FEATURES.map((f) => (
-                <FeatureRow key={f.text} feature={f} />
-              ))}
-            </View>
-          </>
-        ) : (
-          <>
-            {/* Standard full paywall view */}
-            <Text style={styles.compSectionLabel}>Compare Plans</Text>
-            <RagnaCallout />
-            <PlanComparisonTable caregiverPkg={caregiverPkg} companionPkg={companionPkg} />
-
-            {/* Caregiver plan */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.planName}>Caregiver</Text>
-                <Text style={styles.planPrice}>
-                  {caregiverPkg?.product.priceString ?? "$4.99"}
-                  <Text style={styles.planPeriod}>/wk</Text>
-                </Text>
-              </View>
-              <Text style={styles.planDesc}>
-                Core tools to support daily caregiving.
-              </Text>
-              <View style={styles.divider} />
-              {CAREGIVER_FEATURES.map((f) => (
-                <FeatureRow key={f.text} feature={f} />
-              ))}
-              <Pressable
-                style={[styles.ctaBtn, styles.caregiverBtn, (isBusy || !caregiverPkg) && styles.ctaBtnDisabled]}
-                onPress={() => caregiverPkg && handleSelectPlan(caregiverPkg)}
-                disabled={isBusy || !caregiverPkg}
-              >
-                {isPurchasing && pendingPackage?.identifier === CAREGIVER_PACKAGE_IDENTIFIER ? (
-                  <ActivityIndicator color={Colors.background} size="small" />
-                ) : (
-                  <Text style={styles.ctaBtnText}>Start Caregiver Plan</Text>
-                )}
-              </Pressable>
-            </View>
-
-            {/* Companion plan */}
-            <View style={[styles.card, styles.companionCard]}>
-              <View style={styles.bestValueBadge}>
-                <Text style={styles.bestValueText}>Best Value</Text>
-              </View>
-              <View style={styles.cardHeader}>
-                <Text style={[styles.planName, styles.companionPlanName]}>Companion</Text>
-                <Text style={[styles.planPrice, styles.companionPrice]}>
-                  {companionPkg?.product.priceString ?? "$9.99"}
-                  <Text style={styles.planPeriod}>/wk</Text>
-                </Text>
-              </View>
-              <Text style={styles.planDesc}>
-                Full access, including Ragna AI for personalized guidance.
-              </Text>
-              {Platform.OS !== "web" && (
-                <Text style={styles.trialNote}>
-                  7-day free trial available on App Store &amp; Play Store.
-                </Text>
-              )}
-              <View style={styles.divider} />
-              {COMPANION_FEATURES.map((f) => (
-                <FeatureRow key={f.text} feature={f} />
-              ))}
-              <Pressable
-                style={[styles.ctaBtn, styles.companionBtn, (isBusy || !companionPkg) && styles.ctaBtnDisabled]}
-                onPress={() => companionPkg && handleSelectPlan(companionPkg)}
-                disabled={isBusy || !companionPkg}
-              >
-                {isPurchasing && pendingPackage?.identifier === COMPANION_PACKAGE_IDENTIFIER ? (
-                  <ActivityIndicator color={Colors.background} size="small" />
-                ) : (
-                  <Text style={styles.ctaBtnText}>Start Companion Plan</Text>
-                )}
-              </Pressable>
-            </View>
-          </>
-        )}
+            )}
+          </Pressable>
+        </View>
 
         {/* Restore */}
         <Pressable

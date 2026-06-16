@@ -46,8 +46,8 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   splash: {
-    image: "./assets/images/app-icon.png",
-    resizeMode: "contain",
+    image: "./assets/images/splash.png",
+    resizeMode: "cover",
     backgroundColor: "#1A1840",
   },
   ios: {

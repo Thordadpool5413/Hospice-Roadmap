@@ -3,6 +3,9 @@ export const ENTITLEMENT_IDENTIFIER = "premium";
 export const CAREGIVER_PACKAGE_IDENTIFIER = "$rc_monthly";
 export const COMPANION_PACKAGE_IDENTIFIER = "companion_monthly";
 
+/** Single plan shown in the paywall — full access including Ragna AI. */
+export const PRIMARY_PACKAGE_IDENTIFIER = COMPANION_PACKAGE_IDENTIFIER;
+
 export const OFFERING_IDENTIFIER = "default";
 
 export type PlanName = "Free" | "Caregiver" | "Companion";
