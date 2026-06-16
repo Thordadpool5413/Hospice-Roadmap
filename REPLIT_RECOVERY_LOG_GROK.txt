@@ -1,0 +1,211 @@
+================================================================================
+  HOSPICE ROADMAP — REPLIT & GIT RECOVERY LOG
+  Prepared for: Nick Lynch / Thordadpool5413
+  Project: Hospice-Roadmap (Expo mobile + Replit API)
+  Document date: June 16, 2026
+================================================================================
+
+  FIXED WITH ASSISTANCE FROM:  Grok AI (xAI)
+  Session focus:             Replit merge conflicts, EAS/TestFlight,
+                             App Store Connect, and missing app updates
+
+================================================================================
+
+
+1. ROOT PROBLEMS (WHAT KEPT GOING WRONG)
+--------------------------------------------------------------------------------
+
+  Problem                          Cause
+  -------                          -----
+  TestFlight app looked "old"      EAS baked in Vercel API, not Replit
+  Merge conflicts in Replit        Replit had app.config.js; GitHub uses app.config.ts
+  git push failed from Replit      OAuth token lacks "workflow" scope for CI files
+  Submit "failed" but build showed   Build 64 already uploaded; duplicate submit error
+  "Replit fixes" unchanged app     Commits only touched images/eas.json, not real fixes
+  Replit "Published your App"      Auto-commit replaced icons; did not wire splash.png
+
+
+2. GITHUB / EAS FIXES (BEFORE REPLIT SYNC)
+--------------------------------------------------------------------------------
+
+  CI & iOS build:
+  - Fixed pnpm version conflict in GitHub Actions
+  - Fixed monorepo typecheck
+  - Added expo-build-properties ios.useFrameworks: "static" (Clerk pod fix)
+  - Hardened .github/workflows/eas-build.yml
+
+  App Store Connect (ASC) API key:
+  - Updated artifacts/mobile/eas.json
+      Key ID:     RN36YUWW26
+      Key path:   attached_assets/AuthKey_RN36YUWW26.p8
+      Issuer ID:  b6126ce7-eea8-4ad4-a1b5-3b718912f190
+      ASC App ID: 6773936838
+  - Fixed Expo ASC link (was wrong app 6773177246 and key N6KS8S65GA)
+  - Reconnected to correct ASC app with RN36YUWW26
+
+  Key commits: c884694, e4fd4a0, 0fcd47b
+
+
+3. REPLIT MERGE CONFLICT FIX
+--------------------------------------------------------------------------------
+
+  Error: Conflicting files — app.config.js, eas.json, package.json, pnpm-lock.yaml
+
+  Clean reset (recommended):
+    git merge --abort 2>/dev/null || true
+    git fetch origin
+    git reset --hard origin/master
+    pnpm install
+
+  Alternative (keep Replit changes, exclude workflow):
+    git fetch origin
+    git reset --soft origin/master
+    git restore --source=origin/master --staged --worktree .github/workflows/eas-build.yml
+    git commit -m "Replit fixes (excluding CI workflow)"
+    git push origin master
+
+  Helper script: scripts/resolve-replit-merge.sh
+
+
+4. REPLIT GIT PUSH BLOCKED (WORKFLOW SCOPE)
+--------------------------------------------------------------------------------
+
+  Error:
+    refusing to allow an OAuth App to create or update workflow
+    .github/workflows/eas-build.yml without workflow scope
+
+  Fix: Do not push workflow file from Replit (see section 3), or push from Windows.
+
+
+5. TESTFLIGHT PIPELINE
+--------------------------------------------------------------------------------
+
+  Auth:
+    npx eas-cli whoami
+    (Use EXPO_TOKEN in Replit; skip eas login when token is set)
+
+  ASC key on Replit:
+    attached_assets/AuthKey_RN36YUWW26.p8
+    ls attached_assets/AuthKey_RN36YUWW26.p8
+
+  Build:
+    cd artifacts/mobile
+    npx eas-cli build --platform ios --profile preview --non-interactive
+
+  Submit:
+    npx eas-cli submit --platform ios --latest --profile production --non-interactive
+
+  Note: Build 64 was already VALID in App Store Connect; re-submit caused EAS error.
+
+
+6. WRONG BACKEND URL (WHY APP FELT UNCHANGED)
+--------------------------------------------------------------------------------
+
+  Old EAS preview env:
+    EXPO_PUBLIC_API_URL = https://hospice-roadmap-backend-olive.vercel.app/api
+    EXPO_PUBLIC_DOMAIN  = hospicesalespro.com
+
+  Correct Replit production:
+    Site: https://hospice-roadmap.replit.app
+    API:  https://hospice-roadmap.replit.app/api
+
+  Fix:
+    npx eas-cli env:update preview --variable-name EXPO_PUBLIC_API_URL \
+      --value "https://hospice-roadmap.replit.app/api" --non-interactive
+    npx eas-cli env:update preview --variable-name EXPO_PUBLIC_DOMAIN \
+      --value "hospice-roadmap.replit.app" --non-interactive
+
+  Verify:
+    curl -s https://hospice-roadmap.replit.app/api/healthz
+
+  Do NOT use *.replit.dev for TestFlight (dev preview only).
+
+
+7. BUILD HISTORY
+--------------------------------------------------------------------------------
+
+  Build 63  — commit e4fd4a0  — CI-hardened master
+  Build 64  — commit 0fcd47b  — ASC key; still Vercel API
+  Build 65  — commit 55d0df0  — Replit deploy; only tiny icon files
+  Build 66+ — commit 81854bc  — Splash + single paywall + Ragna voice
+
+
+8. CODE FIXES BY GROK AI (COMMIT 81854bc)
+--------------------------------------------------------------------------------
+
+  A. Splash screen (app.config.ts)
+     - splash.image: splash.png (cover), not app-icon.png
+
+  B. Single subscription price (paywall.tsx)
+     - One plan: "Hospice Roadmap Premium" (companion_monthly)
+
+  C. Ragna ElevenLabs voice
+     - Single voice id: ragna
+     - iOS preview via server TTS (ElevenLabs first)
+     - Server: elevenlabsTts.ts + Replit Connectors
+     - Requires voice named "ragna" in ElevenLabs on deployed Repl
+
+
+9. FULL REPLIT WORKFLOW
+--------------------------------------------------------------------------------
+
+  cd ~/workspace && git pull origin master
+  curl -s https://hospice-roadmap.replit.app/api/healthz
+  cd artifacts/mobile
+  npx eas-cli env:list preview
+  npx eas-cli build --platform ios --profile preview --non-interactive
+  npx eas-cli submit --platform ios --latest --profile production --non-interactive
+
+
+10. COMMON ERRORS & FIXES
+--------------------------------------------------------------------------------
+
+  EXPO_TOKEN set / eas login fails     -> Skip login; use whoami
+  env:exec preview fails               -> Must include a command to run
+  Merge conflicts                      -> reset --hard origin/master
+  Push workflow scope error            -> Exclude .github/workflows from push
+  Submit fails, build in ASC           -> New build; don't re-submit same ID
+  App unchanged on TestFlight          -> New build + correct API URL
+  Voice not ElevenLabs                 -> Connect integration; voice named ragna
+
+
+11. KEY FILE PATHS
+--------------------------------------------------------------------------------
+
+  app.config.ts      artifacts/mobile/app.config.ts
+  eas.json           artifacts/mobile/eas.json
+  ASC key            attached_assets/AuthKey_RN36YUWW26.p8 (gitignored)
+  Splash             artifacts/mobile/assets/images/splash.png
+  Paywall            artifacts/mobile/app/paywall.tsx
+  ElevenLabs         artifacts/api-server/src/lib/elevenlabsTts.ts
+
+
+12. CURRENT STATUS
+--------------------------------------------------------------------------------
+
+  GitHub master: 81854bc (splash, paywall, voice fixes)
+  Replit:        pulled 81854bc successfully
+  Next step:     New EAS iOS build + submit -> TestFlight build 66+
+  Verify:        New splash, one premium plan, Ragna ElevenLabs voice
+
+
+13. WHAT REPLIT AI DID WRONG (SUMMARY)
+--------------------------------------------------------------------------------
+
+  1. Kept app.config.js while GitHub uses app.config.ts
+  2. "Published your App" commits without wiring new assets in config
+  3. Pushes without real feature/code fixes
+  4. Merge conflicts not resolved toward GitHub canonical source
+  5. Builds before API URL pointed at Replit production
+
+  Rule: GitHub master = source of truth -> pull -> fix -> commit -> push
+        (exclude workflow from Replit) -> EAS env -> build -> submit
+
+
+================================================================================
+  END OF RECOVERY LOG
+
+  Document prepared with Grok AI (xAI) — automated coding assistant
+  Repository: https://github.com/Thordadpool5413/Hospice-Roadmap
+  Final fix commit: 81854bc
+================================================================================
