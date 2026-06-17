@@ -16,6 +16,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { clerkErrorMessage } from "@/components/auth/clerkErrors";
+import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { Colors } from "@/constants/colors";
 
 export default function SignInScreen() {
@@ -224,6 +226,8 @@ export default function SignInScreen() {
             <Text style={styles.btnText}>Sign in</Text>
           )}
         </Pressable>
+
+        <SocialAuthButtons onError={setLocalError} />
 
         <Pressable
           style={styles.forgotBtn}

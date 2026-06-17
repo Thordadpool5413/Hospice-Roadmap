@@ -1,6 +1,9 @@
+import * as WebBrowser from "expo-web-browser";
 import { Stack } from "expo-router";
 import React from "react";
 import { Colors } from "@/constants/colors";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthLayout() {
   return (

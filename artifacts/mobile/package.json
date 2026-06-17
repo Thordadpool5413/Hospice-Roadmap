@@ -65,6 +65,7 @@
     "@react-native-community/datetimepicker": "^8.4.4",
     "@workspace/api-client-react": "workspace:*",
     "@workspace/goc-merge": "workspace:*",
+    "expo-apple-authentication": "~8.0.8",
     "expo-audio": "~1.1.1",
     "expo-build-properties": "~0.14.8",
     "expo-clipboard": "^8.0.8",

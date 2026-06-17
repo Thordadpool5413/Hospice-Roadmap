@@ -98,6 +98,7 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-font",
     "expo-web-browser",
+    "expo-apple-authentication",
     "expo-audio",
     "expo-notifications",
     [

@@ -16,6 +16,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { clerkErrorMessage } from "@/components/auth/clerkErrors";
+import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { Colors } from "@/constants/colors";
 
 export default function SignUpScreen() {
@@ -41,8 +43,18 @@ export default function SignUpScreen() {
     setLocalError(null);
     const { error } = await signUp.password({ emailAddress: email, password });
     if (error) {
-      setLocalError((error as any)?.longMessage ?? (error as any)?.message ?? "Could not create account. Please try again.");
+      setLocalError(clerkErrorMessage(error as { longMessage?: string; message?: string }, "Could not create account. Please try again."));
       return;
+    }
+
+    const { error: sendError } = await signUp.verifications.sendEmailCode();
+    if (sendError) {
+      setLocalError(
+        clerkErrorMessage(
+          sendError as { longMessage?: string; message?: string },
+          "Account created but we could not send a verification code. Tap Resend code or use Google/Apple sign-in.",
+        ),
+      );
     }
     setPendingVerification(true);
   };
@@ -67,7 +79,16 @@ export default function SignUpScreen() {
 
   const handleResendCode = async () => {
     if (!signUp) return;
-    await (signUp.verifications as any).sendEmailCode?.();
+    setLocalError(null);
+    const { error } = await signUp.verifications.sendEmailCode();
+    if (error) {
+      setLocalError(
+        clerkErrorMessage(
+          error as { longMessage?: string; message?: string },
+          "Could not resend the code. Check spam or try Google/Apple sign-in.",
+        ),
+      );
+    }
   };
 
   if (pendingVerification) {
@@ -122,9 +143,12 @@ export default function SignUpScreen() {
         <Pressable
           style={styles.secondaryBtn}
           onPress={handleResendCode}
+          disabled={isLoading}
         >
           <Text style={styles.secondaryBtnText}>Resend code</Text>
         </Pressable>
+
+        <SocialAuthButtons onError={setLocalError} />
       </View>
     );
   }
@@ -216,6 +240,8 @@ export default function SignUpScreen() {
             <Text style={styles.btnText}>Create Account</Text>
           )}
         </Pressable>
+
+        <SocialAuthButtons onError={setLocalError} />
 
         <View style={styles.linkRow}>
           <Text style={styles.linkText}>Already have an account? </Text>
