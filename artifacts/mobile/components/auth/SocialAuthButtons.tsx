@@ -1,11 +1,9 @@
 import { useSSO } from "@clerk/expo";
-import { useSignInWithApple } from "@clerk/expo/apple";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -21,20 +19,10 @@ type SocialAuthButtonsProps = {
 
 export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
   const { startSSOFlow } = useSSO();
-  const { startAppleAuthenticationFlow } = useSignInWithApple();
-  const [busyProvider, setBusyProvider] = useState<"google" | "apple" | null>(null);
-
-  const finishAuth = async (createdSessionId: string | null, setActive?: (params: { session: string }) => Promise<void>) => {
-    if (!createdSessionId || !setActive) {
-      onError?.("Sign-in was cancelled. Please try again.");
-      return;
-    }
-    await setActive({ session: createdSessionId });
-    router.replace("/");
-  };
+  const [busy, setBusy] = useState(false);
 
   const handleGoogle = async () => {
-    setBusyProvider("google");
+    setBusy(true);
     try {
       const { createdSessionId, setActive, authSessionResult } = await startSSOFlow({
         strategy: "oauth_google",
@@ -42,28 +30,23 @@ export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
       if (authSessionResult?.type && authSessionResult.type !== "success") {
         return;
       }
-      await finishAuth(createdSessionId, setActive);
+      if (!createdSessionId || !setActive) {
+        onError?.("Sign-in was cancelled. Please try again.");
+        return;
+      }
+      await setActive({ session: createdSessionId });
+      router.replace("/");
     } catch (err) {
-      onError?.(clerkErrorMessage(err as { longMessage?: string; message?: string }, "Google sign-in failed. Please try again."));
+      onError?.(
+        clerkErrorMessage(
+          err as { longMessage?: string; message?: string },
+          "Google sign-in failed. Please try again.",
+        ),
+      );
     } finally {
-      setBusyProvider(null);
+      setBusy(false);
     }
   };
-
-  const handleApple = async () => {
-    if (Platform.OS !== "ios") return;
-    setBusyProvider("apple");
-    try {
-      const { createdSessionId, setActive } = await startAppleAuthenticationFlow();
-      await finishAuth(createdSessionId, setActive);
-    } catch (err) {
-      onError?.(clerkErrorMessage(err as { longMessage?: string; message?: string }, "Apple sign-in failed. Please try again."));
-    } finally {
-      setBusyProvider(null);
-    }
-  };
-
-  const isBusy = busyProvider !== null;
 
   return (
     <View style={styles.wrap}>
@@ -76,13 +59,13 @@ export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
       <Pressable
         style={({ pressed }) => [
           styles.socialBtn,
-          (isBusy || busyProvider === "google") && styles.socialBtnDisabled,
+          busy && styles.socialBtnDisabled,
           pressed && { opacity: 0.85 },
         ]}
         onPress={handleGoogle}
-        disabled={isBusy}
+        disabled={busy}
       >
-        {busyProvider === "google" ? (
+        {busy ? (
           <ActivityIndicator color={Colors.text} size="small" />
         ) : (
           <>
@@ -91,27 +74,6 @@ export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
           </>
         )}
       </Pressable>
-
-      {Platform.OS === "ios" && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.socialBtn,
-            (isBusy || busyProvider === "apple") && styles.socialBtnDisabled,
-            pressed && { opacity: 0.85 },
-          ]}
-          onPress={handleApple}
-          disabled={isBusy}
-        >
-          {busyProvider === "apple" ? (
-            <ActivityIndicator color={Colors.text} size="small" />
-          ) : (
-            <>
-              <Feather name="smartphone" size={18} color={Colors.text} />
-              <Text style={styles.socialBtnText}>Apple</Text>
-            </>
-          )}
-        </Pressable>
-      )}
     </View>
   );
 }

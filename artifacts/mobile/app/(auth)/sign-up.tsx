@@ -52,7 +52,7 @@ export default function SignUpScreen() {
       setLocalError(
         clerkErrorMessage(
           sendError as { longMessage?: string; message?: string },
-          "Account created but we could not send a verification code. Tap Resend code or use Google/Apple sign-in.",
+          "Account created but we could not send a verification code. Tap Resend code or use Google sign-in.",
         ),
       );
     }
@@ -85,7 +85,7 @@ export default function SignUpScreen() {
       setLocalError(
         clerkErrorMessage(
           error as { longMessage?: string; message?: string },
-          "Could not resend the code. Check spam or try Google/Apple sign-in.",
+          "Could not resend the code. Check spam or try Google sign-in.",
         ),
       );
     }
