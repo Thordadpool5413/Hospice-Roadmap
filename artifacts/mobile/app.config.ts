@@ -94,6 +94,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    "./plugins/withIosNonModularHeadersFix.js",
     "expo-router",
     "expo-font",
     "expo-web-browser",
