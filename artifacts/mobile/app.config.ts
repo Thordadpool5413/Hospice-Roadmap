@@ -46,9 +46,9 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   splash: {
-    image: "./assets/images/splash.png",
-    resizeMode: "cover",
-    backgroundColor: "#1A1840",
+    image: "./assets/images/app-icon.png",
+    resizeMode: "contain",
+    backgroundColor: "#091734",
   },
   ios: {
     supportsTablet: false,
@@ -98,14 +98,12 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        image: "./assets/images/splash.png",
-        resizeMode: "cover",
-        backgroundColor: "#1A1840",
-        ios: {
-          enableFullScreenImage_legacy: true,
-        },
+        image: "./assets/images/app-icon.png",
+        resizeMode: "contain",
+        backgroundColor: "#091734",
       },
     ],
+    "expo-video",
     "expo-router",
     "expo-font",
     "expo-web-browser",
