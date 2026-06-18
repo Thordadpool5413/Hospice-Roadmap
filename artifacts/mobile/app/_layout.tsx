@@ -18,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { CloudSyncProvider } from "@/components/CloudSyncManager";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { AppSplashScreen } from "@/components/AppSplashScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LockScreen } from "@/components/LockScreen";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -524,11 +525,7 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+  const fontsReady = fontsLoaded || !!fontError;
 
   // Handle notification taps — routes to the correct screen based on notification type.
   // Handles both: (a) foreground/background taps via the listener, and (b) cold-start
@@ -604,8 +601,8 @@ export default function RootLayout() {
   // Safe loading state — dark view keeps the splash color while fonts load.
   // Never return null: on iOS a null root causes a brief blank flash before
   // the React tree has a chance to paint.
-  if (!fontsLoaded && !fontError) {
-    return <View style={{ flex: 1, backgroundColor: "#030A18" }} />;
+  if (!fontsReady) {
+    return <View style={{ flex: 1, backgroundColor: "#1A1840" }} />;
   }
 
   // Guard against a missing Clerk publishable key (e.g. EAS secret not
@@ -637,12 +634,13 @@ export default function RootLayout() {
             produces a blank white flash on fast devices. */}
         <ClerkLoading>
           <SafeAreaProvider>
-            <View style={{ flex: 1, backgroundColor: "#030A18" }} />
+            <View style={{ flex: 1, backgroundColor: "#1A1840" }} />
           </SafeAreaProvider>
         </ClerkLoading>
 
         <ClerkLoaded>
           <SafeAreaProvider>
+            <AppSplashScreen fontsReady={fontsReady} />
             <ErrorBoundary>
               <AccessibilityProvider>
               <AppProvider>

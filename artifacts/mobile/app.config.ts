@@ -95,6 +95,17 @@ const config: ExpoConfig = {
       },
     ],
     "./plugins/withIosNonModularHeadersFix.js",
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/images/splash.png",
+        resizeMode: "cover",
+        backgroundColor: "#1A1840",
+        ios: {
+          enableFullScreenImage_legacy: true,
+        },
+      },
+    ],
     "expo-router",
     "expo-font",
     "expo-web-browser",

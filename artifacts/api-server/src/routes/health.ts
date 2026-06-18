@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
+import { getElevenLabsStatus } from "../lib/elevenlabsTts.js";
 import { getClerkProxyHost } from "../middlewares/clerkProxyMiddleware.js";
 
 const router: IRouter = Router();
@@ -34,6 +35,19 @@ router.get("/mobile-clerk-config", (req: Request, res: Response) => {
   res.json({
     publishableKey,
     clerkProxyUrl: host ? `${proto}://${host}/api/__clerk` : null,
+  });
+});
+
+/**
+ * Public voice bootstrap — helps verify ElevenLabs is wired on Replit without
+ * requiring a signed-in mobile session.
+ */
+router.get("/voice-status", async (_req, res) => {
+  const elevenLabs = await getElevenLabsStatus();
+  res.json({
+    openaiConfigured: Boolean(process.env["OPENAI_API_KEY"]),
+    betaBypass: process.env["REVENUECAT_BETA_BYPASS"] === "true",
+    elevenLabs,
   });
 });
 

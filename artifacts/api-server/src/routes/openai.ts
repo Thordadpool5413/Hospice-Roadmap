@@ -368,9 +368,11 @@ router.post("/speak", requireCompanion, async (req: Request, res: Response) => {
 
   try {
     let audioBuffer: Buffer;
+    let voiceProvider: "elevenlabs" | "openai" = "elevenlabs";
     try {
       audioBuffer = await synthesizeElevenLabsSpeech(speakText);
     } catch (elErr: unknown) {
+      voiceProvider = "openai";
       req.log.warn({ err: elErr }, "ElevenLabs TTS failed for speak, falling back to OpenAI TTS");
       const speechResponse = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
@@ -408,6 +410,7 @@ router.post("/speak", requireCompanion, async (req: Request, res: Response) => {
       audioBase64,
       audioUrl: `${buildPublicBaseUrl(req)}/api/openai/speak/${audioId}`,
       audioMimeType: "audio/mpeg",
+      voiceProvider,
     });
   } catch (error: unknown) {
     req.log.error({ err: error }, "OpenAI speak failure");
