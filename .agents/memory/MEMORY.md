@@ -9,3 +9,4 @@
 - [React dual-version web crash](react-monorepo-dual-version-web-crash.md) — root package.json pinning react/react-dom/react-native-web to a different major than the apps crashes web ($$typeof element mismatch); catalog all three so they can't drift.
 - [Drizzle migration workflow](drizzle-migration-workflow.md) — lib/db uses `push` not `migrate`; snapshots have drifted (ragna_memory), so `drizzle-kit generate` goes interactive — hand-write SQL + snapshot + journal instead.
 - [Device session revocation pattern](device-session-revocation.md) — Clerk session revocation uses the REST API directly (no @clerk/backend package needed); sessionId comes from getAuth(req), not from the client body.
+- [ElevenLabs audio URL auth bug](elevenlabs-audio-url-auth.md) — expo-audio player can't send auth tokens; register GET /speak/:audioId as a public route BEFORE requireAuth or audio falls back to device TTS.

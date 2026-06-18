@@ -6,11 +6,13 @@ import { HOSPICE_SYSTEM_PROMPT } from "./anthropic/systemPrompt.js";
 import { MODELS } from "../config/models.js";
 import { synthesizeElevenLabsSpeech } from "../lib/elevenlabsTts.js";
 import { requireEntitlement } from "../middlewares/requirePremium.js";
+import { pruneSpeechCache, getSpeechCacheEntry, setSpeechCacheEntry } from "../lib/speechCache.js";
 
 // Companion-tier gate for Ragna voice generation. Applied to the live voice
 // routes below. The voice preview (/preview) and cached-audio playback
-// (/speak/:audioId) are intentionally left open so non-subscribers can sample
-// Ragna's voice and so already-generated clips remain retrievable.
+// (/speak/:audioId) are intentionally left open (public route in index.ts)
+// so non-subscribers can sample Ragna's voice and the audio player on iOS
+// can fetch the URL without sending an auth token.
 const requireCompanion = requireEntitlement("companion");
 
 const router: IRouter = Router();
@@ -35,17 +37,6 @@ const ALLOWED_VOICES = new Set([
 ]);
 const DEFAULT_PREVIEW_TEXT =
   "Hi, I'm Ragna. I'm here to help you understand hospice, prepare for what comes next, and feel a little less alone in the hard moments.";
-const SPEECH_CACHE_TTL_MS = 10 * 60 * 1000;
-const speechCache = new Map<string, { buffer: Buffer; mimeType: string; expiresAt: number }>();
-
-function pruneSpeechCache(): void {
-  const now = Date.now();
-  for (const [key, value] of speechCache.entries()) {
-    if (value.expiresAt <= now) {
-      speechCache.delete(key);
-    }
-  }
-}
 
 function buildPublicBaseUrl(req: Request): string {
   const forwardedProto = req.header("x-forwarded-proto")?.split(",")[0]?.trim();
@@ -102,33 +93,9 @@ function extractAssistantText(payload: unknown): string {
   return "";
 }
 
-router.get("/speak/:audioId", (req: Request, res: Response) => {
-  pruneSpeechCache();
-  const entry = speechCache.get(req.params["audioId"] as string);
-  if (!entry) {
-    res.status(404).json({ error: "Spoken reply audio not found or expired." });
-    return;
-  }
-
-  res.setHeader("Content-Type", entry.mimeType);
-  res.setHeader("Content-Length", String(entry.buffer.length));
-  res.setHeader("Cache-Control", "no-store");
-  res.status(200).send(entry.buffer);
-});
-
-router.head("/speak/:audioId", (req: Request, res: Response) => {
-  pruneSpeechCache();
-  const entry = speechCache.get(req.params["audioId"] as string);
-  if (!entry) {
-    res.status(404).end();
-    return;
-  }
-
-  res.setHeader("Content-Type", entry.mimeType);
-  res.setHeader("Content-Length", String(entry.buffer.length));
-  res.setHeader("Cache-Control", "no-store");
-  res.status(200).end();
-});
+// GET /speak/:audioId and HEAD /speak/:audioId are registered as PUBLIC routes
+// in routes/index.ts (before requireAuth) so the iOS audio player can load
+// cached audio without sending an auth token. Do not re-add them here.
 
 router.post("/realtime/session", requireCompanion, async (req: Request, res: Response) => {
   const apiKey = getOpenAiApiKey(res);
@@ -400,11 +367,7 @@ router.post("/speak", requireCompanion, async (req: Request, res: Response) => {
     pruneSpeechCache();
     const audioBase64 = audioBuffer.toString("base64");
     const audioId = randomUUID();
-    speechCache.set(audioId, {
-      buffer: audioBuffer,
-      mimeType: "audio/mpeg",
-      expiresAt: Date.now() + SPEECH_CACHE_TTL_MS,
-    });
+    setSpeechCacheEntry(audioId, audioBuffer, "audio/mpeg");
 
     res.json({
       audioBase64,
