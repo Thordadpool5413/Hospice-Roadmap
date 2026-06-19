@@ -91,7 +91,7 @@ export function RagnaComposer({
     <View
       style={[
         styles.inputBar,
-        { paddingBottom: Platform.OS === "web" ? 84 : Math.max(insetsBottom, 8) },
+        { paddingBottom: Platform.OS === "web" ? 84 : 0 },
       ]}
     >
       {!isOnline && (
