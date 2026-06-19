@@ -1384,50 +1384,55 @@ export default function HelpScreen() {
       {
         text: "Start Fresh",
         onPress: async () => {
-          if (ragnaPrivacy.includeConversationMemory) {
-            let newMemory: {
-              summary: string;
-              keyFacts: string[];
-              emotionalTone: string;
-              mainTopics: string[];
-              date: string;
-            } | null = null;
-            try {
-              const memory = await generateConversationMemory(conversation.id);
-              if (memory && memory.summary) {
-                newMemory = {
-                  summary: memory.summary,
-                  keyFacts: memory.keyFacts ?? [],
-                  emotionalTone: memory.emotionalTone ?? "calm",
-                  mainTopics: memory.mainTopics ?? [],
-                  date: new Date().toISOString(),
-                };
-                await addMemory({
-                  id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                  date: newMemory.date,
-                  conversationId: conversation.id,
-                  summary: newMemory.summary,
-                  keyFacts: newMemory.keyFacts,
-                  emotionalTone:
-                    (newMemory.emotionalTone as RagnaEmotionalTone) ?? "calm",
-                  mainTopics: newMemory.mainTopics,
-                });
-                const updatedProfile = await synthesizeProfile(
-                  livingProfile,
-                  newMemory,
-                  recentTiles,
-                );
-                if (updatedProfile) {
-                  await updateLivingProfile(updatedProfile);
-                }
-              }
-            } catch {}
-          }
+          const oldConvId = conversation.id;
+
+          // Clear UI immediately so the user sees the empty state at once.
+          setLocalMessages([]);
+          setSuggestions([]);
+          setVoiceStatusText(null);
+
           try {
-            await deleteConversation(conversation.id);
+            await deleteConversation(oldConvId);
           } catch {}
           await clearActiveConversationId();
           await startNewConversation();
+
+          // Generate and persist conversation memory in the background so it
+          // doesn't block the transition to the new chat.
+          if (ragnaPrivacy.includeConversationMemory) {
+            void (async () => {
+              try {
+                const memory = await generateConversationMemory(oldConvId);
+                if (memory && memory.summary) {
+                  const newMemory = {
+                    summary: memory.summary,
+                    keyFacts: memory.keyFacts ?? [],
+                    emotionalTone: memory.emotionalTone ?? "calm",
+                    mainTopics: memory.mainTopics ?? [],
+                    date: new Date().toISOString(),
+                  };
+                  await addMemory({
+                    id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                    date: newMemory.date,
+                    conversationId: oldConvId,
+                    summary: newMemory.summary,
+                    keyFacts: newMemory.keyFacts,
+                    emotionalTone:
+                      (newMemory.emotionalTone as RagnaEmotionalTone) ?? "calm",
+                    mainTopics: newMemory.mainTopics,
+                  });
+                  const updatedProfile = await synthesizeProfile(
+                    livingProfile,
+                    newMemory,
+                    recentTiles,
+                  );
+                  if (updatedProfile) {
+                    await updateLivingProfile(updatedProfile);
+                  }
+                }
+              } catch {}
+            })();
+          }
         },
       },
     ]);

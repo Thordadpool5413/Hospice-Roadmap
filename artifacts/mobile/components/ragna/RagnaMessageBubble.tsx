@@ -50,7 +50,10 @@ function RenderedMessage({
     return <Text style={styles.bubbleTextUser}>{content}</Text>;
   }
 
-  const lines = content.split("\n");
+  const lines = content
+    .replace(/\[SUGGEST:[^\]]*\]\s*$/g, "")
+    .trimEnd()
+    .split("\n");
   const elements: React.ReactNode[] = [];
   let key = 0;
 
