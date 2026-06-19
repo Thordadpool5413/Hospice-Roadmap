@@ -705,10 +705,6 @@ async function playFromBase64(
   }
 }
 
-function shouldPreferAudioUrl(audioUrl?: string): boolean {
-  return Boolean(audioUrl) && (isExpoGoStoreClient() || Platform.OS === "ios");
-}
-
 async function playAudioReply({
   audioBase64,
   audioMimeType,
@@ -725,11 +721,12 @@ async function playAudioReply({
   await configurePlaybackMode();
   setCurrentReplySummary(summarizeReplyForLockScreen(assistantTranscript));
 
-  if (shouldPreferAudioUrl(audioUrl) && audioUrl) {
-    await createAndAutoplaySound({ uri: audioUrl });
-    return;
-  }
-
+  // Prefer base64 (written to a local temp file) over streaming a remote URL.
+  // expo-audio's remote URL buffering is unreliable in Expo Go — the isLoaded
+  // status event may never fire, causing a 5-second timeout that falls through
+  // to the Speech.speak() robot-voice fallback and discards the ElevenLabs audio
+  // that already arrived. A local file has no network dependency after the data
+  // is on-device, making it the most reliable playback path.
   if (audioBase64) {
     try {
       await playFromBase64(audioBase64, audioMimeType);
@@ -743,6 +740,7 @@ async function playAudioReply({
     }
   }
 
+  // No base64 present (e.g. replay from cache — only the URL was stored).
   if (audioUrl) {
     await createAndAutoplaySound({ uri: audioUrl });
     return;
