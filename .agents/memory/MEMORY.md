@@ -10,3 +10,5 @@
 - [Drizzle migration workflow](drizzle-migration-workflow.md) — lib/db uses `push` not `migrate`; snapshots have drifted (ragna_memory), so `drizzle-kit generate` goes interactive — hand-write SQL + snapshot + journal instead.
 - [Device session revocation pattern](device-session-revocation.md) — Clerk session revocation uses the REST API directly (no @clerk/backend package needed); sessionId comes from getAuth(req), not from the client body.
 - [ElevenLabs audio URL auth bug](elevenlabs-audio-url-auth.md) — expo-audio player can't send auth tokens; register GET /speak/:audioId as a public route BEFORE requireAuth or audio falls back to device TTS.
+- [Expo Go expo-audio startup events unreliable](expo-audio-startup-events.md) — playbackStatusUpdate isLoaded/playing gate never resolves in Expo Go; call player.play() and return immediately; lifecycle subscription handles cleanup.
+- [liveSpeechPreviewEnabled blocks ElevenLabs in chat tab](live-speech-preview-blocks-elevenlabs.md) — setting true on iOS calls Speech.speak() during streaming AND early-returns before synthesizeAssistantVoice(); set false to reach ElevenLabs path.

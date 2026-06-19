@@ -344,7 +344,7 @@ export default function HelpScreen() {
 
   const isPatient = user?.role === "patient";
   const nativeVoiceSupported = isNativeOpenAiVoiceSupported();
-  const liveSpeechPreviewEnabled = nativeVoiceSupported && Platform.OS === "ios";
+  const liveSpeechPreviewEnabled = false;
 
   const visibleTiles = URGENT_TILES.filter(
     (t) => !isPatient || !t.caregiverOnly,

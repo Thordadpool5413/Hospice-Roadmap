@@ -626,35 +626,13 @@ async function createAndAutoplaySound(
     player.volume = 1;
     player.play();
 
-    // Wait for playback to actually start using event-driven confirmation
-    // instead of a fixed 150 ms poll. expo-audio loads audio asynchronously
-    // (and iOS needs time to transition the audio session from record →
-    // playback mode), so 150 ms was consistently too short and caused a false
-    // "Audio playback did not start" error that triggered the expo-speech
-    // robot-voice fallback — discarding the ElevenLabs audio that had already
-    // arrived. We now wait up to 5 s for the player to confirm it is playing.
-    if (!player.playing) {
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error("Audio playback did not start."));
-        }, 5000);
-
-        const startSub = player.addListener(
-          "playbackStatusUpdate",
-          (status: AudioStatus) => {
-            if (!status.isLoaded) return;
-            // Resolve as soon as we see the player is playing, or if a very
-            // short clip finished before we even observed it playing.
-            if (status.playing || status.didJustFinish) {
-              clearTimeout(timeout);
-              startSub.remove();
-              resolve();
-            }
-          },
-        );
-      });
-    }
-
+    // expo-audio loads and plays asynchronously. Attempting to gate on
+    // playbackStatusUpdate events (isLoaded/playing) proved unreliable in
+    // Expo Go — the events either arrived late or not at all within the
+    // 5-second window, causing every ElevenLabs playback attempt to time
+    // out and fall through to the robot-voice Speech.speak() fallback.
+    // player.play() is the correct call to start playback; the lifecycle
+    // subscription above (didJustFinish / error) handles all cleanup.
     activateLockScreenControls(player);
     emitPlaybackState({ isPlaying: true, isPaused: false });
   } catch (error) {
