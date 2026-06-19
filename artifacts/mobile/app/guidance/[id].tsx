@@ -18,8 +18,8 @@ import { Colors } from "@/constants/colors";
 import { CALL_SCRIPTS, SCENARIO_TO_SCRIPT } from "@/constants/callScripts";
 import { useA11y } from "@/context/AccessibilityContext";
 import {
-  findCategoryById,
-  findScenarioById,
+  getCategoryById,
+  getGuidanceById,
 } from "@/data/guidanceContent";
 
 const EMERGENCY_CARD_ROUTE = "/emergency-card";
@@ -46,8 +46,8 @@ export default function GuidanceDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { fontScale, highContrast } = useA11y();
-  const scenario = findScenarioById(id ?? "");
-  const category = scenario ? findCategoryById(scenario.categoryId) : null;
+  const scenario = getGuidanceById(id ?? "");
+  const category = scenario ? getCategoryById(scenario.categoryId) : null;
 
   const scaledText = (base: number) => base * fontScale;
   const scaledLine = (base: number) => base * fontScale;

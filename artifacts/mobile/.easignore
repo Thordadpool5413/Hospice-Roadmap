@@ -41,7 +41,11 @@ attached_assets/generated_videos
 attached_assets/*.mp4
 attached_assets/*.mov
 attached_assets/*.pdf
-attached_assets/*.mov
+artifacts/mobile/assets/app-preview-video.mp4
+artifacts/mobile/assets/app-preview-video-portrait.mp4
+artifacts/mobile/assets/screenshots
+artifacts/mobile/assets/images/splash.png
+tmp-*.mp3
 
 # Development / tooling / cache (keep archive clean and fast)
 node_modules

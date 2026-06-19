@@ -154,5 +154,9 @@ jobs:
             fi
 
             export EAS_BUILD_PROFILE="$PROFILE"
-            eas build --platform ios --profile "$PROFILE" --non-interactive --wait
+            if [ "$PROFILE" = "preview" ] || [ "$PROFILE" = "production" ]; then
+              eas build --platform ios --profile "$PROFILE" --non-interactive --wait --auto-submit-with-profile production
+            else
+              eas build --platform ios --profile "$PROFILE" --non-interactive --wait
+            fi
           '

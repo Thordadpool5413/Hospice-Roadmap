@@ -109,19 +109,4 @@ export function getRelatedGuidance(
 /** Flat array of all scenarios — alias for guidanceItems. */
 export const allScenarios: GuidanceScenario[] = guidanceItems;
 
-/** @deprecated Use getGuidanceById */
-export function findScenarioById(id: string): GuidanceScenario | undefined {
-  return getGuidanceById(id);
-}
 
-/** @deprecated Use getCategoryById */
-export function findCategoryById(
-  id: GuidanceCategoryId
-): GuidanceCategory | undefined {
-  return getCategoryById(id);
-}
-
-/** @deprecated Use searchGuidance */
-export function searchScenarios(query: string): GuidanceScenario[] {
-  return searchGuidance(query);
-}

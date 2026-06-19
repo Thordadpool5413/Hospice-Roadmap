@@ -53,7 +53,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.thordadpool.hospiceroadmap",
-    buildNumber: "2",
+    usesAppleSignIn: true,
     appleTeamId: "65C25YHCX9",
     config: {
       googleMapsApiKey,
@@ -66,7 +66,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: "app.replit.hospiceroadmap",
+    package: "com.thordadpool.hospiceroadmap",
     permissions: ["android.permission.RECORD_AUDIO"],
     config: {
       googleMaps: {

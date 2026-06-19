@@ -17,7 +17,7 @@ import {
   GuidanceCategory,
   GuidanceScenario,
   guidanceCategories,
-  searchScenarios,
+  searchGuidance,
 } from "@/data/guidanceContent";
 
 const urgencyColors: Record<string, string> = {
@@ -44,7 +44,7 @@ export default function SituationFinderScreen() {
     }
   }, [params.category]);
 
-  const searchResults = query.trim().length > 1 ? searchScenarios(query) : [];
+  const searchResults = query.trim().length > 1 ? searchGuidance(query) : [];
   const isSearching = query.trim().length > 1;
 
   const activeCategory = selectedCategory

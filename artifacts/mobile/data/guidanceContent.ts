@@ -25,10 +25,6 @@ export {
   guidanceCategories,
   guidanceItems,
   allScenarios,
-  findScenarioById,
-  findCategoryById,
-  searchScenarios,
-  // New helpers — available to consumers that want to opt in
   getAllGuidance,
   getGuidanceById,
   getCategoryById,

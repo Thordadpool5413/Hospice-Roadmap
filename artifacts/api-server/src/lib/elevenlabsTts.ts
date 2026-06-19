@@ -122,16 +122,27 @@ export type ElevenLabsStatus = {
   voiceId: string | null;
   connector: "replit" | "api_key" | "voice_id_env" | "unavailable";
   availableVoiceNames: string[];
+  synthesisOk: boolean | null;
+  synthesisBytes: number | null;
   error: string | null;
 };
 
-export async function getElevenLabsStatus(): Promise<ElevenLabsStatus> {
+async function probeSynthesis(): Promise<{ ok: boolean; bytes: number }> {
+  const buffer = await synthesizeElevenLabsSpeech("Ragna voice check.");
+  return { ok: buffer.length > 0, bytes: buffer.length };
+}
+
+export async function getElevenLabsStatus(options?: {
+  includeSynthesisProbe?: boolean;
+}): Promise<ElevenLabsStatus> {
   const status: ElevenLabsStatus = {
     configured: false,
     voiceName: RAGNA_VOICE_NAME,
     voiceId: cachedVoiceId,
     connector: "unavailable",
     availableVoiceNames: [],
+    synthesisOk: null,
+    synthesisBytes: null,
     error: null,
   };
 
@@ -139,6 +150,16 @@ export async function getElevenLabsStatus(): Promise<ElevenLabsStatus> {
     status.configured = true;
     status.connector = "voice_id_env";
     status.voiceId = cachedVoiceId;
+    if (options?.includeSynthesisProbe) {
+      try {
+        const probe = await probeSynthesis();
+        status.synthesisOk = probe.ok;
+        status.synthesisBytes = probe.bytes;
+      } catch (err: unknown) {
+        status.synthesisOk = false;
+        status.error = err instanceof Error ? err.message : "ElevenLabs synthesis probe failed.";
+      }
+    }
     return status;
   }
 
@@ -160,6 +181,16 @@ export async function getElevenLabsStatus(): Promise<ElevenLabsStatus> {
     if (match) {
       status.configured = true;
       status.voiceId = match.voice_id;
+      if (options?.includeSynthesisProbe) {
+        try {
+          const probe = await probeSynthesis();
+          status.synthesisOk = probe.ok;
+          status.synthesisBytes = probe.bytes;
+        } catch (err: unknown) {
+          status.synthesisOk = false;
+          status.error = err instanceof Error ? err.message : "ElevenLabs synthesis probe failed.";
+        }
+      }
     } else {
       status.error = `Voice "${RAGNA_VOICE_NAME}" not found in ElevenLabs account.`;
     }

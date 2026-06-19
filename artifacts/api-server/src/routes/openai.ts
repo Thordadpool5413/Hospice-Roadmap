@@ -8,11 +8,10 @@ import { synthesizeElevenLabsSpeech } from "../lib/elevenlabsTts.js";
 import { requireEntitlement } from "../middlewares/requirePremium.js";
 import { pruneSpeechCache, getSpeechCacheEntry, setSpeechCacheEntry } from "../lib/speechCache.js";
 
-// Companion-tier gate for Ragna voice generation. Applied to the live voice
-// routes below. The voice preview (/preview) and cached-audio playback
-// (/speak/:audioId) are intentionally left open (public route in index.ts)
-// so non-subscribers can sample Ragna's voice and the audio player on iOS
-// can fetch the URL without sending an auth token.
+// Companion-tier gate for Ragna voice generation on live voice routes below.
+// Cached-audio playback (/speak/:audioId) is registered as a public route in
+// index.ts so the iOS media player can fetch UUID-keyed clips without a Bearer
+// token. All other /openai routes require Clerk auth.
 const requireCompanion = requireEntitlement("companion");
 
 const router: IRouter = Router();

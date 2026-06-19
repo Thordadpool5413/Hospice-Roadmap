@@ -8,11 +8,15 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Colors } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { claimDevice } from "@/services/aiService";
+import {
+  hasSeenIntroVideos,
+  markIntroVideosSeen,
+} from "@/services/introPreference";
 
 const DEVICE_CLAIMED_KEY = "@device_claimed";
 const CLIENT_ID_STORAGE_KEY = "ragna_client_id";
 
-type IntroStage = "hospice" | "ragna" | "done";
+type IntroStage = "loading" | "hospice" | "ragna" | "done";
 
 async function runDeviceClaimIfNeeded(): Promise<boolean> {
   try {
@@ -39,7 +43,7 @@ export default function IndexScreen() {
   const { isOnboarded, isLoading } = useApp();
   const claimAttempted = useRef(false);
   const [claimReady, setClaimReady] = useState(false);
-  const [introStage, setIntroStage] = useState<IntroStage>("hospice");
+  const [introStage, setIntroStage] = useState<IntroStage>("loading");
 
   const hospicePlayer = useVideoPlayer(
     require("@/assets/HospiceRoadmap_SplashScreen.mp4"),
@@ -55,9 +59,16 @@ export default function IndexScreen() {
     },
   );
 
+  useEffect(() => {
+    void hasSeenIntroVideos().then((seen) => {
+      setIntroStage(seen ? "done" : "hospice");
+    });
+  }, []);
+
   const finishIntro = useCallback(() => {
     hospicePlayer.pause();
     ragnaPlayer.pause();
+    void markIntroVideosSeen();
     setIntroStage("done");
   }, [hospicePlayer, ragnaPlayer]);
 
@@ -125,6 +136,21 @@ export default function IndexScreen() {
       router.replace("/onboarding");
     }
   }, [claimReady, introStage, isClerkLoaded, isLoading, isOnboarded, isSignedIn]);
+
+  if (introStage === "loading") {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: Colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   if (introStage !== "done") {
     return (

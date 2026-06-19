@@ -16,10 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PurchasesPackage } from "react-native-purchases";
 
 import { Colors } from "@/constants/colors";
-import {
-  COMPANION_PACKAGE_IDENTIFIER,
-  PRIMARY_PACKAGE_IDENTIFIER,
-} from "@/constants/subscriptionProducts";
+import { PRIMARY_PACKAGE_IDENTIFIER } from "@/constants/subscriptionProducts";
 import { useApp } from "@/context/AppContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 
@@ -28,17 +25,12 @@ interface PlanFeature {
   included: boolean;
 }
 
-const CAREGIVER_FEATURES: PlanFeature[] = [
+const PREMIUM_FEATURES: PlanFeature[] = [
   { text: "Structured guidance for 60 scenarios", included: true },
   { text: "Symptom tracker with 7-day trends", included: true },
   { text: "Caregiver journal", included: true },
   { text: "Goals of care planner", included: true },
   { text: "Cloud sync across devices", included: true },
-  { text: "Ragna AI companion", included: false },
-];
-
-const COMPANION_FEATURES: PlanFeature[] = [
-  { text: "Everything in Caregiver", included: true },
   { text: "Ragna AI companion (unlimited)", included: true },
   { text: "AI-powered personalized guidance", included: true },
   { text: "Cross-session AI memory", included: true },
@@ -46,73 +38,10 @@ const COMPANION_FEATURES: PlanFeature[] = [
   { text: "Priority support", included: true },
 ];
 
-interface ComparisonRow {
-  feature: string;
-  caregiver: boolean;
-  companion: boolean;
-}
-
-const COMPARISON_ROWS: ComparisonRow[] = [
-  { feature: "Structured guidance (60 scenarios)", caregiver: true, companion: true },
-  { feature: "Symptom Tracker", caregiver: true, companion: true },
-  { feature: "Caregiver Journal", caregiver: true, companion: true },
-  { feature: "Goals of Care", caregiver: true, companion: true },
-  { feature: "Cloud sync across devices", caregiver: true, companion: true },
-  { feature: "Ragna AI companion", caregiver: false, companion: true },
-  { feature: "AI-powered personalized guidance", caregiver: false, companion: true },
-  { feature: "Cross-session AI memory", caregiver: false, companion: true },
-  { feature: "Smart follow-up suggestions", caregiver: false, companion: true },
-  { feature: "Priority support", caregiver: false, companion: true },
-];
-
-function ComparisonCell({ included }: { included: boolean }) {
-  return (
-    <View style={styles.compCell}>
-      {included ? (
-        <Feather name="check" size={14} color={Colors.success} />
-      ) : (
-        <Text style={styles.compCellDash}>—</Text>
-      )}
-    </View>
-  );
-}
-
-const COMPANION_EXCLUSIVE_FEATURES: Array<{ icon: string; title: string; desc: string }> = [
-  {
-    icon: "message-circle",
-    title: "Ragna AI companion",
-    desc: "Ask anything, anytime. Ragna understands your caregiving situation and delivers personalized guidance in plain language.",
-  },
-  {
-    icon: "cpu",
-    title: "AI-powered personalized guidance",
-    desc: "Ragna tailors every response to your loved one's diagnosis, symptoms, and care goals — not generic advice.",
-  },
-  {
-    icon: "bookmark",
-    title: "Cross-session AI memory",
-    desc: "Ragna remembers your journey across conversations so you never have to repeat yourself.",
-  },
-  {
-    icon: "zap",
-    title: "Smart follow-up suggestions",
-    desc: "Ragna proactively surfaces questions worth asking and next steps you might not have considered.",
-  },
-];
-
-/**
- * Role-aware hero copy shown on the standard (non-upgrade) paywall.
- * Falls back to generic copy when role is null / "other".
- *
- * Beta testing note: the mobile-side bypass is EXPO_PUBLIC_BETA_OVERRIDE_PREMIUM=true
- * (set in eas.json "preview" profile). The API server also needs REVENUECAT_BETA_BYPASS=true
- * so that premium endpoints are unblocked server-side for TestFlight builds.
- * NEVER set either flag in the production build/server.
- */
 const ROLE_HERO_COPY: Record<string, { title: string; sub: string }> = {
   caregiver: {
     title: "Support your loved one every step of the way",
-    sub: "Get the tools caregivers rely on.",
+    sub: "One plan with every tool plus Ragna AI.",
   },
   patient: {
     title: "Navigate your journey with confidence",
@@ -121,46 +50,9 @@ const ROLE_HERO_COPY: Record<string, { title: string; sub: string }> = {
 };
 
 const DEFAULT_HERO_COPY = {
-  title: "Upgrade Hospice Roadmap",
-  sub: "Get the tools and guidance you need — right when you need them most.",
+  title: "Hospice Roadmap Premium",
+  sub: "One plan with every tool plus Ragna AI for personalized guidance.",
 };
-
-function WhatYouGainSection({ companionPrice }: { companionPrice?: string }) {
-  return (
-    <View style={styles.gainSection}>
-      <View style={styles.gainHeader}>
-        <View style={styles.gainIconWrap}>
-          <Feather name="arrow-up-circle" size={20} color={Colors.primary} />
-        </View>
-        <View style={styles.gainHeaderText}>
-          <Text style={styles.gainTitle}>What you'll gain</Text>
-          <Text style={styles.gainSubtitle}>
-            Companion adds these features on top of your current Caregiver plan
-          </Text>
-        </View>
-      </View>
-
-      {COMPANION_EXCLUSIVE_FEATURES.map((f) => (
-        <View key={f.title} style={styles.gainFeatureRow}>
-          <View style={styles.gainFeatureIconWrap}>
-            <Feather name={f.icon as any} size={15} color={Colors.primary} />
-          </View>
-          <View style={styles.gainFeatureBody}>
-            <Text style={styles.gainFeatureTitle}>{f.title}</Text>
-            <Text style={styles.gainFeatureDesc}>{f.desc}</Text>
-          </View>
-        </View>
-      ))}
-
-      <View style={styles.gainPriceRow}>
-        <Feather name="tag" size={13} color={Colors.amber} />
-        <Text style={styles.gainPriceText}>
-          {companionPrice ?? "$9.99"}/wk — cancel anytime
-        </Text>
-      </View>
-    </View>
-  );
-}
 
 function RagnaCallout() {
   return (
@@ -171,50 +63,9 @@ function RagnaCallout() {
       <View style={styles.ragnaCalloutBody}>
         <Text style={styles.ragnaCalloutTitle}>Ragna AI</Text>
         <Text style={styles.ragnaCalloutDesc}>
-          A conversational AI companion that remembers your caregiving journey and delivers personalized guidance — exclusive to the Companion plan.
+          A conversational AI companion that remembers your caregiving journey and delivers personalized guidance.
         </Text>
       </View>
-    </View>
-  );
-}
-
-interface PlanComparisonTableProps {
-  caregiverPkg?: PurchasesPackage;
-  companionPkg?: PurchasesPackage;
-}
-
-function PlanComparisonTable({ caregiverPkg, companionPkg }: PlanComparisonTableProps) {
-  const caregiverPrice = caregiverPkg?.product.priceString ?? "$4.99";
-  const companionPrice = companionPkg?.product.priceString ?? "$9.99";
-
-  return (
-    <View style={styles.compTable}>
-      {/* Column headers */}
-      <View style={styles.compHeaderRow}>
-        <View style={styles.compFeatureCol} />
-        <View style={[styles.compPlanCol, styles.compPlanColCaregiver]}>
-          <Text style={styles.compPlanLabel}>Caregiver</Text>
-          <Text style={styles.compPlanPrice}>{caregiverPrice}<Text style={styles.compPlanPer}>/wk</Text></Text>
-        </View>
-        <View style={[styles.compPlanCol, styles.compPlanColCompanion]}>
-          <Text style={[styles.compPlanLabel, styles.compPlanLabelCompanion]}>Companion</Text>
-          <Text style={[styles.compPlanPrice, styles.compPlanPriceCompanion]}>{companionPrice}<Text style={styles.compPlanPer}>/wk</Text></Text>
-        </View>
-      </View>
-
-      {/* Feature rows */}
-      {COMPARISON_ROWS.map((row, i) => (
-        <View
-          key={row.feature}
-          style={[styles.compRow, i % 2 === 0 && styles.compRowAlt]}
-        >
-          <View style={styles.compFeatureCol}>
-            <Text style={styles.compFeatureText}>{row.feature}</Text>
-          </View>
-          <ComparisonCell included={row.caregiver} />
-          <ComparisonCell included={row.companion} />
-        </View>
-      ))}
     </View>
   );
 }
@@ -294,18 +145,12 @@ export default function PaywallScreen() {
   const primaryPkg =
     currentOffering?.availablePackages.find(
       (p: PurchasesPackage) => p.identifier === PRIMARY_PACKAGE_IDENTIFIER,
-    ) ??
-    currentOffering?.availablePackages.find(
-      (p: PurchasesPackage) => p.identifier === COMPANION_PACKAGE_IDENTIFIER,
-    ) ??
-    currentOffering?.availablePackages[0];
+    ) ?? currentOffering?.availablePackages[0];
 
   function handleSelectPlan(pkg: PurchasesPackage) {
     setErrorMsg(null);
     setSuccessMsg(null);
     if (__DEV__) {
-      // Show custom confirmation modal in test mode — per RevenueCat guidance,
-      // never use Alert.alert for confirmation prompts
       setPendingPackage(pkg);
     } else {
       void executePurchase(pkg);
@@ -348,7 +193,6 @@ export default function PaywallScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.closeBtn} hitSlop={12}>
           <Feather name="x" size={22} color={Colors.textSecondary} />
@@ -361,7 +205,6 @@ export default function PaywallScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
         <Text style={styles.heroTitle}>
           {(ROLE_HERO_COPY[userRole ?? ""] ?? DEFAULT_HERO_COPY).title}
         </Text>
@@ -414,7 +257,7 @@ export default function PaywallScreen() {
             </Text>
           )}
           <View style={styles.divider} />
-          {COMPANION_FEATURES.map((f) => (
+          {PREMIUM_FEATURES.map((f) => (
             <FeatureRow key={f.text} feature={f} />
           ))}
           <Pressable
@@ -432,7 +275,6 @@ export default function PaywallScreen() {
           </Pressable>
         </View>
 
-        {/* Restore */}
         <Pressable
           onPress={handleRestore}
           disabled={isBusy}
@@ -451,7 +293,6 @@ export default function PaywallScreen() {
         </Text>
       </ScrollView>
 
-      {/* Test mode purchase confirmation modal */}
       <ConfirmModal
         visible={pendingPackage !== null}
         packageItem={pendingPackage}
@@ -653,11 +494,6 @@ const styles = StyleSheet.create({
   ctaBtnDisabled: {
     opacity: 0.5,
   },
-  caregiverBtn: {
-    backgroundColor: Colors.surfaceLight,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-  },
   companionBtn: {
     backgroundColor: Colors.primary,
   },
@@ -687,7 +523,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 8,
   },
-  // ── Ragna AI callout ──────────────────────────────────────────────────────
   ragnaCallout: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -724,103 +559,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 18,
   },
-
-  // ── Plan comparison table ──────────────────────────────────────────────────
-  compSectionLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    color: Colors.textSubtle,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  compTable: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    overflow: "hidden",
-    marginBottom: 20,
-  },
-  compHeaderRow: {
-    flexDirection: "row",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.divider,
-    backgroundColor: Colors.surfaceLight,
-  },
-  compFeatureCol: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    justifyContent: "center",
-  },
-  compPlanCol: {
-    width: 80,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-  },
-  compPlanColCaregiver: {
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: Colors.divider,
-  },
-  compPlanColCompanion: {
-    borderLeftWidth: 1,
-    borderLeftColor: Colors.primary + "55",
-    backgroundColor: Colors.primary + "0A",
-  },
-  compPlanLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    color: Colors.textSecondary,
-    letterSpacing: 0.2,
-    marginBottom: 2,
-  },
-  compPlanLabelCompanion: {
-    color: Colors.primary,
-  },
-  compPlanPrice: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: Colors.text,
-  },
-  compPlanPriceCompanion: {
-    color: Colors.primary,
-  },
-  compPlanPer: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  compRow: {
-    flexDirection: "row",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.divider,
-  },
-  compRowAlt: {
-    backgroundColor: "rgba(255,255,255,0.015)",
-  },
-  compFeatureText: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.text,
-    lineHeight: 17,
-  },
-  compCell: {
-    width: 80,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-  },
-  compCellDash: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-
-  // Confirmation modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
@@ -879,103 +617,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: Colors.background,
-  },
-
-  // ── What you'll gain section (fromPlan=caregiver) ─────────────────────────
-  gainSection: {
-    backgroundColor: Colors.primary + "0E",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.primary + "35",
-    padding: 16,
-    marginBottom: 20,
-  },
-  gainHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 16,
-  },
-  gainIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary + "20",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  gainHeaderText: {
-    flex: 1,
-  },
-  gainTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: Colors.primary,
-    marginBottom: 3,
-  },
-  gainSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  gainFeatureRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 12,
-  },
-  gainFeatureIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: Colors.primary + "18",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  gainFeatureBody: {
-    flex: 1,
-  },
-  gainFeatureTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  gainFeatureDesc: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textSecondary,
-    lineHeight: 17,
-  },
-  gainPriceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.primary + "30",
-  },
-  gainPriceText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.amber,
-  },
-
-  // ── De-emphasized Caregiver card (shown when fromPlan=caregiver) ──────────
-  caregiverCardDimmed: {
-    opacity: 0.5,
-    marginTop: 8,
-  },
-  planNameDimmed: {
-    color: Colors.textSecondary,
-  },
-  planPriceDimmed: {
-    color: Colors.textSecondary,
   },
 });

@@ -2,7 +2,7 @@ import { useClerk, useUser } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Linking,
@@ -22,7 +22,12 @@ import { ENTITLEMENT_IDENTIFIER, getPlanName } from "@/constants/subscriptionPro
 import { useSubscription } from "@/context/SubscriptionContext";
 import { usePaywall } from "@/hooks/usePaywall";
 import { unregisterForPushNotifications } from "@/services/pushRegistration";
+import { clearIntroVideosSeen } from "@/services/introPreference";
 import { markExplicitSignOut } from "@/services/signOutState";
+import {
+  fetchVoiceStatus,
+  type VoiceStatusResponse,
+} from "@/services/voiceStatusService";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -68,12 +73,25 @@ async function openManageSubscription(): Promise<void> {
 
 const PLAN_DESCRIPTIONS: Record<string, string> = {
   Free: "Access the emergency card, journey map, situation finder, and hospice provider search — always free.",
-  Caregiver:
-    "Full access to symptom tracking, the caregiver journal, goals of care, and Ragna AI.",
-  Companion:
-    "Complete access to all Hospice Roadmap features, including Ragna AI and priority support.",
+  Caregiver: "Full access to every Hospice Roadmap feature, including Ragna AI.",
+  Companion: "Full access to every Hospice Roadmap feature, including Ragna AI.",
   Beta: "You have full access to every feature as a TestFlight beta tester. Thank you for helping us improve Hospice Roadmap.",
 };
+
+function formatVoiceDiagnostics(status: VoiceStatusResponse | null): string {
+  if (!status) return "Voice status has not been checked yet.";
+  const el = status.elevenLabs;
+  if (!el.configured) {
+    return el.error ?? "ElevenLabs is not configured on the server.";
+  }
+  if (el.synthesisOk === false) {
+    return el.error ?? "Ragna voice is configured but synthesis failed.";
+  }
+  if (el.synthesisOk === true) {
+    return `Ragna voice is active (${el.voiceId ?? "unknown"}) via ${el.connector}.`;
+  }
+  return `Ragna voice is configured (${el.voiceId ?? "unknown"}) via ${el.connector}.`;
+}
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
@@ -90,6 +108,28 @@ export default function AccountScreen() {
     isRestoring,
   } = useSubscription();
   const { openPaywall } = usePaywall();
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatusResponse | null>(null);
+  const [voiceStatusError, setVoiceStatusError] = useState<string | null>(null);
+  const [voiceStatusLoading, setVoiceStatusLoading] = useState(false);
+
+  const refreshVoiceStatus = useCallback(async () => {
+    setVoiceStatusLoading(true);
+    setVoiceStatusError(null);
+    try {
+      setVoiceStatus(await fetchVoiceStatus());
+    } catch (err) {
+      setVoiceStatus(null);
+      setVoiceStatusError(
+        err instanceof Error ? err.message : "Could not check Ragna voice status.",
+      );
+    } finally {
+      setVoiceStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshVoiceStatus();
+  }, [refreshVoiceStatus]);
 
   const productId =
     customerInfo?.entitlements.active?.[ENTITLEMENT_IDENTIFIER]?.productIdentifier;
@@ -207,37 +247,21 @@ export default function AccountScreen() {
                 <Text style={styles.betaAccessText}>All features unlocked for beta testing</Text>
               </View>
             ) : isPremium ? (
-              <>
-                <Pressable
-                  onPress={() => {
-                    void openManageSubscription();
-                  }}
-                  style={({ pressed }) => [
-                    styles.actionRow,
-                    planName === "Caregiver" && styles.actionRowBorder,
-                    pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
-                  ]}
-                >
-                  <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
-                    <Feather name="credit-card" size={16} color={Colors.primary} />
-                  </View>
-                  <Text style={styles.actionLabel}>Manage Subscription</Text>
-                  <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
-                </Pressable>
-                {planName === "Caregiver" && (
-                  <Pressable
-                    onPress={() => openPaywall()}
-                    style={({ pressed }) => [
-                      styles.upgradeCompanionBtn,
-                      pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-                    ]}
-                  >
-                    <Feather name="zap" size={15} color={Colors.primary} />
-                    <Text style={styles.upgradeCompanionText}>Upgrade to Companion</Text>
-                    <Feather name="chevron-right" size={15} color={Colors.primary + "99"} />
-                  </Pressable>
-                )}
-              </>
+              <Pressable
+                onPress={() => {
+                  void openManageSubscription();
+                }}
+                style={({ pressed }) => [
+                  styles.actionRow,
+                  pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
+                ]}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
+                  <Feather name="credit-card" size={16} color={Colors.primary} />
+                </View>
+                <Text style={styles.actionLabel}>Manage Subscription</Text>
+                <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
+              </Pressable>
             ) : (
               <Pressable
                 onPress={() => openPaywall()}
@@ -250,6 +274,65 @@ export default function AccountScreen() {
                 <Text style={styles.upgradeBtnText}>Upgrade to Premium</Text>
               </Pressable>
             )}
+          </View>
+        </View>
+
+        {/* ── Ragna Voice ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>RAGNA VOICE</Text>
+          <View style={styles.card}>
+            <View style={styles.voiceStatusRow}>
+              <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
+                <Feather name="volume-2" size={16} color={Colors.primary} />
+              </View>
+              <View style={styles.actionTextWrap}>
+                <Text style={styles.actionLabel}>Voice diagnostics</Text>
+                <Text style={styles.actionHint}>
+                  {voiceStatusLoading
+                    ? "Checking server voice configuration…"
+                    : voiceStatusError ?? formatVoiceDiagnostics(voiceStatus)}
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => {
+                void refreshVoiceStatus();
+              }}
+              disabled={voiceStatusLoading}
+              style={({ pressed }) => [
+                styles.actionRow,
+                styles.actionRowBorder,
+                pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
+              ]}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: Colors.primary + "20" }]}>
+                <Feather name="refresh-cw" size={16} color={Colors.primary} />
+              </View>
+              <Text style={styles.actionLabel}>
+                {voiceStatusLoading ? "Refreshing…" : "Refresh voice status"}
+              </Text>
+              <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                void clearIntroVideosSeen().then(() => {
+                  router.replace("/");
+                });
+              }}
+              style={({ pressed }) => [
+                styles.actionRow,
+                pressed && { backgroundColor: "rgba(255,255,255,0.04)" },
+              ]}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: Colors.textMuted + "20" }]}>
+                <Feather name="play-circle" size={16} color={Colors.textMuted} />
+              </View>
+              <View style={styles.actionTextWrap}>
+                <Text style={styles.actionLabel}>Replay intro videos</Text>
+                <Text style={styles.actionHint}>Show the Hospice and Ragna launch videos again</Text>
+              </View>
+              <Feather name="chevron-right" size={15} color="rgba(100,130,200,0.45)" />
+            </Pressable>
           </View>
         </View>
 
@@ -525,20 +608,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
 
-  // Upgrade to Companion row (shown for Caregiver subscribers)
-  upgradeCompanionBtn: {
+  voiceStatusRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+    alignItems: "flex-start",
+    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-  },
-  upgradeCompanionText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.primary,
-    letterSpacing: -0.1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.divider,
   },
 
   versionNote: {

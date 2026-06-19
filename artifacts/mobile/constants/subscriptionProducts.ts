@@ -1,10 +1,14 @@
 export const ENTITLEMENT_IDENTIFIER = "premium";
 
+/** Legacy caregiver tier — kept for restore/purchase history mapping only. */
 export const CAREGIVER_PACKAGE_IDENTIFIER = "$rc_monthly";
-export const COMPANION_PACKAGE_IDENTIFIER = "companion_monthly";
 
-/** Single plan shown in the paywall — full access including Ragna AI. */
-export const PRIMARY_PACKAGE_IDENTIFIER = COMPANION_PACKAGE_IDENTIFIER;
+/** Single premium plan — full access including Ragna AI. */
+export const PREMIUM_PACKAGE_IDENTIFIER = "companion_monthly";
+export const PRIMARY_PACKAGE_IDENTIFIER = PREMIUM_PACKAGE_IDENTIFIER;
+
+/** @deprecated Use PREMIUM_PACKAGE_IDENTIFIER */
+export const COMPANION_PACKAGE_IDENTIFIER = PREMIUM_PACKAGE_IDENTIFIER;
 
 export const OFFERING_IDENTIFIER = "default";
 

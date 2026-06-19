@@ -37,6 +37,7 @@ export interface NativeOpenAiVoicePlaybackResult {
   audioBase64?: string;
   audioMimeType?: string;
   audioUrl?: string;
+  voiceProvider?: "elevenlabs" | "openai";
   didAutoPlayAudio: boolean;
   autoPlayErrorMessage?: string;
   usedSpeechFallback?: boolean;
@@ -1022,6 +1023,7 @@ export async function speakNativeOpenAiVoiceText({
     audioBase64?: string;
     audioMimeType?: string;
     audioUrl?: string;
+    voiceProvider?: "elevenlabs" | "openai";
   };
 
   let didAutoPlayAudio = false;
@@ -1061,8 +1063,12 @@ export async function speakNativeOpenAiVoiceText({
     audioBase64: payload.audioBase64,
     audioMimeType: payload.audioMimeType,
     audioUrl: payload.audioUrl,
+    voiceProvider: payload.voiceProvider,
     didAutoPlayAudio,
-    autoPlayErrorMessage,
+    autoPlayErrorMessage:
+      payload.voiceProvider === "openai" && didAutoPlayAudio
+        ? "Ragna's custom voice was unavailable — a fallback voice was used."
+        : autoPlayErrorMessage,
     usedSpeechFallback,
   };
 }

@@ -1,9 +1,10 @@
 import { useSSO } from "@clerk/expo";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -17,34 +18,51 @@ type SocialAuthButtonsProps = {
   onError?: (message: string) => void;
 };
 
+async function completeSsoFlow(
+  startSSOFlow: ReturnType<typeof useSSO>["startSSOFlow"],
+  strategy: "oauth_google" | "oauth_apple",
+  onError?: (message: string) => void,
+): Promise<void> {
+  const { createdSessionId, setActive, authSessionResult } = await startSSOFlow({
+    strategy,
+  });
+
+  if (authSessionResult?.type && authSessionResult.type !== "success") {
+    return;
+  }
+
+  if (!createdSessionId || !setActive) {
+    onError?.("Sign-in was cancelled. Please try again.");
+    return;
+  }
+
+  await setActive({ session: createdSessionId });
+  router.replace("/");
+}
+
 export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
   const { startSSOFlow } = useSSO();
-  const [busy, setBusy] = useState(false);
+  const [busyProvider, setBusyProvider] = useState<"google" | "apple" | null>(null);
 
-  const handleGoogle = async () => {
-    setBusy(true);
+  const runProvider = async (provider: "google" | "apple") => {
+    setBusyProvider(provider);
     try {
-      const { createdSessionId, setActive, authSessionResult } = await startSSOFlow({
-        strategy: "oauth_google",
-      });
-      if (authSessionResult?.type && authSessionResult.type !== "success") {
-        return;
-      }
-      if (!createdSessionId || !setActive) {
-        onError?.("Sign-in was cancelled. Please try again.");
-        return;
-      }
-      await setActive({ session: createdSessionId });
-      router.replace("/");
+      await completeSsoFlow(
+        startSSOFlow,
+        provider === "google" ? "oauth_google" : "oauth_apple",
+        onError,
+      );
     } catch (err) {
       onError?.(
         clerkErrorMessage(
           err as { longMessage?: string; message?: string },
-          "Google sign-in failed. Please try again.",
+          provider === "google"
+            ? "Google sign-in failed. Please try again."
+            : "Apple sign-in failed. Please try again.",
         ),
       );
     } finally {
-      setBusy(false);
+      setBusyProvider(null);
     }
   };
 
@@ -59,21 +77,42 @@ export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
       <Pressable
         style={({ pressed }) => [
           styles.socialBtn,
-          busy && styles.socialBtnDisabled,
+          busyProvider !== null && styles.socialBtnDisabled,
           pressed && { opacity: 0.85 },
         ]}
-        onPress={handleGoogle}
-        disabled={busy}
+        onPress={() => void runProvider("google")}
+        disabled={busyProvider !== null}
       >
-        {busy ? (
+        {busyProvider === "google" ? (
           <ActivityIndicator color={Colors.text} size="small" />
         ) : (
           <>
-            <Feather name="mail" size={18} color={Colors.text} />
+            <Ionicons name="logo-google" size={18} color={Colors.text} />
             <Text style={styles.socialBtnText}>Google</Text>
           </>
         )}
       </Pressable>
+
+      {Platform.OS === "ios" && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.socialBtn,
+            busyProvider !== null && styles.socialBtnDisabled,
+            pressed && { opacity: 0.85 },
+          ]}
+          onPress={() => void runProvider("apple")}
+          disabled={busyProvider !== null}
+        >
+          {busyProvider === "apple" ? (
+            <ActivityIndicator color={Colors.text} size="small" />
+          ) : (
+            <>
+              <Ionicons name="logo-apple" size={18} color={Colors.text} />
+              <Text style={styles.socialBtnText}>Apple</Text>
+            </>
+          )}
+        </Pressable>
+      )}
     </View>
   );
 }

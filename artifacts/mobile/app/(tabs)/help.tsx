@@ -53,6 +53,7 @@ import {
   subscribeNativeOpenAiVoicePlayback,
   subscribeNativeOpenAiVoiceReplySummary,
   updateNativeOpenAiVoiceReplySummary,
+  type NativeOpenAiVoicePlaybackResult,
 } from "@/services/nativeOpenAiVoiceService";
 import {
   clearActiveConversationId,
@@ -82,6 +83,25 @@ import { RagnaMessageList } from "@/components/ragna/RagnaMessageList";
 import { PremiumGate } from "@/components/PremiumGate";
 
 const VOICE_OPTIONS = [{ id: RAGNA_VOICE_ID, label: "Ragna" }] as const;
+
+function describeVoicePlaybackStatus(
+  playback: NativeOpenAiVoicePlaybackResult,
+  voiceLabel: string,
+): string {
+  if (playback.usedSpeechFallback) {
+    return "Ragna replied in text. Your device read it aloud because custom audio could not play — check silent mode and volume.";
+  }
+  if (playback.voiceProvider === "openai") {
+    return "Ragna replied with a fallback voice. The custom ElevenLabs voice was unavailable on the server.";
+  }
+  if (playback.autoPlayErrorMessage) {
+    return playback.autoPlayErrorMessage;
+  }
+  if (playback.didAutoPlayAudio) {
+    return `Ragna replied with ${voiceLabel}.`;
+  }
+  return `Ragna replied with ${voiceLabel}. Tap Play voice reply in the chat if audio did not start.`;
+}
 
 const VOICE_LABELS: Record<string, string> = {
   [RAGNA_VOICE_ID]: "Ragna",
@@ -815,11 +835,7 @@ export default function HelpScreen() {
         );
       }
 
-      setVoiceStatusText(
-        playback.didAutoPlayAudio
-          ? `Ragna replied with ${selectedVoiceLabel}.`
-          : `Ragna replied with ${selectedVoiceLabel}. Tap Play voice reply in the chat if audio did not start.`,
-      );
+      setVoiceStatusText(describeVoicePlaybackStatus(playback, selectedVoiceLabel));
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Playback control failed.";
@@ -868,11 +884,7 @@ export default function HelpScreen() {
           );
         }
 
-        setVoiceStatusText(
-          playback.didAutoPlayAudio
-            ? `Ragna replied with ${selectedVoiceLabel}.`
-            : `Ragna replied with ${selectedVoiceLabel}. Tap Play voice reply in the chat if audio did not start.`,
-        );
+        setVoiceStatusText(describeVoicePlaybackStatus(playback, selectedVoiceLabel));
       } catch (error) {
         const message =
           error instanceof Error

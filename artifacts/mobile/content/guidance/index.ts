@@ -24,9 +24,5 @@ export {
   getGuidanceByUrgency,
   searchGuidance,
   getRelatedGuidance,
-  // backward-compat aliases
   allScenarios,
-  findScenarioById,
-  findCategoryById,
-  searchScenarios,
 } from "./helpers";

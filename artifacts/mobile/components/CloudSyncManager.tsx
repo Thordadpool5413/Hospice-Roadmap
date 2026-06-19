@@ -771,7 +771,4 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   );
 }
 
-/** @deprecated Use CloudSyncProvider instead */
-export function CloudSyncManager() {
-  return null;
-}
+

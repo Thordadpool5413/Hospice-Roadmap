@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
-import { getElevenLabsStatus, synthesizeElevenLabsSpeech } from "../lib/elevenlabsTts.js";
+import { getElevenLabsStatus } from "../lib/elevenlabsTts.js";
 import { getClerkProxyHost } from "../middlewares/clerkProxyMiddleware.js";
 
 const router: IRouter = Router();
@@ -42,30 +42,18 @@ router.get("/mobile-clerk-config", (req: Request, res: Response) => {
  * Public voice bootstrap — helps verify ElevenLabs is wired on Replit without
  * requiring a signed-in mobile session.
  *
- * Optional query param: ?test_tts=true — actually calls ElevenLabs synthesis
- * with a short test string and reports whether audio was produced.
+ * Optional synthesis probe: ?probe=1 or ?test_tts=true
  */
 router.get("/voice-status", async (req: Request, res: Response) => {
-  const elevenLabs = await getElevenLabsStatus();
-
-  let ttsTest: { ok: boolean; audioBytes?: number; error?: string } | null = null;
-  if (req.query["test_tts"] === "true") {
-    try {
-      const buf = await synthesizeElevenLabsSpeech("Hi, I'm Ragna.");
-      ttsTest = { ok: true, audioBytes: buf.length };
-    } catch (err: unknown) {
-      ttsTest = {
-        ok: false,
-        error: err instanceof Error ? err.message : String(err),
-      };
-    }
-  }
-
+  const includeSynthesisProbe =
+    req.query["probe"] === "1" ||
+    req.query["probe"] === "true" ||
+    req.query["test_tts"] === "true";
+  const elevenLabs = await getElevenLabsStatus({ includeSynthesisProbe });
   res.json({
     openaiConfigured: Boolean(process.env["OPENAI_API_KEY"]),
     betaBypass: process.env["REVENUECAT_BETA_BYPASS"] === "true",
     elevenLabs,
-    ...(ttsTest !== null ? { ttsTest } : {}),
   });
 });
 
