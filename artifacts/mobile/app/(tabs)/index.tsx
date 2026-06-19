@@ -18,8 +18,11 @@ import { useFamilyContacts } from "@/components/FamilyContactsManager";
 
 import { CaregiverWellnessCard } from "@/components/CaregiverWellnessCard";
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { NeedHelpNowButton } from "@/components/crisis/NeedHelpNowButton";
+import { RagnaPromptCard } from "@/components/crisis/RagnaPromptCard";
 import { ProfileSetupWizard } from "@/components/ProfileSetupWizard";
 import { Colors } from "@/constants/colors";
+import { getProactiveRagnaPrompt } from "@/services/symptomActionSuggestions";
 import { useApp } from "@/context/AppContext";
 import { useJournal } from "@/context/JournalContext";
 import { useReminders } from "@/context/RemindersContext";
@@ -713,6 +716,7 @@ export default function HomeScreen() {
   const { contacts: familyContacts } = useFamilyContacts();
 
   const [setupDismissed, setSetupDismissed] = useState(false);
+  const [ragnaPromptDismissed, setRagnaPromptDismissed] = useState(false);
   const [wizardVisible, setWizardVisible] = useState(false);
   const hasTriggeredWizard = useRef(false);
   const { loaded: wizardLoaded, canShow: wizardCanShow, markCompleted: markWizardCompleted, markDismissed: markWizardDismissed } = useProfileWizard();
@@ -781,6 +785,33 @@ export default function HomeScreen() {
     [config.keyActions[2], config.keyActions[3]],
   ];
 
+  const proactiveRagna = useMemo(
+    () => getProactiveRagnaPrompt(symptomEntries, patientName),
+    [symptomEntries, patientName],
+  );
+
+  const stagePriorityResources: ResourceItem[] = useMemo(() => {
+    if (journeyStage === "before") {
+      return [
+        { label: "Find hospice providers", sub: "Search by ZIP — compare agencies", icon: "search", route: "/(tabs)/providers", color: Colors.accentJourney },
+        { label: "Interview scorecard", sub: "Questions to ask every hospice", icon: "check-square", route: "/hospice-interview", color: Colors.accentGoals },
+        { label: "Is it time for hospice?", sub: "Myths, timing, and next steps", icon: "help-circle", route: "/hospice-myths", color: Colors.accentSituation },
+      ];
+    }
+    if (journeyStage === "after") {
+      return [
+        { label: "Grief & bereavement", sub: "What to expect and who can help", icon: "cloud", route: "/guidance/bereavement-support", color: "#9A7ACC" },
+        { label: "Talk to Ragna", sub: "Gentle grief check-in", icon: "message-circle", route: "/(tabs)/help", color: Colors.primary },
+        { label: "Family updates", sub: "Wind down updates when you're ready", icon: "message-square", route: "/family-updates", color: Colors.success },
+      ];
+    }
+    return [
+      { label: "Signs death may be near", sub: "What to watch for and how to help", icon: "moon", route: "/guidance/approaching-death", color: "#9A7ACC" },
+      { label: "Emergency card", sub: "One-tap call, read aloud, share", icon: "credit-card", route: "/emergency-card", color: Colors.error },
+      { label: "Equipment help", sub: "Oxygen, bed, suction troubleshooting", icon: "tool", route: "/need-help-now", color: Colors.amber },
+    ];
+  }, [journeyStage]);
+
   return (
     <View style={sc.root}>
       <CosmicBackground />
@@ -827,10 +858,31 @@ export default function HomeScreen() {
           />
         )}
 
-        {/* ── Hero ── */}
+        {/* ── Crisis-first entry ── */}
+        <NeedHelpNowButton variant="hero" />
+
+        {!ragnaPromptDismissed && proactiveRagna && journeyStage === "during" && (
+          <RagnaPromptCard
+            reason={proactiveRagna.reason}
+            initialMessage={proactiveRagna.message}
+            onDismiss={() => setRagnaPromptDismissed(true)}
+          />
+        )}
+
+        {/* ── Stage-specific priorities ── */}
+        <View style={sc.section}>
+          <SectionHeader title={journeyStage === "before" ? "Choosing hospice" : journeyStage === "after" ? "After hospice" : "During hospice"} />
+          <View style={sc.resourceCol}>
+            {stagePriorityResources.map((item) => (
+              <ResourceCard key={item.label} item={item} onPress={() => tap(item.route)} />
+            ))}
+          </View>
+        </View>
+
+        {/* ── Hero Ragna ── */}
         <HeroRagnaCard
-          title={config.heroTitle}
-          subtitle={config.heroSubtitle}
+          title={journeyStage === "after" ? "Grief support from Ragna" : config.heroTitle}
+          subtitle={journeyStage === "after" ? "Check in when you need someone who remembers your story" : config.heroSubtitle}
           onPress={() => tap("/(tabs)/help")}
         />
 
@@ -864,7 +916,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Family Updates shortcut (caregiver/other only, when contacts or data exists) ── */}
-        {role !== "patient" && (familyContacts.length > 0 || !!todayEntry || journalEntries.length > 0) && (
+        {journeyStage !== "after" && role !== "patient" && (familyContacts.length > 0 || !!todayEntry || journalEntries.length > 0) && (
           <Pressable
             onPress={() => tap("/family-updates")}
             style={({ pressed }) => [fu.card, pressed && { opacity: 0.82, transform: [{ scale: 0.98 }] }]}

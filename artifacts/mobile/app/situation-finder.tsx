@@ -12,7 +12,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { HospiceTeamMatrix } from "@/components/crisis/HospiceTeamMatrix";
+import { NeedHelpNowButton } from "@/components/crisis/NeedHelpNowButton";
 import { Colors } from "@/constants/colors";
+import { CRISIS_SHORTCUTS } from "@/constants/crisisFlow";
 import {
   GuidanceCategory,
   GuidanceScenario,
@@ -157,6 +160,42 @@ export default function SituationFinderScreen() {
         {/* Category Grid */}
         {!isSearching && !activeCategory && (
           <View>
+            <NeedHelpNowButton variant="compact" />
+
+            <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Common crisis situations</Text>
+            {CRISIS_SHORTCUTS.slice(0, 5).map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() =>
+                  router.push({ pathname: "/guidance/[id]", params: { id: item.guidanceId } } as any)
+                }
+                style={({ pressed }) => [styles.crisisRow, pressed && { opacity: 0.82 }]}
+              >
+                <View style={[styles.crisisIcon, { backgroundColor: item.color + "22" }]}>
+                  <Feather name={item.icon as any} size={16} color={item.color} />
+                </View>
+                <View style={styles.crisisText}>
+                  <Text style={styles.crisisTitle}>{item.label}</Text>
+                  <Text style={styles.crisisSub} numberOfLines={1}>{item.subtitle}</Text>
+                </View>
+                <Feather name="chevron-right" size={14} color={Colors.textSubtle} />
+              </Pressable>
+            ))}
+
+            <Pressable
+              onPress={() => router.push("/after-death-guide" as any)}
+              style={({ pressed }) => [styles.afterDeathBanner, pressed && { opacity: 0.85 }]}
+            >
+              <Feather name="heart" size={18} color="#B89AE8" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.afterDeathTitle}>After death — dedicated guide</Text>
+                <Text style={styles.afterDeathSub}>What to do first, what not to do, who to call</Text>
+              </View>
+              <Feather name="chevron-right" size={14} color="#B89AE899" />
+            </Pressable>
+
+            <HospiceTeamMatrix compact />
+
             <Text style={styles.sectionLabel}>What kind of help do you need?</Text>
             <View style={styles.categoryGrid}>
               {guidanceCategories.map((cat) => (
@@ -345,6 +384,40 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  crisisRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  crisisIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crisisText: { flex: 1, gap: 1 },
+  crisisTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: Colors.text },
+  crisisSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  afterDeathBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "rgba(154, 122, 204, 0.12)",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#9A7ACC35",
+  },
+  afterDeathTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.text },
+  afterDeathSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textSecondary, marginTop: 2 },
   sectionLabel: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",

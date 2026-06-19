@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Linking,
   Platform,
   Pressable,
@@ -13,8 +15,17 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CosmicBackground } from "@/components/CosmicBackground";
+import { HospiceTeamMatrix } from "@/components/crisis/HospiceTeamMatrix";
 import { Colors } from "@/constants/colors";
+import { LOCK_SCREEN_SHORTCUT_HINT } from "@/services/crisisQuickActions";
 import { useApp } from "@/context/AppContext";
+import { shareEmergencyCard } from "@/utils/emergencyCardShare";
+import {
+  isEmergencyCardSpeaking,
+  speakEmergencyCard,
+  stopEmergencyCardSpeech,
+} from "@/utils/emergencyCardSpeech";
+import { callHospice, formatDnrStatus } from "@/utils/hospiceCall";
 
 interface ContactRowProps {
   label: string;
@@ -109,6 +120,7 @@ export default function EmergencyCardScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useApp();
   const [rightsExpanded, setRightsExpanded] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const profile = user?.patientProfile;
 
   const hasAnyContact =
@@ -116,6 +128,44 @@ export default function EmergencyCardScreen() {
     profile?.hospiceAfterHoursPhone ||
     profile?.equipmentProviderPhone ||
     profile?.pharmacyPhone;
+
+  const handleCallHospice = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    const ok = callHospice(profile);
+    if (!ok) {
+      Alert.alert(
+        "Add hospice phone",
+        "Set your hospice number in Patient Profile for one-tap emergency calling.",
+        [
+          { text: "Later", style: "cancel" },
+          { text: "Set up", onPress: () => router.push("/patient-profile") },
+        ],
+      );
+    }
+  };
+
+  const handleReadAloud = () => {
+    if (isEmergencyCardSpeaking()) {
+      stopEmergencyCardSpeech();
+      setSpeaking(false);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    speakEmergencyCard(profile);
+    setSpeaking(true);
+    setTimeout(() => setSpeaking(false), 15000);
+  };
+
+  const handleShare = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await shareEmergencyCard(profile);
+    } catch {
+      // user cancelled share
+    }
+  };
+
+  const dnrLabel = formatDnrStatus(profile?.goalsOfCare?.dnrStatus);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -148,6 +198,47 @@ export default function EmergencyCardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Break-glass actions */}
+        <Pressable
+          onPress={handleCallHospice}
+          style={({ pressed }) => [styles.callHero, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+        >
+          <Feather name="phone-call" size={24} color="#fff" />
+          <View style={styles.callHeroText}>
+            <Text style={styles.callHeroTitle}>Call hospice now</Text>
+            <Text style={styles.callHeroSub}>24/7 — uses your saved after-hours or main number</Text>
+          </View>
+        </Pressable>
+
+        <View style={styles.actionRow}>
+          <Pressable
+            onPress={handleReadAloud}
+            style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Feather name={speaking ? "pause" : "volume-2"} size={18} color={Colors.primary} />
+            <Text style={styles.actionBtnText}>{speaking ? "Stop" : "Read aloud"}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void handleShare()}
+            style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Feather name="share-2" size={18} color={Colors.primary} />
+            <Text style={styles.actionBtnText}>Share with ER</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/need-help-now" as any)}
+            style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Feather name="alert-circle" size={18} color={Colors.error} />
+            <Text style={styles.actionBtnText}>Crisis help</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.walletHint}>
+          <Feather name="smartphone" size={14} color={Colors.textMuted} />
+          <Text style={styles.walletHintText}>{LOCK_SCREEN_SHORTCUT_HINT}</Text>
+        </View>
+
         {/* Setup banner if no data */}
         {!hasAnyContact && (
           <Pressable
@@ -216,8 +307,22 @@ export default function EmergencyCardScreen() {
               value={profile?.diagnosis}
               icon="activity"
             />
+            <View style={styles.rowDivider} />
+            <InfoRow
+              label="Code status (DNR/POLST)"
+              value={dnrLabel}
+              icon="shield"
+            />
+            <View style={styles.rowDivider} />
+            <InfoRow
+              label="Allergies / critical notes"
+              value={profile?.additionalNotes}
+              icon="alert-circle"
+            />
           </View>
         </View>
+
+        <HospiceTeamMatrix />
 
         {/* Comfort Kit Medications */}
         <View style={styles.section}>
@@ -488,6 +593,48 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 16,
+  },
+  callHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: Colors.error,
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: Colors.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  callHeroText: { flex: 1, gap: 2 },
+  callHeroTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff" },
+  callHeroSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.85)" },
+  actionRow: { flexDirection: "row", gap: 8 },
+  actionBtn: {
+    flex: 1,
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(12, 20, 55, 0.90)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: "rgba(55, 85, 170, 0.22)",
+  },
+  actionBtnText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#C8D8F0", textAlign: "center" },
+  walletHint: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 4,
+    alignItems: "flex-start",
+  },
+  walletHintText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 16,
   },
   setupBanner: {
     flexDirection: "row",

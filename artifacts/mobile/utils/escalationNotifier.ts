@@ -91,6 +91,9 @@ export function buildEscalationPrompt(alert: EscalationAlert, patientName?: stri
     case "consecutive_high_pain":
       return `${firstName}'s pain has been ${alert.severityLevel}/10 or higher for ${alert.daysAffected ?? 2} consecutive days. This is clinically significant. What steps should I be taking right now, and what should I say when I call the hospice nurse about this?`;
 
+    case "consecutive_high_breathlessness":
+      return `${firstName}'s breathlessness has been ${alert.severityLevel}/10 or higher for ${alert.daysAffected ?? 4} consecutive days. What comfort measures should we try, and should I ask hospice for a nurse visit?`;
+
     case "rapid_increase":
       return `${firstName}'s ${alert.symptomName.toLowerCase()} just jumped to ${alert.severityLevel}/10 — a large increase since the last check-in. Can you help me understand what this might mean and whether I need to contact the hospice team right away?`;
 
@@ -106,6 +109,8 @@ function buildNotificationTitle(alert: EscalationAlert, patientName?: string): s
   switch (alert.pattern) {
     case "consecutive_high_pain":
       return `${firstName}'s pain has been high for ${alert.daysAffected ?? 2} days`;
+    case "consecutive_high_breathlessness":
+      return `Breathlessness logged ${alert.daysAffected ?? 4} days in a row`;
     case "rapid_increase":
       return `${firstName}'s ${alert.symptomName.toLowerCase()} increased sharply`;
     case "new_high_severity":

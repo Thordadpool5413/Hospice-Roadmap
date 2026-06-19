@@ -29,7 +29,13 @@ import { useRagnaLearning } from "@/context/RagnaLearningContext";
 import { useReminders } from "@/context/RemindersContext";
 import { useSymptoms } from "@/context/SymptomContext";
 import { useRagnaMemory } from "@/context/RagnaMemoryContext";
+import { OfflineRagnaBanner } from "@/components/crisis/OfflineRagnaBanner";
 import { useAppNetwork } from "@/hooks/useAppNetwork";
+import {
+  formatOfflineScriptAsMessage,
+  getOfflineResponse,
+  matchOfflineScriptFromMessage,
+} from "@/services/offlineRagnaFallback";
 import {
   AiConversation,
   AiMessage,
@@ -350,8 +356,9 @@ export default function HelpScreen() {
   const { getObservationContext } = useRagnaLearning();
   const { getWellnessSummary } = useCaregiverWellness();
   const { isOnline, issue: networkIssue, statusMessage } = useAppNetwork();
-  const { initialMessage } = useLocalSearchParams<{
+  const { initialMessage, offlineScenarioId } = useLocalSearchParams<{
     initialMessage?: string;
+    offlineScenarioId?: string;
   }>();
   const lastInitialRef = useRef("");
   const actionInFlightRef = useRef<Set<string>>(new Set());
@@ -896,6 +903,28 @@ export default function HelpScreen() {
     [nativeVoiceSupported, selectedVoice, selectedVoiceLabel],
   );
 
+  const sendOfflineFallback = useCallback(
+    (text: string, scenarioId?: string) => {
+      const script =
+        (scenarioId ? getOfflineResponse(scenarioId) : undefined)
+        ?? matchOfflineScriptFromMessage(text);
+      if (!script) return false;
+
+      const reply = formatOfflineScriptAsMessage(script);
+      const userMsgId = `user-${Date.now()}`;
+      const assistantMsgId = `asst-${Date.now()}`;
+      setLocalMessages((prev) => [
+        ...prev,
+        { id: userMsgId, role: "user", content: text },
+        { id: assistantMsgId, role: "assistant", content: reply },
+      ]);
+      setInputText("");
+      scrollToBottom(150);
+      return true;
+    },
+    [],
+  );
+
   const sendMessage = useCallback(
     async (messageText: string) => {
       const text = messageText.trim();
@@ -904,6 +933,16 @@ export default function HelpScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       stopLiveSpeechPreview(true);
       await stopNativeOpenAiVoicePlayback();
+
+      if (!isOnline) {
+        const scenarioId = typeof offlineScenarioId === "string" ? offlineScenarioId : undefined;
+        if (sendOfflineFallback(text, scenarioId)) return;
+        Alert.alert(
+          "Ragna is offline",
+          "Reconnect for a personalized answer. Cached urgent guidance is still available from any guidance screen.",
+        );
+        return;
+      }
 
       let activeConv = conversation;
       if (!activeConv) {
@@ -1052,10 +1091,13 @@ export default function HelpScreen() {
       conversation,
       enqueueLiveSpeechPreview,
       finalizeLiveSpeechPreview,
+      isOnline,
       isStreaming,
       liveSpeechPreviewEnabled,
+      offlineScenarioId,
       scrollToBottom,
       selectedVoiceLabel,
+      sendOfflineFallback,
       stopLiveSpeechPreview,
       synthesizeAssistantVoice,
     ],
@@ -1621,6 +1663,12 @@ export default function HelpScreen() {
           router.push("/(tabs)/voice");
         }}
       />
+
+      {!isOnline && (
+        <OfflineRagnaBanner
+          scenarioId={typeof offlineScenarioId === "string" ? offlineScenarioId : undefined}
+        />
+      )}
 
       <ScrollView
         ref={scrollRef}

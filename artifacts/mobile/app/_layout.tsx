@@ -8,6 +8,7 @@ import {
 import { ClerkProvider, ClerkLoaded, ClerkLoading, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import * as Linking from "expo-linking";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import Constants from "expo-constants";
@@ -38,6 +39,11 @@ import { synthesizeFromActivity } from "@/services/aiService";
 import { registerForPushNotifications } from "@/services/pushRegistration";
 import { registerDevice } from "@/services/deviceRegistration";
 import { consumeExplicitSignOut } from "@/services/signOutState";
+import {
+  handleDeepLinkRoute,
+  handleQuickActionRoute,
+  setupCrisisQuickActions,
+} from "@/services/crisisQuickActions";
 
 const isExpoGo = Constants.executionEnvironment === "storeClient";
 const notificationsAvailable = Platform.OS !== "web" && !isExpoGo;
@@ -446,6 +452,18 @@ function RootLayoutNav() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="need-help-now"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="unsure-wizard"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="after-death-guide"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="guidance/[id]"
         options={{ headerShown: false }}
       />
@@ -526,6 +544,52 @@ export default function RootLayout() {
   });
 
   const fontsReady = fontsLoaded || !!fontError;
+
+  // iOS home-screen quick actions + deep links for crisis entry
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    void setupCrisisQuickActions();
+
+    let QuickActions: typeof import("expo-quick-actions") | null = null;
+    if (Platform.OS === "ios") {
+      try {
+        QuickActions = require("expo-quick-actions");
+      } catch {
+        QuickActions = null;
+      }
+    }
+
+    if (QuickActions) {
+      const initial = QuickActions.initial;
+      if (initial?.id) {
+        setTimeout(() => {
+          handleQuickActionRoute(initial.id, (path) => router.push(path as any));
+        }, 400);
+      }
+      const sub = QuickActions.addListener((action) => {
+        handleQuickActionRoute(action.id, (path) => router.push(path as any));
+      });
+      return () => sub.remove();
+    }
+
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    const routeFromUrl = (url: string) => {
+      handleDeepLinkRoute(url, (path) => router.push(path as any));
+    };
+
+    Linking.getInitialURL()
+      .then((url) => { if (url) routeFromUrl(url); })
+      .catch(() => {});
+
+    const sub = Linking.addEventListener("url", ({ url }) => routeFromUrl(url));
+    return () => sub.remove();
+  }, []);
 
   // Handle notification taps — routes to the correct screen based on notification type.
   // Handles both: (a) foreground/background taps via the listener, and (b) cold-start

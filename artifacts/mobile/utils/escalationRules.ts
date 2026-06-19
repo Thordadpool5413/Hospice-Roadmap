@@ -2,6 +2,7 @@ import { SymptomEntry } from "@/types";
 
 export type EscalationPattern =
   | "consecutive_high_pain"
+  | "consecutive_high_breathlessness"
   | "rapid_increase"
   | "new_high_severity";
 
@@ -94,6 +95,31 @@ export function evaluateEscalation(entries: SymptomEntry[]): EscalationAlert[] {
       description: `Pain has been ${getScore(latest, "pain")}/10 or higher for ${daysAffected} consecutive days`,
       daysAffected,
     });
+  }
+
+  // Rule 1b — Breathlessness ≥ 6 for 4+ consecutive days
+  if (onConsecutiveDays && getScore(latest, "breathlessness") >= 6 && getScore(previous, "breathlessness") >= 6) {
+    let daysAffected = 2;
+    for (let i = 2; i < sorted.length; i++) {
+      const prevEntry = sorted[i - 1];
+      const curEntry = sorted[i];
+      const dayDiff = new Date(prevEntry.date + "T12:00:00").getTime() - new Date(curEntry.date + "T12:00:00").getTime();
+      if (dayDiff <= TWENTY_FOUR_HOURS_MS * 1.5 && getScore(curEntry, "breathlessness") >= 6) {
+        daysAffected++;
+      } else {
+        break;
+      }
+    }
+    if (daysAffected >= 4) {
+      addAlert({
+        symptomKey: "breathlessness",
+        symptomName: "Breathlessness",
+        severityLevel: getScore(latest, "breathlessness"),
+        pattern: "consecutive_high_breathlessness",
+        description: `Breathlessness has been ${getScore(latest, "breathlessness")}/10 or higher for ${daysAffected} consecutive days`,
+        daysAffected,
+      });
+    }
   }
 
   // Rule 2 — Rapid increase (≥ 3 points) only if within 24 hours of each other

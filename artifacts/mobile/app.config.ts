@@ -109,6 +109,7 @@ const config: ExpoConfig = {
     "expo-web-browser",
     "expo-audio",
     "expo-notifications",
+    "expo-quick-actions",
     [
       "expo-location",
       {

@@ -24,6 +24,8 @@ import { useSymptoms } from "@/context/SymptomContext";
 import { useApp } from "@/context/AppContext";
 import { SymptomEntry } from "@/types";
 import { PremiumGate } from "@/components/PremiumGate";
+import { SymptomActionCard } from "@/components/crisis/SymptomActionCard";
+import { getSymptomActionSuggestions } from "@/services/symptomActionSuggestions";
 import { checkAndScheduleEscalationAlerts } from "@/utils/escalationNotifier";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -748,9 +750,8 @@ export default function SymptomTrackerScreen() {
 
         {/* ── Saved Panel (post-save) ── */}
         {savedEntry && (
-          <SavedPanel
-            entry={savedEntry}
-            onAskRagna={() => openRagna(savedEntry)}
+          <SymptomActionCard
+            suggestions={getSymptomActionSuggestions(savedEntry, entries)}
             onDismiss={() => setSavedEntry(null)}
           />
         )}

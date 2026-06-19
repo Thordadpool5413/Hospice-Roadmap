@@ -17,6 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { CALL_SCRIPTS, SCENARIO_TO_SCRIPT } from "@/constants/callScripts";
 import { useA11y } from "@/context/AccessibilityContext";
+import { useApp } from "@/context/AppContext";
+import { callHospice } from "@/utils/hospiceCall";
 import {
   getCategoryById,
   getGuidanceById,
@@ -438,9 +440,16 @@ function NumberedItem({
 }
 
 function CallHospiceCTA({ urgent }: { urgent: boolean }) {
+  const { user } = useApp();
+
   return (
     <Pressable
-      onPress={() => Linking.openURL("tel:hospice")}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        if (!callHospice(user?.patientProfile)) {
+          router.push("/emergency-card" as any);
+        }
+      }}
       style={({ pressed }) => [
         styles.ctaCard,
         { backgroundColor: urgent ? Colors.error : Colors.primary },
