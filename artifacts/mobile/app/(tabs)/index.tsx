@@ -18,8 +18,10 @@ import { useFamilyContacts } from "@/components/FamilyContactsManager";
 
 import { CaregiverWellnessCard } from "@/components/CaregiverWellnessCard";
 import { CosmicBackground } from "@/components/CosmicBackground";
-import { NeedHelpNowButton } from "@/components/crisis/NeedHelpNowButton";
 import { RagnaPromptCard } from "@/components/crisis/RagnaPromptCard";
+import { HomeCrisisStrip } from "@/components/home/HomeCrisisStrip";
+import { HomeExpandableSection, HomeLinkRow } from "@/components/home/HomeExpandableSection";
+import { HomeGreeting } from "@/components/home/HomeGreeting";
 import { ProfileSetupWizard } from "@/components/ProfileSetupWizard";
 import { Colors } from "@/constants/colors";
 import { getProactiveRagnaPrompt } from "@/services/symptomActionSuggestions";
@@ -735,8 +737,6 @@ export default function HomeScreen() {
   const role   = user?.role ?? "other";
   const config = useMemo(() => ROLE_CONFIG[role] ?? ROLE_CONFIG.other, [role]);
   const patientName = user?.patientProfile?.patientName?.trim();
-  const contextLine = config.contextLine(patientName);
-
   const journeyStage: JourneyStage = (user?.journeyStage as JourneyStage) ?? "during";
   const stageStyle = STAGE_STYLES[journeyStage] ?? STAGE_FALLBACK;
 
@@ -780,37 +780,82 @@ export default function HomeScreen() {
     router.push(route as any);
   };
 
-  const rows: [ActionItem, ActionItem][] = [
-    [config.keyActions[0], config.keyActions[1]],
-    [config.keyActions[2], config.keyActions[3]],
-  ];
-
   const proactiveRagna = useMemo(
     () => getProactiveRagnaPrompt(symptomEntries, patientName),
     [symptomEntries, patientName],
   );
 
-  const stagePriorityResources: ResourceItem[] = useMemo(() => {
+  const greeting = config.contextLine(patientName);
+
+  const showRagnaNudge =
+    !ragnaPromptDismissed && !!proactiveRagna && journeyStage === "during";
+  const showProfileNudge = showSetupCard && !showRagnaNudge;
+
+  const careTodayLinks = useMemo(() => {
+    if (journeyStage === "during") {
+      const links: { label: string; sub?: string; icon: string; color: string; route: string }[] = [];
+      if (todayEntry) {
+        links.push({
+          label: "Today's symptom check-in",
+          sub: buildSymptomLine(todayEntry),
+          icon: "activity",
+          color: Colors.accentSymptom,
+          route: "/symptom-tracker",
+        });
+      } else {
+        links.push({
+          label: "Log today's symptoms",
+          sub: "Quick check-in — helps Ragna spot changes",
+          icon: "activity",
+          color: Colors.accentSymptom,
+          route: "/symptom-tracker",
+        });
+      }
+      links.push(
+        { label: "Ask Ragna", sub: "Chat in the Ragna tab", icon: "message-circle", color: Colors.primary, route: "/(tabs)/help" },
+        { label: "Situation guide", sub: "Step-by-step for any moment", icon: "compass", color: Colors.accentSituation, route: "/situation-finder" },
+        { label: "Signs death may be near", sub: "What to watch for", icon: "moon", color: "#9A7ACC", route: "/guidance/approaching-death" },
+        { label: "Equipment help", sub: "Oxygen, bed, suction", icon: "tool", color: Colors.amber, route: "/need-help-now" },
+      );
+      return links;
+    }
     if (journeyStage === "before") {
       return [
-        { label: "Find hospice providers", sub: "Search by ZIP — compare agencies", icon: "search", route: "/(tabs)/providers", color: Colors.accentJourney },
-        { label: "Interview scorecard", sub: "Questions to ask every hospice", icon: "check-square", route: "/hospice-interview", color: Colors.accentGoals },
-        { label: "Is it time for hospice?", sub: "Myths, timing, and next steps", icon: "help-circle", route: "/hospice-myths", color: Colors.accentSituation },
-      ];
-    }
-    if (journeyStage === "after") {
-      return [
-        { label: "Grief & bereavement", sub: "What to expect and who can help", icon: "cloud", route: "/guidance/bereavement-support", color: "#9A7ACC" },
-        { label: "Talk to Ragna", sub: "Gentle grief check-in", icon: "message-circle", route: "/(tabs)/help", color: Colors.primary },
-        { label: "Family updates", sub: "Wind down updates when you're ready", icon: "message-square", route: "/family-updates", color: Colors.success },
+        { label: "Interview scorecard", sub: "Questions to ask every hospice", icon: "check-square", color: Colors.accentGoals, route: "/hospice-interview" },
+        { label: "Is it time for hospice?", sub: "Myths and timing", icon: "help-circle", color: Colors.accentSituation, route: "/hospice-myths" },
+        { label: "Situation guide", sub: "Browse all guidance", icon: "compass", color: Colors.accentSituation, route: "/situation-finder" },
       ];
     }
     return [
-      { label: "Signs death may be near", sub: "What to watch for and how to help", icon: "moon", route: "/guidance/approaching-death", color: "#9A7ACC" },
-      { label: "Emergency card", sub: "One-tap call, read aloud, share", icon: "credit-card", route: "/emergency-card", color: Colors.error },
-      { label: "Equipment help", sub: "Oxygen, bed, suction troubleshooting", icon: "tool", route: "/need-help-now", color: Colors.amber },
+      { label: "Grief & bereavement", sub: "What to expect", icon: "cloud", color: "#9A7ACC", route: "/guidance/bereavement-support" },
+      { label: "After-death guide", sub: "First steps when you're ready", icon: "heart", color: "#B89AE8", route: "/after-death-guide" },
+      { label: "Situation guide", sub: "Browse support topics", icon: "compass", color: Colors.accentSituation, route: "/situation-finder" },
     ];
-  }, [journeyStage]);
+  }, [journeyStage, todayEntry]);
+
+  const planningLinks = useMemo(() => {
+    const links = config.keyActions.map((a) => ({
+      label: a.label,
+      icon: a.icon,
+      color: a.color,
+      route: a.route,
+    }));
+    if (journeyStage !== "after" && role !== "patient" && (familyContacts.length > 0 || !!todayEntry || journalEntries.length > 0)) {
+      links.push({
+        label: "Family update",
+        icon: "message-square",
+        color: Colors.success,
+        route: "/family-updates",
+      });
+    }
+    links.push({
+      label: "Journey guide",
+      icon: "map",
+      color: Colors.accentJourney,
+      route: "/(tabs)/journey",
+    });
+    return links;
+  }, [config.keyActions, journeyStage, role, familyContacts.length, todayEntry, journalEntries.length]);
 
   return (
     <View style={sc.root}>
@@ -823,34 +868,28 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ── */}
-        <View style={sc.header}>
-          <View style={sc.headerLeft}>
-            <View style={[sc.stagePill, { backgroundColor: stageStyle.bg, borderColor: stageStyle.border }]}>
-              <View style={[sc.stageDot, { backgroundColor: stageStyle.dot }]} />
-              <Text style={[sc.stagePillText, { color: stageStyle.color }]}>{stageStyle.label}</Text>
-            </View>
-            <Text style={sc.pageTitle}>{config.title}</Text>
-            <Text style={sc.contextLine}>{contextLine}</Text>
-          </View>
-          <Pressable
-            onPress={() => tap("/(tabs)/more")}
-            style={({ pressed }) => [sc.settingsBtn, pressed && { opacity: 0.55, transform: [{ scale: 0.9 }] }]}
-          >
-            <Feather name="settings" size={19} color="rgba(150, 175, 230, 0.75)" />
-          </Pressable>
-        </View>
+        {/* ── Calm greeting (one line, no dashboard title) ── */}
+        <HomeGreeting
+          greeting={greeting}
+          stageStyle={stageStyle}
+          onSettingsPress={() => tap("/(tabs)/more")}
+        />
 
-        {/* ── Today at a glance ── */}
-        <TodayStatusRow chips={statusChips} onPress={tap} />
+        {/* ── Primary zone: one clear action for this journey stage ── */}
+        <HomeCrisisStrip
+          journeyStage={journeyStage}
+          profile={user?.patientProfile}
+        />
 
-        {/* ── Caregiver daily wellness check-in ── */}
-        {(role === "caregiver" || role === "other") && (
-          <CaregiverWellnessCard />
+        {/* ── At most ONE contextual nudge (never stack cards) ── */}
+        {showRagnaNudge && proactiveRagna && (
+          <RagnaPromptCard
+            reason={proactiveRagna.reason}
+            initialMessage={proactiveRagna.message}
+            onDismiss={() => setRagnaPromptDismissed(true)}
+          />
         )}
-
-        {/* ── Profile setup nudge ── */}
-        {showSetupCard && (
+        {showProfileNudge && (
           <ProfileSetupCard
             fields={profileFields}
             onPress={() => tap("/patient-profile")}
@@ -858,95 +897,70 @@ export default function HomeScreen() {
           />
         )}
 
-        {/* ── Crisis-first entry ── */}
-        <NeedHelpNowButton variant="hero" />
-
-        {!ragnaPromptDismissed && proactiveRagna && journeyStage === "during" && (
-          <RagnaPromptCard
-            reason={proactiveRagna.reason}
-            initialMessage={proactiveRagna.message}
-            onDismiss={() => setRagnaPromptDismissed(true)}
-          />
-        )}
-
-        {/* ── Stage-specific priorities ── */}
-        <View style={sc.section}>
-          <SectionHeader title={journeyStage === "before" ? "Choosing hospice" : journeyStage === "after" ? "After hospice" : "During hospice"} />
-          <View style={sc.resourceCol}>
-            {stagePriorityResources.map((item) => (
-              <ResourceCard key={item.label} item={item} onPress={() => tap(item.route)} />
-            ))}
-          </View>
-        </View>
-
-        {/* ── Hero Ragna ── */}
-        <HeroRagnaCard
-          title={journeyStage === "after" ? "Grief support from Ragna" : config.heroTitle}
-          subtitle={journeyStage === "after" ? "Check in when you need someone who remembers your story" : config.heroSubtitle}
-          onPress={() => tap("/(tabs)/help")}
-        />
-
-        {/* ── Key Actions ── */}
-        <View style={sc.section}>
-          <SectionHeader title="Quick Actions" />
-          <View style={sc.actionGrid}>
-            {rows.map((row, ri) => (
-              <View key={ri} style={sc.actionRow}>
-                <ActionCard item={row[0]} onPress={() => tap(row[0].route)} />
-                <ActionCard item={row[1]} onPress={() => tap(row[1].route)} />
-              </View>
-            ))}
-          </View>
-          {todayEntry && (
-            <TodaySymptomSummary
-              entry={todayEntry}
-              onPress={() => tap("/symptom-tracker")}
+        {/* ── Progressive disclosure: everything else collapsed ── */}
+        <HomeExpandableSection
+          title={
+            journeyStage === "during"
+              ? "Care & guidance"
+              : journeyStage === "before"
+                ? "Choosing hospice"
+                : "Support & guidance"
+          }
+          subtitle="Tap to expand — only when you have a moment"
+        >
+          {careTodayLinks.map((item) => (
+            <HomeLinkRow
+              key={item.label}
+              label={item.label}
+              sub={item.sub}
+              icon={item.icon}
+              color={item.color}
+              onPress={() => tap(item.route)}
             />
-          )}
-        </View>
+          ))}
+        </HomeExpandableSection>
 
-        {/* ── Helpful Resources ── */}
-        <View style={sc.section}>
-          <SectionHeader title="Resources" />
-          <View style={sc.resourceCol}>
-            {config.resources.map((item) => (
-              <ResourceCard key={item.label} item={item} onPress={() => tap(item.route)} />
-            ))}
-          </View>
-        </View>
+        <HomeExpandableSection
+          title="Journal, reminders & more"
+          subtitle="Optional — not needed in a crisis"
+        >
+          {planningLinks.map((item) => (
+            <HomeLinkRow
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              color={item.color}
+              onPress={() => tap(item.route)}
+            />
+          ))}
+          {config.resources.map((item) => (
+            <HomeLinkRow
+              key={item.label}
+              label={item.label}
+              sub={item.sub}
+              icon={item.icon}
+              color={item.color}
+              onPress={() => tap(item.route)}
+            />
+          ))}
+        </HomeExpandableSection>
 
-        {/* ── Family Updates shortcut (caregiver/other only, when contacts or data exists) ── */}
-        {journeyStage !== "after" && role !== "patient" && (familyContacts.length > 0 || !!todayEntry || journalEntries.length > 0) && (
-          <Pressable
-            onPress={() => tap("/family-updates")}
-            style={({ pressed }) => [fu.card, pressed && { opacity: 0.82, transform: [{ scale: 0.98 }] }]}
+        {(role === "caregiver" || role === "other") && (
+          <HomeExpandableSection
+            title="How are you doing?"
+            subtitle="Caregiver check-in — hidden until you open this"
           >
-            <LinearGradient
-              colors={["rgba(58, 128, 96, 0.14)", "rgba(58, 128, 96, 0.05)"]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={fu.left}>
-              <View style={fu.iconWrap}>
-                <Feather name="message-square" size={20} color={Colors.success} />
-              </View>
-              <View style={fu.textWrap}>
-                <Text style={fu.label}>Send family update</Text>
-                <Text style={fu.sub}>
-                  {familyContacts.length > 0
-                    ? `${familyContacts.length} contact${familyContacts.length !== 1 ? "s" : ""} · SMS update`
-                    : "Keep family in the loop · SMS"}
-                </Text>
-              </View>
+            <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+              <CaregiverWellnessCard />
             </View>
-            <View style={fu.chevronWrap}>
-              <Feather name="chevron-right" size={18} color={Colors.success} />
-            </View>
-          </Pressable>
+          </HomeExpandableSection>
         )}
 
-        {/* ── Journey card ── */}
-        <JourneyCard stageLabel={stageStyle.label} onPress={() => tap("/(tabs)/journey")} />
+        <HomeExpandableSection title="Today at a glance" subtitle="Reminders, journal streak, check-in status">
+          <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+            <TodayStatusRow chips={statusChips} onPress={tap} />
+          </View>
+        </HomeExpandableSection>
 
       </ScrollView>
 
